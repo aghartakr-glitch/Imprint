@@ -793,7 +793,7 @@ export default function App() {
 
   // ── 텍스트 구조/의미 분석 (v29: 3축 분리 + 전시도록 근거 카운트) ─
   async function analyzeText(text) {
-    const schema = '{"topic":"미술|문학|디자인|건축|기술|사회|역사|철학|기타","textForm":"에세이|비평문|연구문|인터뷰|작품설명|목록형|서사|데이터|실험","pubType":"단행본|잡지|전시도록|아카이브|실험출판","tone":"학술|문학|실험|정보|기록|비평","density":"low|mid|high","fn":"none|few|many","read":"장문|탐색|도판|아카이브","layout":"안정|밀도|실험|미니멀|비선형","structure":"서사|논증|목록|인터뷰|카탈로그|데이터","exhibitEvidence":0,"riskyKeywords":[]}';
+    const schema = '{"topic":"미술|문학|디자인|건축|타이포그래피|사진|사회|역사|철학|기타","genre":"타이포그래피|그래픽디자인|아트이론·비평|현대미술|전시·큐레이션|인문·사회|문학|건축·공간|시각문화·매체|사진|기타","textForm":"에세이|비평문|연구문|인터뷰|작품설명|목록형|서사|데이터|실험","pubType":"단행본|잡지·저널|전시도록|아카이브|실험출판|기관출판","tone":"학술|문학|실험|정보|기록|비평","density":"low|mid|high","fn":"none|few|many","read":"장문|탐색|도판|아카이브","layout":"안정|밀도|실험|미니멀|비선형","structure":"서사|논증|목록|인터뷰|카탈로그|데이터","exhibitEvidence":0,"riskyKeywords":[]}';
     const sysPrompt = 'Return ONLY valid JSON. Rules: topic/textForm/pubType from FULL style+structure, NOT single keywords. pubType=전시도록 ONLY if 2+ signals: work-list/exhibition-dates/venue/artist-bio/caption/curator-text/artwork-desc. exhibitEvidence=count(0-7). riskyKeywords=misleading words like 전시/작품/작가. If exhibitEvidence<2 set pubType=단행본 or 잡지.';
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
