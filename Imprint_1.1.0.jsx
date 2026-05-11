@@ -1976,6 +1976,9 @@ REQUIRED OUTPUT FORMAT:
                         </div>
                         <div style={{ fontSize:12.5, color:T.muted, marginTop:4 }}>
                           {pkg.g} · {pkg.pub_type}
+                          {pkg.designer && pkg.designer !== '-' && (
+                            <span style={{ color:T.ink, fontWeight:600 }}> · {pkg.designer}</span>
+                          )}
                         </div>
                       </div>
                       <div style={{ display:"flex", gap:6 }}>
