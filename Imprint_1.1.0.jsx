@@ -969,12 +969,16 @@ export default function App() {
       ]);
 
       setTextProfile(profile);
+      // analyzeText가 감지한 genre를 hint 없을 때 자동 활용
+      const autoGenre = (!h && profile?.genre) ? profile.genre : null;
       const filteredLabel = h
         ? `장르 "${h}" 풀 ${Math.min(ranked.length, 999)}개 중 상위 추출`
-        : `전체 DB 상위 추출`;
+        : autoGenre
+          ? `자동 장르 "${autoGenre}" 전체 DB 스코어링`
+          : `전체 DB 상위 추출`;
       pushLog('analyze', '텍스트 분석', 'done',
         profile
-          ? `topic:${profile.topic||''} · form:${profile.textForm||''} · pub:${profile.pubType||''} · exhibitEv:${profile.exhibitEvidence??'-'}`
+          ? `genre:${profile.genre||''} · topic:${profile.topic||''} · form:${profile.textForm||''} · pub:${profile.pubType||''} · exhibitEv:${profile.exhibitEvidence??'-'}`
           : '분석 완료');
       pushLog('kw', '후보 추출', 'done', filteredLabel);
 
