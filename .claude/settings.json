@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,os,subprocess,datetime; d=json.load(sys.stdin); f=d.get('tool_input',{}).get('file_path','') or (d.get('tool_response') or {}).get('filePath',''); ts=datetime.datetime.now().strftime('%Y%m%d_%H%M%S'); bn=os.path.basename(f); subprocess.run('cd C:/Users/mjungpk/Desktop/Imprint && git add -A && git diff --cached --quiet || git commit -m \\\"auto: '+ts+' '+bn+'\\\" && git push origin main', shell=True) if f and 'Imprint' in f else None\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
