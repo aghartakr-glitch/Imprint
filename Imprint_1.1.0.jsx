@@ -786,9 +786,9 @@ export default function App() {
     if (p.why_font) layoutScore += 0.3;
 
     // 분리 점수를 p 객체에 붙여서 rerank에서 참조 가능하게
-    p._scores = { contentScore, genreScore, pubTypeScore, layoutScore };
+    p._scores = { contentScore, genreScore, pubTypeScore, layoutScore, alignScore };
 
-    return contentScore + genreScore + pubTypeScore + layoutScore;
+    return contentScore + genreScore + pubTypeScore + layoutScore + alignScore;
   }
 
   // ── 텍스트 구조/의미 분석 (v29: 3축 분리 + 전시도록 근거 카운트) ─
