@@ -1996,13 +1996,17 @@ REQUIRED OUTPUT FORMAT:
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
                       {[
                         ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
-                        ["여백 상/하/안/밖", `${pkg.m.상}/${pkg.m.하}/${pkg.m.안}/${pkg.m.밖}`],
+                        ["여백 상/하/안/밖", `${pkg.m.상}/${pkg.m.하}/${pkg.m.안}/${pkg.m.밖}mm`],
                         ["단 구성", pkg.c.구성],
-                        ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
+                        ["본문 크기", `${displayBodySize || pkg.b.크기}pt / 행간 ${pkg.b.행간}pt`],
                         ["자간", pkg.b.자간 === 0 ? "0" : `${pkg.b.자간}`],
                         ["서체", pkg.ty.분류],
                         ["쪽번호", pkg.pn || "—"],
-                        ["정렬", pkg.layout_type?.slice(0,14) || "—"],
+                        ["본문 정렬", pkg.align_body || "—"],
+                        ["소제목", pkg.subheading !== '-' ? pkg.subheading : "—"],
+                        ["면주", pkg.running !== '-' ? pkg.running : "—"],
+                        ["각주", pkg.footnote !== '-' ? pkg.footnote : "—"],
+                        ["레이아웃", pkg.layout_type?.slice(0,16) || "—"],
                       ].map(([label, value]) => (
                         <div key={label} style={{ padding:"8px 10px", background:T.bg,
                           borderRadius:6, border:`1px solid ${T.border}` }}>
