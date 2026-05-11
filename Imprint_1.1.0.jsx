@@ -1993,7 +1993,7 @@ REQUIRED OUTPUT FORMAT:
                     </div>
 
                     {/* Package spec grid */}
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6, marginBottom:2 }}>
                       {[
                         ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
                         ["여백 상/하/안/밖", `${pkg.m.상}/${pkg.m.하}/${pkg.m.안}/${pkg.m.밖}mm`],
