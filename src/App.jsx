@@ -631,9 +631,9 @@ function validateNoHalfwidthCJK(name, content) {
 }
 
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
-  const t = escapeLatex(title);
-  const st = escapeLatex(subtitle);
-  const rh = escapeLatex(runningHead);
+  const t = escapeLatex(sanitizeUnicodeForLatex(title));
+  const st = escapeLatex(sanitizeUnicodeForLatex(subtitle));
+  const rh = escapeLatex(sanitizeUnicodeForLatex(runningHead));
   const lines = [];
   lines.push('% ============================================================');
   lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
