@@ -1250,33 +1250,41 @@ export default function App() {
       const fnFont = (mixedFnOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
       const rhFont = (mixedRhOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
 
-      // FONT_MANIFEST — 실제 파일명 기반 (XeLaTeX Path=./ 기준)
+      // FONT_MANIFEST — 실제 파일명 + 확장자 기반 (fonts/ 하위 폴더)
+      // Pretendard = .otf / 나머지 = .ttf / NanumMyeongjo = -Regular 없음
       const FONT_MANIFEST = {
         NanumMyeongjo: {
+          ext: '.ttf',
           upright: 'NanumMyeongjo', bold: 'NanumMyeongjoBold',
           italic: null, boldItalic: null,
         },
         NotoSans: {
+          ext: '.ttf',
           upright: 'NotoSans-Regular', bold: 'NotoSans-Bold',
           italic: 'NotoSans-Italic', boldItalic: 'NotoSans-BoldItalic',
         },
         NotoSans_SemiCondensed: {
+          ext: '.ttf',
           upright: 'NotoSans_SemiCondensed-Regular', bold: 'NotoSans_SemiCondensed-Bold',
           italic: 'NotoSans_SemiCondensed-Italic', boldItalic: 'NotoSans_SemiCondensed-BoldItalic',
         },
         NotoSans_Condensed: {
+          ext: '.ttf',
           upright: 'NotoSans_Condensed-Regular', bold: 'NotoSans_Condensed-Bold',
           italic: 'NotoSans_Condensed-Italic', boldItalic: 'NotoSans_Condensed-BoldItalic',
         },
         NotoSerif: {
+          ext: '.ttf',
           upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
           italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
         },
         NotoSerif_Condensed: {
+          ext: '.ttf',
           upright: 'NotoSerif_Condensed-Regular', bold: 'NotoSerif_Condensed-Bold',
           italic: 'NotoSerif_Condensed-Italic', boldItalic: 'NotoSerif_Condensed-BoldItalic',
         },
         Pretendard: {
+          ext: '.otf',
           upright: 'Pretendard-Regular', bold: 'Pretendard-Bold',
           italic: null, boldItalic: null,
         },
@@ -1284,7 +1292,7 @@ export default function App() {
       function fontspecCmd(cmd, name) {
         const m = FONT_MANIFEST[name] || FONT_MANIFEST['NotoSerif'];
         const opts = [
-          'Path=./', 'Extension=.ttf',
+          'Path=./fonts/', `Extension=${m.ext || '.ttf'}`,
           `UprightFont=${m.upright}`,
           m.bold ? `BoldFont=${m.bold}` : null,
           m.italic ? `ItalicFont=${m.italic}` : null,
