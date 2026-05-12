@@ -815,6 +815,11 @@ function validateLatexExport({ mainTex, sty }) {
   }
   if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(styCode))
     errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
+  // 반각 CJK 문자 검증 — U+FF61-FF9F (UnBatang 미지원, XeLaTeX Missing character 오류 원인)
+  const halfCJKMain = validateNoHalfwidthCJK('main.tex', mainTex);
+  if (halfCJKMain) errors.push(halfCJKMain);
+  const halfCJKSty = validateNoHalfwidthCJK('imprint-style.sty', sty);
+  if (halfCJKSty) errors.push(halfCJKSty);
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
   // document body에 실제 내용 있는지 확인
