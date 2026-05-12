@@ -833,6 +833,7 @@ export default function App() {
   const [appliedMargins, setAppliedMargins] = useState(null); // corrections.margins from last run()
   const [latex, setLatex] = useState("");
   const [styCode, setStyCode] = useState(""); // imprint-style.sty 내용
+  const [requiredFonts, setRequiredFonts] = useState([]); // 필요한 폰트 파일 목록
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
   const [copied, setCopied] = useState(false);
