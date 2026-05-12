@@ -1629,6 +1629,16 @@ export default function App() {
         `\\endinput`,
       ].filter(x => x !== null && x !== undefined).join('\n');
 
+      // 사용된 폰트의 실제 파일 목록 수집
+      const usedFontNames = [...new Set([mainFont, sansFont, fnFont].filter(Boolean))];
+      const _fontFiles = usedFontNames.flatMap(name => {
+        const m = FONT_MANIFEST[name];
+        if (!m) return [];
+        return [m.upright, m.bold, m.italic, m.boldItalic]
+          .filter(Boolean)
+          .map(f => f + '.ttf');
+      });
+      setRequiredFonts(_fontFiles);
       setStyCode(styContent);
 
       const preambleSummary =
