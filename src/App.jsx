@@ -694,7 +694,17 @@ function validateLatexExport({ mainTex, sty }) {
     errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
-  return errors;
+  // document body에 실제 내용 있는지 확인
+  const bodyMatch = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+  const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
+    .replace(/\\XeTeXlinebreakskip[^\n]*\n?/g, '')
+    .replace(/\\pagestyle[^\n]*\n?/g, '')
+    .replace(/\\fancyhf[^\n]*\n?/g, '')
+    .replace(/^\s*%[^\n]*\n?/gm, '')
+    .trim() : '';
+  const warnings = [];
+  if (!bodySection) warnings.push('⚠ main.tex document body에 본문 내용이 없습니다');
+  return { errors, warnings };
 }
 
 // Imprint 1.0.0 — App Component
