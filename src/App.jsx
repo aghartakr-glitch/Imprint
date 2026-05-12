@@ -2473,10 +2473,11 @@ REQUIRED OUTPUT FORMAT:
                           스타일 파일 (imprint-style.sty)
                         </div>
                         <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.6 }}>
-                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 파일입니다.
+                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 패키지 파일입니다.<br/>
                           이 파일 하나로 본문 길이와 관계없이 동일한 스타일이 유지됩니다.<br/>
-                          <strong style={{ color:T.ink }}>사용법:</strong> Overleaf에 이 파일을 업로드하고,
-                          본문 tex 파일 상단에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>\usepackage{"{imprint-style}"}</code> 추가
+                          <strong style={{ color:T.ink }}>사용법:</strong> main.tex과 같은 폴더에 저장.
+                          main.tex에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>{"\\usepackage{imprint-style}"}</code> 이미 포함됨.<br/>
+                          <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
                       <button onClick={() => { navigator.clipboard.writeText(styCode); }}
