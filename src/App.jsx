@@ -1136,26 +1136,60 @@ export default function App() {
       const fnFont = (mixedFnOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
       const rhFont = (mixedRhOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
 
-      // fontBlock 생성 (Overleaf 경로 기반)
-      function fontEntry(name, isNanum) {
-        if (isNanum) return name + '}[Path=./,Extension=.ttf,UprightFont=NanumMyeongjo,BoldFont=NanumMyeongjoBold,ExtraBoldFont=NanumMyeongjoExtraBold';
-        if (name === 'NotoSans_SemiCondensed') return name + '}[Path=./,Extension=.ttf,UprightFont=NotoSans_SemiCondensed-Regular,BoldFont=NotoSans_SemiCondensed-Bold,ItalicFont=NotoSans_SemiCondensed-Italic,BoldItalicFont=NotoSans_SemiCondensed-BoldItalic';
-        return name + '}[Path=./,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic';
+      // FONT_MANIFEST — 실제 파일명 기반 (XeLaTeX Path=./ 기준)
+      const FONT_MANIFEST = {
+        NanumMyeongjo: {
+          upright: 'NanumMyeongjo', bold: 'NanumMyeongjoBold',
+          italic: null, boldItalic: null,
+        },
+        NotoSans: {
+          upright: 'NotoSans-Regular', bold: 'NotoSans-Bold',
+          italic: 'NotoSans-Italic', boldItalic: 'NotoSans-BoldItalic',
+        },
+        NotoSans_SemiCondensed: {
+          upright: 'NotoSans_SemiCondensed-Regular', bold: 'NotoSans_SemiCondensed-Bold',
+          italic: 'NotoSans_SemiCondensed-Italic', boldItalic: 'NotoSans_SemiCondensed-BoldItalic',
+        },
+        NotoSans_Condensed: {
+          upright: 'NotoSans_Condensed-Regular', bold: 'NotoSans_Condensed-Bold',
+          italic: 'NotoSans_Condensed-Italic', boldItalic: 'NotoSans_Condensed-BoldItalic',
+        },
+        NotoSerif: {
+          upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
+          italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
+        },
+        NotoSerif_Condensed: {
+          upright: 'NotoSerif_Condensed-Regular', bold: 'NotoSerif_Condensed-Bold',
+          italic: 'NotoSerif_Condensed-Italic', boldItalic: 'NotoSerif_Condensed-BoldItalic',
+        },
+        Pretendard: {
+          upright: 'Pretendard-Regular', bold: 'Pretendard-Bold',
+          italic: null, boldItalic: null,
+        },
+      };
+      function fontspecCmd(cmd, name) {
+        const m = FONT_MANIFEST[name] || FONT_MANIFEST['NotoSerif'];
+        const opts = [
+          'Path=./', 'Extension=.ttf',
+          `UprightFont=${m.upright}`,
+          m.bold ? `BoldFont=${m.bold}` : null,
+          m.italic ? `ItalicFont=${m.italic}` : null,
+          m.boldItalic ? `BoldItalicFont=${m.boldItalic}` : null,
+        ].filter(Boolean).join(',\n  ');
+        return `\\${cmd}{${name}}[\n  ${opts}\n]`;
       }
-      const isNanumMain = mainFont === 'NanumMyeongjo';
-      const isNanumSans = sansFont === 'NanumMyeongjo';
       const fontBlock =
-        `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans / NotoSans_SemiCondensed\n` +
+        `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans_SemiCondensed\n` +
         `% 원본 서체: ${p.ty.이름} (${fontClass})\n` +
-        `\\setmainfont{${fontEntry(mainFont, isNanumMain)}]\n` +
+        fontspecCmd('setmainfont', mainFont) + '\n' +
         (mainFont !== sansFont
-          ? `\\setsansfont{${fontEntry(sansFont, isNanumSans)}]\n`
+          ? fontspecCmd('setsansfont', sansFont) + '\n'
           : `% sans = main (단일 서체군)\n`) +
         (isMixedLayout
           ? `% 혼합 레이아웃: 본문=\\rmfamily, 제목/소제목=\\sffamily\n`
           : '') +
         ((mixedFnOnly || mixedRhOnly) && fnFont !== mainFont
-          ? `\\newfontfamily\\fnfont{${fontEntry(fnFont, false)}] % 각주/면주 전용\n`
+          ? fontspecCmd('newfontfamily\\fnfont', fnFont) + ' % 각주/면주 전용\n'
           : '');
       // ── 단 구성 분석 ─────────────────────────────────────────────
       const 구성 = p.c.구성 || '';
