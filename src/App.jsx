@@ -2833,6 +2833,10 @@ REQUIRED OUTPUT FORMAT:
                       1) main.tex + imprint-style.sty → 작업 폴더<br/>
                       2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
                       3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:"#a05000" }}>
+                        <strong style={{ display:"block", marginBottom:2 }}>Missing character 경고가 계속되면</strong>
+                        기존 <code style={{ fontFamily:T.mono, background:"#fff3e0", padding:"1px 4px", borderRadius:3, fontSize:10.5 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
+                      </div>
                       <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
                         <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
                         1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
