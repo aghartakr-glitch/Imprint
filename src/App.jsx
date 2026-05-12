@@ -610,11 +610,9 @@ function escapeLatex(s) {
 }
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
-function buildBodyContent({ title, subtitle, body, footnote, runningHead, pn }) {
+function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   const t = escapeLatex(title);
   const st = escapeLatex(subtitle);
-  const b = escapeLatex(body);
-  const fn = escapeLatex(footnote);
   const rh = escapeLatex(runningHead);
   const lines = [];
   lines.push('% ============================================================');
@@ -627,21 +625,126 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, pn }) 
     lines.push('');
   }
   if (t) {
+    lines.push('\\Needspace{6\\baselineskip}');
     lines.push(`{\\hone ${t}\\par}`);
     lines.push('\\vspace{20pt}');
     lines.push('');
   }
   if (st) {
+    lines.push('\\Needspace{4\\baselineskip}');
     lines.push(`{\\htwo ${st}\\par}`);
     lines.push('\\vspace{16pt}');
     lines.push('');
   }
-  if (b) {
-    lines.push('{\\bodyf');
-    lines.push(b + (fn ? `\\footnote{${fn}}` : ''));
-    lines.push('}');
+  if (body) {
+    // superMap for footnote marker detection (Unicode → digit)
+    const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+    // Parse footnote text → map (digit → content)
+    const fnMap = {};
+    if (footnote && footnote.trim()) {
+      let cur = null, buf = [];
+      for (const line of footnote.split('\n')) {
+        const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
+        const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
+        if (m1)      { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = m1[1]; buf = [m1[2]]; }
+        else if (m2) { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = superMap[m2[1]]; buf = [m2[2]]; }
+        else if (cur && line.trim()) buf.push(line.trim());
+      }
+      if (cur) fnMap[cur] = buf.join(' ').trim();
+    }
+
+    // inject \footnote{} into a text fragment (after escapeLatex)
+    function injectIntoEscaped(text) {
+      const nums = Object.keys(fnMap).sort((a,b) => +b - +a);
+      const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v])=>[v,k]));
+      let r = text;
+      for (const n of nums) {
+        const content = escapeLatex(fnMap[n]);
+        const sup = numToSuper[n];
+        if (sup) r = r.split(sup).join(`\\footnote{${content}}`);
+        r = r.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
+        r = r.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
+      }
+      return r;
+    }
+
+    // preface keyword detection
+    const prefaceRe = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
+    // TOC entry pattern: "1. 제목", "2) 제목" etc.
+    const tocEntryRe = /^\d+[\.\)]\s+\S/;
+
+    const rawLines = body.split('\n');
+    let buf = [];
+    let inPreface = false;
+
+    const flushBuf = () => {
+      if (!buf.length) return;
+      const raw = buf.join('\n').trim();
+      if (!raw) { buf = []; return; }
+      const escaped = injectIntoEscaped(escapeLatex(raw));
+      if (inPreface) {
+        lines.push('{\\itshape\\bodyf\\noindent');
+        lines.push(escaped + '\\par}');
+      } else {
+        lines.push('{\\bodyf\\noindent');
+        lines.push(escaped + '\\par}');
+      }
+      lines.push('\\vspace{0.5\\baselineskip}');
+      lines.push('');
+      buf = [];
+    };
+
+    // detect if body looks like a TOC block (≥3 consecutive TOC entries)
+    const tocLineCount = rawLines.filter(l => tocEntryRe.test(l.trim())).length;
+    const hasTOCBlock = tocLineCount >= 3;
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const trimmed = line.trim();
+
+      // Markdown headings (#, ##, ###)
+      const mH1 = trimmed.match(/^#\s+(.+)/);
+      const mH2 = trimmed.match(/^##\s+(.+)/);
+      const mH3 = trimmed.match(/^###\s+(.+)/);
+
+      if (mH1 || mH2 || mH3) {
+        flushBuf();
+        inPreface = false;
+        const [macro, vsp, text] = mH1
+          ? ['\\hone', '14pt', mH1[1]]
+          : mH2 ? ['\\htwo', '10pt', mH2[1]]
+          : ['\\hthree', '8pt', mH3[1]];
+        lines.push('\\Needspace{4\\baselineskip}');
+        lines.push(`{${macro} ${escapeLatex(text)}\\par}`);
+        lines.push(`\\vspace{${vsp}}`);
+        lines.push('');
+      } else if (prefaceRe.test(trimmed)) {
+        // Preface section label → use \htwo, set inPreface mode
+        flushBuf();
+        inPreface = true;
+        lines.push('\\Needspace{4\\baselineskip}');
+        lines.push(`{\\htwo ${escapeLatex(trimmed)}\\par}`);
+        lines.push('\\vspace{10pt}');
+        lines.push('');
+      } else if (hasTOCBlock && tocEntryRe.test(trimmed) &&
+                 rawLines[Math.max(0,i-1)].trim() === '' &&
+                 (i + 1 >= rawLines.length || rawLines[i+1].trim() === '' || tocEntryRe.test(rawLines[i+1].trim()))) {
+        // TOC block: use \tableofcontents at first occurrence, skip manual entries
+        flushBuf();
+        if (!lines.some(l => l === '\\tableofcontents')) {
+          lines.push('\\tableofcontents');
+          lines.push('\\newpage');
+          lines.push('');
+        }
+      } else if (trimmed === '') {
+        flushBuf();
+        inPreface = false;
+      } else {
+        buf.push(line);
+      }
+    }
+    flushBuf();
   }
-  lines.push('');
   lines.push('% ============================================================');
   lines.push('% 문서 본문 끝');
   lines.push('% ============================================================');
