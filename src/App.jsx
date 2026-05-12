@@ -2622,8 +2622,10 @@ REQUIRED OUTPUT FORMAT:
                       borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5,
                       color:T.muted, lineHeight:2 }}>
                       <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
-                      1) main.tex + imprint-style.sty + 폰트 파일(.ttf)을 같은 폴더에 저장<br/>
-                      2) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> 선택 → 컴파일
+                      폴더 구조: <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:10.5 }}>작업폴더/ main.tex · imprint-style.sty · fonts/</code><br/>
+                      1) main.tex + imprint-style.sty → 작업 폴더<br/>
+                      2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
+                      3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
                       <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
                         <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
                         1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
