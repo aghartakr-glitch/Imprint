@@ -2622,6 +2622,20 @@ REQUIRED OUTPUT FORMAT:
                         2) 컴파일러 설정: <strong style={{ color:T.ink }}>XeLaTeX</strong>
                       </div>
                     </div>
+                    {requiredFonts.length > 0 && (
+                      <div style={{ marginTop:10, padding:"12px 16px", background:"#fffbe6",
+                        borderRadius:6, border:`1px solid #e8d88a`, fontSize:11.5, lineHeight:1.9 }}>
+                        <strong style={{ color:"#7a6000", display:"block", marginBottom:4 }}>
+                          ★ 필요한 폰트 파일 — main.tex과 같은 폴더에 저장
+                        </strong>
+                        <div style={{ fontFamily:T.mono, fontSize:11, color:"#5a4800" }}>
+                          {requiredFonts.map(f => <div key={f}>{f}</div>)}
+                        </div>
+                        <div style={{ marginTop:6, fontSize:11, color:"#7a6000" }}>
+                          폰트 파일이 없으면 XeLaTeX이 "cannot be found" 오류를 냅니다.
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
