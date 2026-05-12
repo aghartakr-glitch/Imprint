@@ -1940,8 +1940,8 @@ export default function App() {
           finalBodyContent = buildBodyContent({
             title: fields.제목,
             subtitle: fields.소제목,
-            body: injectFootnotes(fields.본문 || '', fields.각주 || ''),
-            footnote: '',
+            body: fields.본문 || '',
+            footnote: fields.각주 || '',
             runningHead: fields.면주,
           });
         } else {
