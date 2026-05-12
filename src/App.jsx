@@ -598,6 +598,8 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
 function validateLatexExport({ mainTex, sty }) {
   const errors = [];
   function count(s, re) { return (s.match(re) || []).length; }
+  // 주석 줄(% 시작) 제외한 .sty 실행 코드만 검사
+  const styCode = sty.split('\n').filter(l => !l.trimStart().startsWith('%')).join('\n');
   if (count(mainTex, /\\documentclass/g) !== 1)
     errors.push('main.tex: \\documentclass 가 정확히 1개여야 합니다');
   if (count(mainTex, /\\begin\{document\}/g) !== 1)
@@ -611,10 +613,10 @@ function validateLatexExport({ mainTex, sty }) {
     ['\\begin{multicols}', /\\begin\{multicols\}/],
     ['\\begin{paracol}', /\\begin\{paracol\}/],
   ]) {
-    if (re.test(sty))
+    if (re.test(styCode))
       errors.push(`imprint-style.sty: ${label} 은 .sty에 있으면 안 됩니다`);
   }
-  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(sty))
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(styCode))
     errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
