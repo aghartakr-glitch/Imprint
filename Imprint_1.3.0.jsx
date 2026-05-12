@@ -630,140 +630,232 @@ function validateNoHalfwidthCJK(name, content) {
   return null;
 }
 
+// ── Semantic body parser ─────────────────────────────────────────────────
+
+function parseFootnoteMap(footnoteText) {
+  const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+  const fnMap = {};
+  if (!footnoteText || !footnoteText.trim()) return { fnMap, superMap };
+  let cur = null, buf = [];
+  for (const line of footnoteText.split('\n')) {
+    const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
+    const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
+    if (m1)      { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = m1[1]; buf = [m1[2]]; }
+    else if (m2) { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = superMap[m2[1]]; buf = [m2[2]]; }
+    else if (cur && line.trim()) buf.push(line.trim());
+  }
+  if (cur) fnMap[cur] = buf.join(' ').trim();
+  return { fnMap, superMap };
+}
+
+function injectFnIntoEscaped(text, fnMap, superMap) {
+  if (!Object.keys(fnMap).length) return text;
+  const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v]) => [v, k]));
+  const nums = Object.keys(fnMap).sort((a, b) => +b - +a);
+  let r = text;
+  for (const n of nums) {
+    const content = escapeLatex(sanitizeUnicodeForLatex(fnMap[n]));
+    const sup = numToSuper[n];
+    if (sup) r = r.split(sup).join(`\\footnote{${content}}`);
+    r = r.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
+    r = r.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
+  }
+  return r;
+}
+
+// Split paragraph containing inline Korean dialogue into sub-blocks.
+// Matches 「...」 『...』 “...” (curly double quotes) only.
+// Single quotes excluded to avoid splitting English contractions.
+function splitInlineDialogue(text) {
+  const re = /(「[^」]*」|『[^』]*』|“[^”]*”)/g;
+  const parts = [];
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    const before = text.slice(last, m.index).trim();
+    if (before) parts.push({ type: 'paragraph', text: before });
+    parts.push({ type: 'dialogue', text: m[0] });
+    last = m.index + m[0].length;
+  }
+  const after = text.slice(last).trim();
+  if (after) parts.push({ type: 'paragraph', text: after });
+  return parts.length > 1 ? parts : [{ type: 'paragraph', text }];
+}
+
+const _PREFACE_RE = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
+const _SCENE_RE   = /^(\*\s*\*\s*\*|\*{3,}|—{1,3}|―{1,3}|※|\d{1,3})$/;
+const _TOC_RE     = /^\d+[\.\)]\s+\S/;
+
+function _isHeadingLike(text, prevBlank, nextBlank) {
+  if (!text || text.length > 60) return false;
+  // Starts with dialogue marker → always body/dialogue, never heading
+  if (/^[「『"'"]/.test(text)) return false;
+  if (/[.。!！?？,、，]$/.test(text)) return false; // has terminal punct → body
+  if (prevBlank && nextBlank && text.length <= 40) return true;
+  if (/^(제\s*\d+\s*[장절화편부]|第\s*\d+\s*[章節]|\d+\s*[장절화])/.test(text)) return true;
+  if (/^[\d.]*\s*[^/]{1,25}\/[^/]{1,20}$/.test(text)) return true; // "제목 / 작가"
+  return false;
+}
+
+function parseBodyBlocks(raw) {
+  if (!raw || !raw.trim()) return [];
+  const rawLines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const blocks = [];
+  let paraLines = [];
+
+  const flushPara = () => {
+    if (!paraLines.length) return;
+    const text = paraLines.join('\n').trim();
+    if (!text) { paraLines = []; return; }
+    // Full-line dialogue?
+    if (/^(「[^」]*」|『[^』]*』|“[^”]*”)$/.test(text)) {
+      blocks.push({ type: 'dialogue', text });
+    } else {
+      blocks.push(...splitInlineDialogue(text));
+    }
+    paraLines = [];
+  };
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const trimmed = line.trim();
+
+    // Blank line
+    if (!trimmed) {
+      flushPara();
+      // Double blank → scene break
+      if (i + 1 < rawLines.length && !rawLines[i + 1].trim()) {
+        blocks.push({ type: 'sceneBreak' });
+        while (i + 1 < rawLines.length && !rawLines[i + 1].trim()) i++;
+      }
+      continue;
+    }
+
+    // Scene break markers (standalone)
+    if (_SCENE_RE.test(trimmed) && !paraLines.length) {
+      blocks.push({ type: 'sceneBreak' });
+      continue;
+    }
+
+    // Preface keyword (standalone)
+    if (_PREFACE_RE.test(trimmed) && !paraLines.length) {
+      blocks.push({ type: 'preface', text: trimmed });
+      continue;
+    }
+
+    // Markdown headings
+    const mH1 = trimmed.match(/^#\s+(.+)/);
+    const mH2 = trimmed.match(/^##\s+(.+)/);
+    const mH3 = trimmed.match(/^###\s+(.+)/);
+    if (mH1 || mH2 || mH3) {
+      flushPara();
+      blocks.push({ type: mH1 ? 'h1' : mH2 ? 'h2' : 'h3', text: (mH1||mH2||mH3)[1] });
+      continue;
+    }
+
+    // Heading detection (non-markdown): must be isolated (prev+next blank)
+    const prevBlank = i === 0 || !rawLines[i - 1].trim();
+    const nextBlank = i + 1 >= rawLines.length || !rawLines[i + 1].trim();
+    if (prevBlank && nextBlank && _isHeadingLike(trimmed, prevBlank, nextBlank)) {
+      flushPara();
+      // "숫자. 제목 / 작가명" split
+      const slashM = trimmed.match(/^([\d.]*\s*)?(.{1,30}?)\s*\/\s*(.{1,20})$/);
+      if (slashM) {
+        const titlePart = ((slashM[1] || '') + slashM[2]).trim();
+        const authorPart = slashM[3].trim();
+        blocks.push({ type: 'sectionHeading', text: titlePart });
+        blocks.push({ type: 'author', text: authorPart });
+      } else {
+        blocks.push({ type: 'sectionHeading', text: trimmed });
+      }
+      continue;
+    }
+
+    // TOC block: ≥3 consecutive numbered entries → single \tableofcontents
+    if (_TOC_RE.test(trimmed) && !paraLines.length) {
+      let cnt = 1, j = i + 1;
+      while (j < rawLines.length && (_TOC_RE.test(rawLines[j].trim()) || !rawLines[j].trim())) {
+        if (rawLines[j].trim()) cnt++;
+        j++;
+      }
+      if (cnt >= 3) {
+        if (!blocks.some(b => b.type === 'toc')) blocks.push({ type: 'toc' });
+        while (i + 1 < rawLines.length &&
+               (_TOC_RE.test(rawLines[i + 1].trim()) || !rawLines[i + 1].trim())) i++;
+        continue;
+      }
+    }
+
+    paraLines.push(line);
+  }
+  flushPara();
+  return blocks;
+}
+
+function blockToLatex(block, fnMap, superMap) {
+  const esc = t => injectFnIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(t || '')), fnMap, superMap);
+  switch (block.type) {
+    case 'h1':
+      return `\\Needspace{6\\baselineskip}\n{\\hone ${esc(block.text)}\\par}\n\\vspace{16pt}`;
+    case 'sectionHeading':
+    case 'h2':
+      return `\\Needspace{4\\baselineskip}\n{\\htwo ${esc(block.text)}\\par}\n\\vspace{12pt}`;
+    case 'author':
+      return `{\\hthree ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+    case 'h3':
+    case 'subheading':
+      return `\\Needspace{4\\baselineskip}\n{\\hthree ${esc(block.text)}\\par}\n\\vspace{8pt}`;
+    case 'preface':
+      return `\\Needspace{4\\baselineskip}\n{\\htwo ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+    case 'toc':
+      return `\\tableofcontents\n\\newpage`;
+    case 'dialogue':
+      return `\\begin{imprintdialogue}\n${esc(block.text)}\n\\end{imprintdialogue}`;
+    case 'quote':
+      return `\\begin{imprintquote}\n${esc(block.text)}\n\\end{imprintquote}`;
+    case 'sceneBreak':
+      return `\\vspace{1\\baselineskip}\n\\begin{center}＊\\end{center}\n\\vspace{0.5\\baselineskip}`;
+    case 'paragraph':
+    default: {
+      const text = esc(block.text || '');
+      return text.trim() ? `{\\bodyf\n\\noindent ${text}\\par\n}` : '';
+    }
+  }
+}
+
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
-  const t = escapeLatex(sanitizeUnicodeForLatex(title));
-  const st = escapeLatex(sanitizeUnicodeForLatex(subtitle));
-  const rh = escapeLatex(sanitizeUnicodeForLatex(runningHead));
+  const { fnMap, superMap } = parseFootnoteMap(footnote);
+  const esc = t => escapeLatex(sanitizeUnicodeForLatex(t || ''));
   const lines = [];
   lines.push('% ============================================================');
   lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
   lines.push('% ============================================================');
   lines.push('');
+  const rh = esc(runningHead);
   if (rh) {
     lines.push(`\\lhead{\\small ${rh}}`);
     lines.push(`\\rhead{\\small \\thepage}`);
     lines.push('');
   }
+  const t = esc(title);
   if (t) {
     lines.push('\\Needspace{6\\baselineskip}');
     lines.push(`{\\hone ${t}\\par}`);
     lines.push('\\vspace{20pt}');
     lines.push('');
   }
+  const st = esc(subtitle);
   if (st) {
     lines.push('\\Needspace{4\\baselineskip}');
     lines.push(`{\\htwo ${st}\\par}`);
     lines.push('\\vspace{16pt}');
     lines.push('');
   }
-  if (body) {
-    // superMap for footnote marker detection (Unicode → digit)
-    const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
-    // Parse footnote text → map (digit → content)
-    const fnMap = {};
-    if (footnote && footnote.trim()) {
-      let cur = null, buf = [];
-      for (const line of footnote.split('\n')) {
-        const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
-        const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
-        if (m1)      { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = m1[1]; buf = [m1[2]]; }
-        else if (m2) { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = superMap[m2[1]]; buf = [m2[2]]; }
-        else if (cur && line.trim()) buf.push(line.trim());
-      }
-      if (cur) fnMap[cur] = buf.join(' ').trim();
+  if (body && body.trim()) {
+    const blocks = parseBodyBlocks(body);
+    for (const block of blocks) {
+      const latex = blockToLatex(block, fnMap, superMap);
+      if (latex.trim()) { lines.push(latex); lines.push(''); }
     }
-
-    // inject \footnote{} into a text fragment (after escapeLatex)
-    function injectIntoEscaped(text) {
-      const nums = Object.keys(fnMap).sort((a,b) => +b - +a);
-      const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v])=>[v,k]));
-      let r = text;
-      for (const n of nums) {
-        const content = escapeLatex(fnMap[n]);
-        const sup = numToSuper[n];
-        if (sup) r = r.split(sup).join(`\\footnote{${content}}`);
-        r = r.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
-        r = r.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
-      }
-      return r;
-    }
-
-    // preface keyword detection
-    const prefaceRe = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
-    // TOC entry pattern: "1. 제목", "2) 제목" etc.
-    const tocEntryRe = /^\d+[\.\)]\s+\S/;
-
-    const rawLines = body.split('\n');
-    let buf = [];
-    let inPreface = false;
-
-    const flushBuf = () => {
-      if (!buf.length) return;
-      const raw = buf.join('\n').trim();
-      if (!raw) { buf = []; return; }
-      const escaped = injectIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(raw)));
-      if (inPreface) {
-        lines.push('{\\itshape\\bodyf\\noindent');
-        lines.push(escaped + '\\par}');
-      } else {
-        lines.push('{\\bodyf\\noindent');
-        lines.push(escaped + '\\par}');
-      }
-      lines.push('\\vspace{0.5\\baselineskip}');
-      lines.push('');
-      buf = [];
-    };
-
-    // detect if body looks like a TOC block (≥3 consecutive TOC entries)
-    const tocLineCount = rawLines.filter(l => tocEntryRe.test(l.trim())).length;
-    const hasTOCBlock = tocLineCount >= 3;
-
-    for (let i = 0; i < rawLines.length; i++) {
-      const line = rawLines[i];
-      const trimmed = line.trim();
-
-      // Markdown headings (#, ##, ###)
-      const mH1 = trimmed.match(/^#\s+(.+)/);
-      const mH2 = trimmed.match(/^##\s+(.+)/);
-      const mH3 = trimmed.match(/^###\s+(.+)/);
-
-      if (mH1 || mH2 || mH3) {
-        flushBuf();
-        inPreface = false;
-        const [macro, vsp, text] = mH1
-          ? ['\\hone', '14pt', mH1[1]]
-          : mH2 ? ['\\htwo', '10pt', mH2[1]]
-          : ['\\hthree', '8pt', mH3[1]];
-        lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{${macro} ${escapeLatex(sanitizeUnicodeForLatex(text))}\\par}`);
-        lines.push(`\\vspace{${vsp}}`);
-        lines.push('');
-      } else if (prefaceRe.test(trimmed)) {
-        // Preface section label → use \htwo, set inPreface mode
-        flushBuf();
-        inPreface = true;
-        lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{\\htwo ${escapeLatex(sanitizeUnicodeForLatex(trimmed))}\\par}`);
-        lines.push('\\vspace{10pt}');
-        lines.push('');
-      } else if (hasTOCBlock && tocEntryRe.test(trimmed) &&
-                 rawLines[Math.max(0,i-1)].trim() === '' &&
-                 (i + 1 >= rawLines.length || rawLines[i+1].trim() === '' || tocEntryRe.test(rawLines[i+1].trim()))) {
-        // TOC block: use \tableofcontents at first occurrence, skip manual entries
-        flushBuf();
-        if (!lines.some(l => l === '\\tableofcontents')) {
-          lines.push('\\tableofcontents');
-          lines.push('\\newpage');
-          lines.push('');
-        }
-      } else if (trimmed === '') {
-        flushBuf();
-        inPreface = false;
-      } else {
-        buf.push(line);
-      }
-    }
-    flushBuf();
   }
   lines.push('% ============================================================');
   lines.push('% 문서 본문 끝');
@@ -832,6 +924,15 @@ function validateLatexExport({ mainTex, sty }) {
     .trim() : '';
   const warnings = [];
   if (!bodySection) warnings.push('⚠ main.tex document body에 본문 내용이 없습니다');
+  // Semantic structure warnings
+  const bodyFCount = (bodySection.match(/\{\\bodyf/g) || []).length;
+  const hasDialogueEnv = /\\begin\{imprintdialogue\}/.test(bodySection);
+  const hasStructure = /\\begin\{imprintdialogue\}|\\begin\{imprintquote\}|\\htwo|\\hthree|\\tableofcontents|\\begin\{center\}/.test(bodySection);
+  const dialogueMarkerCount = (bodySection.match(/「[^」]*」|『[^』]*』/g) || []).length;
+  if (bodyFCount === 1 && !hasStructure && bodySection.length > 200)
+    warnings.push('⚠ 원문에 여러 문단이 있었지만 main.tex에는 하나의 body block만 있습니다');
+  if (dialogueMarkerCount >= 3 && !hasDialogueEnv)
+    warnings.push('⚠ 본문 안에 대화문(「」)이 감지되었지만 imprintdialogue 환경이 생성되지 않았습니다');
   return { errors, warnings };
 }
 
@@ -1820,6 +1921,36 @@ export default function App() {
         `\\renewcommand{\\footrulewidth}{0pt}`,
         `% fancyhdr 설정(\\lhead \\rhead 등)은 main.tex \\begin{document} 직후에 위치합니다`,
         ``,
+        `% ── 대화문 / 인용문 환경 ──────────────────────────────────────`,
+        `% main.tex에서 \\begin{imprintdialogue}...\\end{imprintdialogue} 로 사용`,
+        `\\newenvironment{imprintdialogue}{%`,
+        `  \\par`,
+        `  \\vspace{0.25\\baselineskip}`,
+        `  \\begingroup`,
+        `  \\bodyf`,
+        `  \\setlength{\\leftskip}{1em}`,
+        `  \\setlength{\\rightskip}{1em}`,
+        `  \\noindent`,
+        `}{%`,
+        `  \\par`,
+        `  \\endgroup`,
+        `  \\vspace{0.25\\baselineskip}`,
+        `}`,
+        `% main.tex에서 \\begin{imprintquote}...\\end{imprintquote} 로 사용`,
+        `\\newenvironment{imprintquote}{%`,
+        `  \\par`,
+        `  \\vspace{0.5\\baselineskip}`,
+        `  \\begingroup`,
+        `  \\bodyf`,
+        `  \\setlength{\\leftskip}{1.5em}`,
+        `  \\setlength{\\rightskip}{1.5em}`,
+        `  \\noindent`,
+        `}{%`,
+        `  \\par`,
+        `  \\endgroup`,
+        `  \\vspace{0.5\\baselineskip}`,
+        `}`,
+        ``,
         `\\endinput`,
       ].filter(x => x !== null && x !== undefined).join('\n');
 
@@ -1905,11 +2036,26 @@ export default function App() {
         'If you detect risk of heading at page bottom: add \\Needspace. ' +
         'If paragraph split risk: add \\nopagebreak[4] before critical lines.\n\n' +
         '# TEXT\n' + bodyBlock + '\n\n' +
+        '# SEMANTIC STRUCTURE — MANDATORY\n' +
+        'NEVER output the entire body as one {\\bodyf ...} block. Segment into separate LaTeX blocks.\n' +
+        'Detect and separately style each of the following:\n' +
+        '  • Work title (short, isolated line) → {\\htwo TITLE\\par}\\vspace{12pt}\n' +
+        '  • Author name after "/" → {\\hthree AUTHOR\\par}\\vspace{10pt}\n' +
+        '  • Chapter/section heading (제N장, numbered, # markdown) → {\\htwo ...\\par} with \\Needspace{4\\baselineskip}\n' +
+        '  • Sub-heading (##, ###, short isolated line ≤30 chars) → {\\hthree ...\\par}\n' +
+        '  • Preface (서문/머리말/들어가며) label → {\\htwo ...\\par}, body in {\\itshape\\bodyf ...\\par}\n' +
+        '  • Each paragraph → separate {\\bodyf\n\\noindent TEXT\\par\n} block\n' +
+        '  • Dialogue (「...」, 『...』, "...") → \\begin{imprintdialogue}\\n TEXT\\n\\end{imprintdialogue}\n' +
+        '  • Block quotation, letter, verse → \\begin{imprintquote}\\n TEXT\\n\\end{imprintquote}\n' +
+        '  • Scene break (* * *, —, ※, double blank) → \\vspace{1\\baselineskip}\\begin{center}＊\\end{center}\\vspace{0.5\\baselineskip}\n' +
+        'PARAGRAPH RULE: one {\\bodyf ...} per paragraph. Do NOT merge multiple paragraphs.\n' +
+        'DIALOGUE RULE: when 「...」 or 『...』 appears inside a paragraph, split at the quote boundary — put surrounding text in {\\bodyf ...} and the dialogue in \\begin{imprintdialogue}.\n\n' +
+        '# TEXT\n' + bodyBlock + '\n\n' +
         '# RULES\n' +
         'No preamble cmds in body. No \\hrule/\\rule. No microtype/polyglossia. No multicols>5. ' +
         'CRITICAL: Never output halfwidth CJK punctuation U+FF61–U+FF9F. ' +
         'Forbidden: ｢ ｣ ｡ ､ ･ (and all halfwidth katakana). ' +
-        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' + +
+        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' +
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +

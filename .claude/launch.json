@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Imprint Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "Imprint Preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}
