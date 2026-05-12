@@ -610,11 +610,9 @@ function escapeLatex(s) {
 }
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
-function buildBodyContent({ title, subtitle, body, footnote, runningHead, pn }) {
+function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   const t = escapeLatex(title);
   const st = escapeLatex(subtitle);
-  const b = escapeLatex(body);
-  const fn = escapeLatex(footnote);
   const rh = escapeLatex(runningHead);
   const lines = [];
   lines.push('% ============================================================');
@@ -627,21 +625,126 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, pn }) 
     lines.push('');
   }
   if (t) {
+    lines.push('\\Needspace{6\\baselineskip}');
     lines.push(`{\\hone ${t}\\par}`);
     lines.push('\\vspace{20pt}');
     lines.push('');
   }
   if (st) {
+    lines.push('\\Needspace{4\\baselineskip}');
     lines.push(`{\\htwo ${st}\\par}`);
     lines.push('\\vspace{16pt}');
     lines.push('');
   }
-  if (b) {
-    lines.push('{\\bodyf');
-    lines.push(b + (fn ? `\\footnote{${fn}}` : ''));
-    lines.push('}');
+  if (body) {
+    // superMap for footnote marker detection (Unicode → digit)
+    const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+    // Parse footnote text → map (digit → content)
+    const fnMap = {};
+    if (footnote && footnote.trim()) {
+      let cur = null, buf = [];
+      for (const line of footnote.split('\n')) {
+        const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
+        const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
+        if (m1)      { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = m1[1]; buf = [m1[2]]; }
+        else if (m2) { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = superMap[m2[1]]; buf = [m2[2]]; }
+        else if (cur && line.trim()) buf.push(line.trim());
+      }
+      if (cur) fnMap[cur] = buf.join(' ').trim();
+    }
+
+    // inject \footnote{} into a text fragment (after escapeLatex)
+    function injectIntoEscaped(text) {
+      const nums = Object.keys(fnMap).sort((a,b) => +b - +a);
+      const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v])=>[v,k]));
+      let r = text;
+      for (const n of nums) {
+        const content = escapeLatex(fnMap[n]);
+        const sup = numToSuper[n];
+        if (sup) r = r.split(sup).join(`\\footnote{${content}}`);
+        r = r.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
+        r = r.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
+      }
+      return r;
+    }
+
+    // preface keyword detection
+    const prefaceRe = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
+    // TOC entry pattern: "1. 제목", "2) 제목" etc.
+    const tocEntryRe = /^\d+[\.\)]\s+\S/;
+
+    const rawLines = body.split('\n');
+    let buf = [];
+    let inPreface = false;
+
+    const flushBuf = () => {
+      if (!buf.length) return;
+      const raw = buf.join('\n').trim();
+      if (!raw) { buf = []; return; }
+      const escaped = injectIntoEscaped(escapeLatex(raw));
+      if (inPreface) {
+        lines.push('{\\itshape\\bodyf\\noindent');
+        lines.push(escaped + '\\par}');
+      } else {
+        lines.push('{\\bodyf\\noindent');
+        lines.push(escaped + '\\par}');
+      }
+      lines.push('\\vspace{0.5\\baselineskip}');
+      lines.push('');
+      buf = [];
+    };
+
+    // detect if body looks like a TOC block (≥3 consecutive TOC entries)
+    const tocLineCount = rawLines.filter(l => tocEntryRe.test(l.trim())).length;
+    const hasTOCBlock = tocLineCount >= 3;
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const trimmed = line.trim();
+
+      // Markdown headings (#, ##, ###)
+      const mH1 = trimmed.match(/^#\s+(.+)/);
+      const mH2 = trimmed.match(/^##\s+(.+)/);
+      const mH3 = trimmed.match(/^###\s+(.+)/);
+
+      if (mH1 || mH2 || mH3) {
+        flushBuf();
+        inPreface = false;
+        const [macro, vsp, text] = mH1
+          ? ['\\hone', '14pt', mH1[1]]
+          : mH2 ? ['\\htwo', '10pt', mH2[1]]
+          : ['\\hthree', '8pt', mH3[1]];
+        lines.push('\\Needspace{4\\baselineskip}');
+        lines.push(`{${macro} ${escapeLatex(text)}\\par}`);
+        lines.push(`\\vspace{${vsp}}`);
+        lines.push('');
+      } else if (prefaceRe.test(trimmed)) {
+        // Preface section label → use \htwo, set inPreface mode
+        flushBuf();
+        inPreface = true;
+        lines.push('\\Needspace{4\\baselineskip}');
+        lines.push(`{\\htwo ${escapeLatex(trimmed)}\\par}`);
+        lines.push('\\vspace{10pt}');
+        lines.push('');
+      } else if (hasTOCBlock && tocEntryRe.test(trimmed) &&
+                 rawLines[Math.max(0,i-1)].trim() === '' &&
+                 (i + 1 >= rawLines.length || rawLines[i+1].trim() === '' || tocEntryRe.test(rawLines[i+1].trim()))) {
+        // TOC block: use \tableofcontents at first occurrence, skip manual entries
+        flushBuf();
+        if (!lines.some(l => l === '\\tableofcontents')) {
+          lines.push('\\tableofcontents');
+          lines.push('\\newpage');
+          lines.push('');
+        }
+      } else if (trimmed === '') {
+        flushBuf();
+        inPreface = false;
+      } else {
+        buf.push(line);
+      }
+    }
+    flushBuf();
   }
-  lines.push('');
   lines.push('% ============================================================');
   lines.push('% 문서 본문 끝');
   lines.push('% ============================================================');
@@ -769,6 +872,27 @@ export default function App() {
     }
     return result;
   }
+
+  function detectContentStructure(bodyText) {
+    if (!bodyText) return null;
+    const lines = bodyText.split('\n');
+    const hints = [];
+    const tocKeywords = /^(목차|차례|contents|table\s+of\s+contents)$/i;
+    const tocEntry = /^\d+[\.\)]\s+\S/;
+    const tocLines = lines.filter(l => tocEntry.test(l.trim()));
+    if (tocLines.length >= 3 || lines.some(l => tocKeywords.test(l.trim()))) hints.push('TOC_PRESENT');
+    const prefaceRe = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
+    if (lines.some(l => prefaceRe.test(l.trim()))) hints.push('PREFACE_PRESENT');
+    if (lines.some(l => /^#{1,3}\s/.test(l))) hints.push('MARKDOWN_HEADINGS');
+    for (let i = 1; i < lines.length - 1; i++) {
+      const cur = lines[i].trim();
+      if (cur.length > 0 && cur.length < 30 && lines[i-1].trim() === '' && lines[i+1].trim() === '') {
+        hints.push('SUBHEADINGS_PRESENT'); break;
+      }
+    }
+    return hints.length > 0 ? hints.join(', ') : null;
+  }
+
   const [hint, setHint] = useState("");
 
   // ── v29: testMode + styleLock (item 3) ──────────────────────────
@@ -1027,13 +1151,18 @@ export default function App() {
     setDisplayBodySize(null);
     const h = hint;
 
+    const hasFootnoteText = !!(fields.각주?.trim());
+    const hasFootnoteMarkers = /[¹²³⁴⁵⁶⁷⁸⁹]|\[\d+\]|\^\d+(?!\d)|\*(?!\*)|\†|\‡|※|[①②③④⑤⑥⑦⑧⑨⑩]/.test(fields.본문 || '');
+    const needsLLMFootnotes = hasFootnoteMarkers && !hasFootnoteText;
     const processedBody = injectFootnotes(fields.본문, fields.각주);
+    const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
       fields.소제목 && `SUBTITLE: ${fields.소제목}`,
       processedBody && `BODY:\n${processedBody}`,
       fields.면주   && `RUNNING HEAD: ${fields.면주}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
+      contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
     ].filter(Boolean).join('\n\n');
 
     try {
@@ -1720,13 +1849,28 @@ export default function App() {
         'RULE: ①always call \\bodyf{} after each heading. ②NEVER inline heading mid-paragraph. ③Use \\Needspace{4\\baselineskip} before EVERY \\hthree/\\htwo/\\hone to prevent heading stranded at page bottom.\n' +
         'LEADING RATIOS: ≤7pt→×1.75 ≤9pt→×1.65 ≤11pt→×1.60 ≤13pt→×1.55 ≤16pt→×1.40 ≤24pt→×1.25 25+pt→×1.15\n' +
         'Any custom \\fontsize{X}{Y}: Y = round(X × ratio above).\n\n' +
+        '# CONTENT STRUCTURE ANALYSIS\n' +
+        'Read the body text BEFORE generating LaTeX. Apply these rules:\n' +
+        '1. 목차(TOC): If body has 3+ numbered list entries or a "목차/차례" label, output \\tableofcontents\\newpage at that location. Do NOT reproduce the TOC list manually.\n' +
+        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\htwo LABEL\\par}\\vspace{10pt} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
+        '3. 소제목(subheadings within body): Short standalone lines (≤30 chars, surrounded by blank lines) → use \\hthree. Longer section labels → \\htwo. Always \\Needspace{4\\baselineskip} before each.\n' +
+        '4. Markdown headings (# ## ###): Convert exactly to \\hone / \\htwo / \\hthree with \\Needspace + \\bodyf reset.\n' +
+        '5. Regular paragraphs: {\\bodyf\\noindent TEXT\\par}\\vspace{0.5\\baselineskip} for each.\n\n' +
         '# PAGE NUMBER: ' + p.pn +
         ' size=' + (p.pn_size || pnAutoSize + 'pt') +
         (fields.면주 ? ' running="' + fields.면주 + '"' : ' running=none') + '\n\n' +
         '# COLUMNS\n' + colSetupBlock +
         (corrections.layoutHint ? '# LAYOUT HINT: ' + corrections.layoutHint + '\n' : '') + '\n' +
         '# FOOTNOTES\n' +
-        (isMultiColLayout ? 'Place \\footnote{} inside column. No split \\footnotemark/\\footnotetext.\n' : 'Use \\footnote{} normally.\n') + '\n' +
+        (needsLLMFootnotes
+          ? 'Body contains footnote markers (¹²³, [1], ^1, *, †, ①, etc.) but NO footnote text was provided by the user. ' +
+            'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
+            'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
+            (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+          : hasFootnoteText
+            ? '\\footnote{} commands already injected inline in the body text above — they render at PAGE BOTTOM automatically. Do NOT move them.\n' +
+              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+            : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
         (alignResult.alignment === 'justified'
@@ -1741,7 +1885,11 @@ export default function App() {
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
-        'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move footnotes to a side column or separate block. ' +
+        (needsLLMFootnotes
+          ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
+          : hasFootnoteText
+            ? 'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
+            : 'FOOTNOTES: no footnotes — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
@@ -1796,8 +1944,8 @@ export default function App() {
           finalBodyContent = buildBodyContent({
             title: fields.제목,
             subtitle: fields.소제목,
-            body: injectFootnotes(fields.본문 || '', fields.각주 || ''),
-            footnote: '',
+            body: fields.본문 || '',
+            footnote: fields.각주 || '',
             runningHead: fields.면주,
           });
         } else {
