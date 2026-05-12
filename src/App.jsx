@@ -687,6 +687,8 @@ const _TOC_RE     = /^\d+[\.\)]\s+\S/;
 
 function _isHeadingLike(text, prevBlank, nextBlank) {
   if (!text || text.length > 60) return false;
+  // Starts with dialogue marker → always body/dialogue, never heading
+  if (/^[「『"'"]/.test(text)) return false;
   if (/[.。!！?？,、，]$/.test(text)) return false; // has terminal punct → body
   if (prevBlank && nextBlank && text.length <= 40) return true;
   if (/^(제\s*\d+\s*[장절화편부]|第\s*\d+\s*[章節]|\d+\s*[장절화])/.test(text)) return true;
