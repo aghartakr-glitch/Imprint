@@ -2428,11 +2428,11 @@ REQUIRED OUTPUT FORMAT:
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>
-                          Overleaf에 붙여넣을 완성 파일
+                          main.tex
                         </div>
-                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>
-                          이 코드를 Overleaf의 main.tex에 전체 복사하면 바로 컴파일됩니다.
-                          스타일과 본문이 하나의 파일에 통합되어 있습니다.
+                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.7 }}>
+                          <strong style={{ color:"#c44" }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
+                          imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
                         </div>
                       </div>
                       <button onClick={copy}
