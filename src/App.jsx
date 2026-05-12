@@ -1151,13 +1151,18 @@ export default function App() {
     setDisplayBodySize(null);
     const h = hint;
 
+    const hasFootnoteText = !!(fields.각주?.trim());
+    const hasFootnoteMarkers = /[¹²³⁴⁵⁶⁷⁸⁹]|\[\d+\]|\^\d+(?!\d)|\*(?!\*)|\†|\‡|※|[①②③④⑤⑥⑦⑧⑨⑩]/.test(fields.본문 || '');
+    const needsLLMFootnotes = hasFootnoteMarkers && !hasFootnoteText;
     const processedBody = injectFootnotes(fields.본문, fields.각주);
+    const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
       fields.소제목 && `SUBTITLE: ${fields.소제목}`,
       processedBody && `BODY:\n${processedBody}`,
       fields.면주   && `RUNNING HEAD: ${fields.면주}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
+      contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
     ].filter(Boolean).join('\n\n');
 
     try {
