@@ -1907,7 +1907,9 @@ export default function App() {
         '# TEXT\n' + bodyBlock + '\n\n' +
         '# RULES\n' +
         'No preamble cmds in body. No \\hrule/\\rule. No microtype/polyglossia. No multicols>5. ' +
-        'Do NOT use halfwidth CJK characters (U+FF61–U+FF9F, e.g. ｢｣｡､) — Korean fonts lack them; use fullwidth equivalents (「」。、) or ASCII quotes instead. ' + +
+        'CRITICAL: Never output halfwidth CJK punctuation U+FF61–U+FF9F. ' +
+        'Forbidden: ｢ ｣ ｡ ､ ･ (and all halfwidth katakana). ' +
+        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' + +
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
