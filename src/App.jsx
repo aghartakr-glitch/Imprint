@@ -2250,7 +2250,7 @@ REQUIRED OUTPUT FORMAT:
                 ① 입력한 텍스트의 장르·형태 분석<br/>
                 ② 253개 레퍼런스에서 최적 스타일 선택<br/>
                 ③ 판형·여백·서체·단 구성 자동 결정<br/>
-                ④ Overleaf에 바로 쓸 수 있는 LaTeX 파일 생성
+                ④ TeXworks·TeX Live·Overleaf용 LaTeX 파일 생성 (XeLaTeX)
               </div>
             </div>
           ) : isDone && (
