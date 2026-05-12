@@ -2006,8 +2006,12 @@ export default function App() {
           `\\end{document}`,
         ].join('\n');
 
-        // LaTeX 구조 검증
-        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex, sty: styContent });
+        // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
+        const finalMainTex = sanitizeUnicodeForLatex(mainTex);
+        const finalStyContent = sanitizeUnicodeForLatex(styContent);
+
+        // LaTeX 구조 검증 (sanitize 후 검증)
+        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent });
         if (_valErrors.length > 0) {
           setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
           pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
@@ -2016,7 +2020,8 @@ export default function App() {
         if (_valWarnings.length > 0) {
           setErr(_valWarnings.join('\n'));
         }
-        setLatex(mainTex);
+        setStyCode(finalStyContent);
+        setLatex(finalMainTex);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
