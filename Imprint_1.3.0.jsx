@@ -611,20 +611,29 @@ function escapeLatex(s) {
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
 // 반각 CJK 문자(U+FF61-FF9F) → 전각 등가로 치환. 한국어 폰트 대부분이 전각만 지원.
-function sanitizeUnicodeForLatex(text) {
-  return text
-    .replace(/｢/g, '「')   // U+FF62 → U+300C
-    .replace(/｣/g, '」')   // U+FF63 → U+300D
-    .replace(/｡/g, '。')   // U+FF61 → U+3002
-    .replace(/､/g, '、')   // U+FF64 → U+3001
-    .replace(/･/g, '・')   // U+FF65 → U+30FB
-    .replace(/｡-ﾟ/g, ''); // 나머지 반각 가타카나 제거
+function sanitizeUnicodeForLatex(s) {
+  return String(s || '')
+    .replace(/｢/g, '「')  // ｢ → 「
+    .replace(/｣/g, '」')  // ｣ → 」
+    .replace(/｡/g, '。')  // ｡ → 。
+    .replace(/､/g, '、')  // ､ → 、
+    .replace(/･/g, '・')  // ･ → ・
+    .replace(/[ｦ-ﾟ]/g, ''); // 나머지 반각 가타카나 제거
+}
+
+function validateNoHalfwidthCJK(name, content) {
+  const bad = String(content || '').match(/[｡-ﾟ]/g);
+  if (bad) {
+    const unique = [...new Set(bad)].map(c => `${c}(U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')})`).join(' ');
+    return `${name} 에 반각 CJK 문자가 남아 있습니다: ${unique}`;
+  }
+  return null;
 }
 
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
-  const t = escapeLatex(title);
-  const st = escapeLatex(subtitle);
-  const rh = escapeLatex(runningHead);
+  const t = escapeLatex(sanitizeUnicodeForLatex(title));
+  const st = escapeLatex(sanitizeUnicodeForLatex(subtitle));
+  const rh = escapeLatex(sanitizeUnicodeForLatex(runningHead));
   const lines = [];
   lines.push('% ============================================================');
   lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
@@ -692,7 +701,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
       if (!buf.length) return;
       const raw = buf.join('\n').trim();
       if (!raw) { buf = []; return; }
-      const escaped = injectIntoEscaped(escapeLatex(raw));
+      const escaped = injectIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(raw)));
       if (inPreface) {
         lines.push('{\\itshape\\bodyf\\noindent');
         lines.push(escaped + '\\par}');
@@ -726,7 +735,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
           : mH2 ? ['\\htwo', '10pt', mH2[1]]
           : ['\\hthree', '8pt', mH3[1]];
         lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{${macro} ${escapeLatex(text)}\\par}`);
+        lines.push(`{${macro} ${escapeLatex(sanitizeUnicodeForLatex(text))}\\par}`);
         lines.push(`\\vspace{${vsp}}`);
         lines.push('');
       } else if (prefaceRe.test(trimmed)) {
@@ -734,7 +743,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
         flushBuf();
         inPreface = true;
         lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{\\htwo ${escapeLatex(trimmed)}\\par}`);
+        lines.push(`{\\htwo ${escapeLatex(sanitizeUnicodeForLatex(trimmed))}\\par}`);
         lines.push('\\vspace{10pt}');
         lines.push('');
       } else if (hasTOCBlock && tocEntryRe.test(trimmed) &&
@@ -806,6 +815,11 @@ function validateLatexExport({ mainTex, sty }) {
   }
   if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(styCode))
     errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
+  // 반각 CJK 문자 검증 — U+FF61-FF9F (UnBatang 미지원, XeLaTeX Missing character 오류 원인)
+  const halfCJKMain = validateNoHalfwidthCJK('main.tex', mainTex);
+  if (halfCJKMain) errors.push(halfCJKMain);
+  const halfCJKSty = validateNoHalfwidthCJK('imprint-style.sty', sty);
+  if (halfCJKSty) errors.push(halfCJKSty);
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
   // document body에 실제 내용 있는지 확인
@@ -1893,7 +1907,9 @@ export default function App() {
         '# TEXT\n' + bodyBlock + '\n\n' +
         '# RULES\n' +
         'No preamble cmds in body. No \\hrule/\\rule. No microtype/polyglossia. No multicols>5. ' +
-        'Do NOT use halfwidth CJK characters (U+FF61–U+FF9F, e.g. ｢｣｡､) — Korean fonts lack them; use fullwidth equivalents (「」。、) or ASCII quotes instead. ' + +
+        'CRITICAL: Never output halfwidth CJK punctuation U+FF61–U+FF9F. ' +
+        'Forbidden: ｢ ｣ ｡ ､ ･ (and all halfwidth katakana). ' +
+        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' + +
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
@@ -1992,8 +2008,12 @@ export default function App() {
           `\\end{document}`,
         ].join('\n');
 
-        // LaTeX 구조 검증
-        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex, sty: styContent });
+        // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
+        const finalMainTex = sanitizeUnicodeForLatex(mainTex);
+        const finalStyContent = sanitizeUnicodeForLatex(styContent);
+
+        // LaTeX 구조 검증 (sanitize 후 검증)
+        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent });
         if (_valErrors.length > 0) {
           setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
           pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
@@ -2002,7 +2022,8 @@ export default function App() {
         if (_valWarnings.length > 0) {
           setErr(_valWarnings.join('\n'));
         }
-        setLatex(mainTex);
+        setStyCode(finalStyContent);
+        setLatex(finalMainTex);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
@@ -2251,8 +2272,9 @@ REQUIRED OUTPUT FORMAT:
         changesText = changesSplit[1].replace("%%END%%", "").trim();
       }
 
-      const diffLines = diffLatex(latex, newLatex);
-      setLatex(newLatex);
+      const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
+      const diffLines = diffLatex(latex, sanitizedNewLatex);
+      setLatex(sanitizedNewLatex);
       setTab("code");
       setRefineHistory(h => [...h, {
         role: "assistant",
@@ -2811,6 +2833,10 @@ REQUIRED OUTPUT FORMAT:
                       1) main.tex + imprint-style.sty → 작업 폴더<br/>
                       2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
                       3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:"#a05000" }}>
+                        <strong style={{ display:"block", marginBottom:2 }}>Missing character 경고가 계속되면</strong>
+                        기존 <code style={{ fontFamily:T.mono, background:"#fff3e0", padding:"1px 4px", borderRadius:3, fontSize:10.5 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
+                      </div>
                       <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
                         <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
                         1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
