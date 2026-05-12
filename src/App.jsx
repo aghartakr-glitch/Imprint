@@ -594,6 +594,33 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
 
 
 
+// LaTeX 출력 구조 검증 — .sty에 document body 코드가 없는지, main.tex 구조가 올바른지
+function validateLatexExport({ mainTex, sty }) {
+  const errors = [];
+  function count(s, re) { return (s.match(re) || []).length; }
+  if (count(mainTex, /\\documentclass/g) !== 1)
+    errors.push('main.tex: \\documentclass 가 정확히 1개여야 합니다');
+  if (count(mainTex, /\\begin\{document\}/g) !== 1)
+    errors.push('main.tex: \\begin{document} 가 정확히 1개여야 합니다');
+  if (count(mainTex, /\\end\{document\}/g) !== 1)
+    errors.push('main.tex: \\end{document} 가 정확히 1개여야 합니다');
+  for (const [label, re] of [
+    ['\\documentclass', /\\documentclass/],
+    ['\\begin{document}', /\\begin\{document\}/],
+    ['\\end{document}', /\\end\{document\}/],
+    ['\\begin{multicols}', /\\begin\{multicols\}/],
+    ['\\begin{paracol}', /\\begin\{paracol\}/],
+  ]) {
+    if (re.test(sty))
+      errors.push(`imprint-style.sty: ${label} 은 .sty에 있으면 안 됩니다`);
+  }
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(sty))
+    errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
+  if (!sty.includes('\\NeedsTeXFormat'))
+    errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
+  return errors;
+}
+
 // Imprint 1.0.0 — App Component
 // UI: Split-panel layout (Left: Input / Right: Package + Output)
 export default function App() {
