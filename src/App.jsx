@@ -2034,11 +2034,26 @@ export default function App() {
         'If you detect risk of heading at page bottom: add \\Needspace. ' +
         'If paragraph split risk: add \\nopagebreak[4] before critical lines.\n\n' +
         '# TEXT\n' + bodyBlock + '\n\n' +
+        '# SEMANTIC STRUCTURE — MANDATORY\n' +
+        'NEVER output the entire body as one {\\bodyf ...} block. Segment into separate LaTeX blocks.\n' +
+        'Detect and separately style each of the following:\n' +
+        '  • Work title (short, isolated line) → {\\htwo TITLE\\par}\\vspace{12pt}\n' +
+        '  • Author name after "/" → {\\hthree AUTHOR\\par}\\vspace{10pt}\n' +
+        '  • Chapter/section heading (제N장, numbered, # markdown) → {\\htwo ...\\par} with \\Needspace{4\\baselineskip}\n' +
+        '  • Sub-heading (##, ###, short isolated line ≤30 chars) → {\\hthree ...\\par}\n' +
+        '  • Preface (서문/머리말/들어가며) label → {\\htwo ...\\par}, body in {\\itshape\\bodyf ...\\par}\n' +
+        '  • Each paragraph → separate {\\bodyf\n\\noindent TEXT\\par\n} block\n' +
+        '  • Dialogue (「...」, 『...』, "...") → \\begin{imprintdialogue}\\n TEXT\\n\\end{imprintdialogue}\n' +
+        '  • Block quotation, letter, verse → \\begin{imprintquote}\\n TEXT\\n\\end{imprintquote}\n' +
+        '  • Scene break (* * *, —, ※, double blank) → \\vspace{1\\baselineskip}\\begin{center}＊\\end{center}\\vspace{0.5\\baselineskip}\n' +
+        'PARAGRAPH RULE: one {\\bodyf ...} per paragraph. Do NOT merge multiple paragraphs.\n' +
+        'DIALOGUE RULE: when 「...」 or 『...』 appears inside a paragraph, split at the quote boundary — put surrounding text in {\\bodyf ...} and the dialogue in \\begin{imprintdialogue}.\n\n' +
+        '# TEXT\n' + bodyBlock + '\n\n' +
         '# RULES\n' +
         'No preamble cmds in body. No \\hrule/\\rule. No microtype/polyglossia. No multicols>5. ' +
         'CRITICAL: Never output halfwidth CJK punctuation U+FF61–U+FF9F. ' +
         'Forbidden: ｢ ｣ ｡ ､ ･ (and all halfwidth katakana). ' +
-        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' + +
+        'Required replacements: ｢→「 ｣→」 ｡→。 ､→、 ･→・ ' +
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
