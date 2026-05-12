@@ -2636,7 +2636,7 @@ REQUIRED OUTPUT FORMAT:
                       <div style={{ marginTop:10, padding:"12px 16px", background:"#fffbe6",
                         borderRadius:6, border:`1px solid #e8d88a`, fontSize:11.5, lineHeight:1.9 }}>
                         <strong style={{ color:"#7a6000", display:"block", marginBottom:4 }}>
-                          ★ 필요한 폰트 파일 — main.tex과 같은 폴더에 저장
+                          ★ 필요한 폰트 파일 — <code style={{ fontFamily:"monospace", background:"#fff3c0", padding:"1px 4px", borderRadius:3 }}>fonts/</code> 하위 폴더에 저장
                         </strong>
                         <div style={{ fontFamily:T.mono, fontSize:11, color:"#5a4800" }}>
                           {requiredFonts.map(f => <div key={f}>{f}</div>)}
