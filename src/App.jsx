@@ -2270,8 +2270,9 @@ REQUIRED OUTPUT FORMAT:
         changesText = changesSplit[1].replace("%%END%%", "").trim();
       }
 
-      const diffLines = diffLatex(latex, newLatex);
-      setLatex(newLatex);
+      const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
+      const diffLines = diffLatex(latex, sanitizedNewLatex);
+      setLatex(sanitizedNewLatex);
       setTab("code");
       setRefineHistory(h => [...h, {
         role: "assistant",
