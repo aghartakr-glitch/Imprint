@@ -2425,14 +2425,14 @@ REQUIRED OUTPUT FORMAT:
           {/* 채팅 메시지 */}
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px",
             display:"flex", flexDirection:"column", gap:10 }}>
-            {refineLog.length === 0 ? (
+            {refineHistory.length === 0 ? (
               <div style={{ fontSize:12, color:T.muted, textAlign:"center",
                 paddingTop:24, lineHeight:1.8 }}>
                 {isDone
                   ? "스타일 생성 완료.\n수정이 필요하면 아래에 입력하세요."
                   : "조판 스타일을 먼저 생성하세요."}
               </div>
-            ) : refineLog.map((msg, i) => (
+            ) : refineHistory.map((msg, i) => (
               <div key={i} style={{
                 padding:"10px 12px", borderRadius:7, fontSize:12, lineHeight:1.6,
                 background: msg.role === "user" ? T.ink : T.bg,
