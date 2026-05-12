@@ -1793,7 +1793,7 @@ export default function App() {
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
-        const _latexHash = simpleHash(cleanLatex);
+        const _latexHash = simpleHash(mainTex);
         const _analyzePrompt = '텍스트 분석→JSON: ' + matchText.slice(0, 200);
         const _semanticPrompt = 'rerank ' + matchText.slice(0, 100);
         const _logId = makeGenerationId();
