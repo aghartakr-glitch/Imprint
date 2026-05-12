@@ -872,6 +872,27 @@ export default function App() {
     }
     return result;
   }
+
+  function detectContentStructure(bodyText) {
+    if (!bodyText) return null;
+    const lines = bodyText.split('\n');
+    const hints = [];
+    const tocKeywords = /^(목차|차례|contents|table\s+of\s+contents)$/i;
+    const tocEntry = /^\d+[\.\)]\s+\S/;
+    const tocLines = lines.filter(l => tocEntry.test(l.trim()));
+    if (tocLines.length >= 3 || lines.some(l => tocKeywords.test(l.trim()))) hints.push('TOC_PRESENT');
+    const prefaceRe = /^(서문|머리말|들어가며|프롤로그|서론|시작하며|foreword|preface|introduction)\s*$/i;
+    if (lines.some(l => prefaceRe.test(l.trim()))) hints.push('PREFACE_PRESENT');
+    if (lines.some(l => /^#{1,3}\s/.test(l))) hints.push('MARKDOWN_HEADINGS');
+    for (let i = 1; i < lines.length - 1; i++) {
+      const cur = lines[i].trim();
+      if (cur.length > 0 && cur.length < 30 && lines[i-1].trim() === '' && lines[i+1].trim() === '') {
+        hints.push('SUBHEADINGS_PRESENT'); break;
+      }
+    }
+    return hints.length > 0 ? hints.join(', ') : null;
+  }
+
   const [hint, setHint] = useState("");
 
   // ── v29: testMode + styleLock (item 3) ──────────────────────────
