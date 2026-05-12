@@ -1849,13 +1849,28 @@ export default function App() {
         'RULE: ①always call \\bodyf{} after each heading. ②NEVER inline heading mid-paragraph. ③Use \\Needspace{4\\baselineskip} before EVERY \\hthree/\\htwo/\\hone to prevent heading stranded at page bottom.\n' +
         'LEADING RATIOS: ≤7pt→×1.75 ≤9pt→×1.65 ≤11pt→×1.60 ≤13pt→×1.55 ≤16pt→×1.40 ≤24pt→×1.25 25+pt→×1.15\n' +
         'Any custom \\fontsize{X}{Y}: Y = round(X × ratio above).\n\n' +
+        '# CONTENT STRUCTURE ANALYSIS\n' +
+        'Read the body text BEFORE generating LaTeX. Apply these rules:\n' +
+        '1. 목차(TOC): If body has 3+ numbered list entries or a "목차/차례" label, output \\tableofcontents\\newpage at that location. Do NOT reproduce the TOC list manually.\n' +
+        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\htwo LABEL\\par}\\vspace{10pt} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
+        '3. 소제목(subheadings within body): Short standalone lines (≤30 chars, surrounded by blank lines) → use \\hthree. Longer section labels → \\htwo. Always \\Needspace{4\\baselineskip} before each.\n' +
+        '4. Markdown headings (# ## ###): Convert exactly to \\hone / \\htwo / \\hthree with \\Needspace + \\bodyf reset.\n' +
+        '5. Regular paragraphs: {\\bodyf\\noindent TEXT\\par}\\vspace{0.5\\baselineskip} for each.\n\n' +
         '# PAGE NUMBER: ' + p.pn +
         ' size=' + (p.pn_size || pnAutoSize + 'pt') +
         (fields.면주 ? ' running="' + fields.면주 + '"' : ' running=none') + '\n\n' +
         '# COLUMNS\n' + colSetupBlock +
         (corrections.layoutHint ? '# LAYOUT HINT: ' + corrections.layoutHint + '\n' : '') + '\n' +
         '# FOOTNOTES\n' +
-        (isMultiColLayout ? 'Place \\footnote{} inside column. No split \\footnotemark/\\footnotetext.\n' : 'Use \\footnote{} normally.\n') + '\n' +
+        (needsLLMFootnotes
+          ? 'Body contains footnote markers (¹²³, [1], ^1, *, †, ①, etc.) but NO footnote text was provided by the user. ' +
+            'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
+            'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
+            (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+          : hasFootnoteText
+            ? '\\footnote{} commands already injected inline in the body text above — they render at PAGE BOTTOM automatically. Do NOT move them.\n' +
+              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+            : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
         (alignResult.alignment === 'justified'
