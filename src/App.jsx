@@ -922,6 +922,15 @@ function validateLatexExport({ mainTex, sty }) {
     .trim() : '';
   const warnings = [];
   if (!bodySection) warnings.push('⚠ main.tex document body에 본문 내용이 없습니다');
+  // Semantic structure warnings
+  const bodyFCount = (bodySection.match(/\{\\bodyf/g) || []).length;
+  const hasDialogueEnv = /\\begin\{imprintdialogue\}/.test(bodySection);
+  const hasStructure = /\\begin\{imprintdialogue\}|\\begin\{imprintquote\}|\\htwo|\\hthree|\\tableofcontents|\\begin\{center\}/.test(bodySection);
+  const dialogueMarkerCount = (bodySection.match(/「[^」]*」|『[^』]*』/g) || []).length;
+  if (bodyFCount === 1 && !hasStructure && bodySection.length > 200)
+    warnings.push('⚠ 원문에 여러 문단이 있었지만 main.tex에는 하나의 body block만 있습니다');
+  if (dialogueMarkerCount >= 3 && !hasDialogueEnv)
+    warnings.push('⚠ 본문 안에 대화문(「」)이 감지되었지만 imprintdialogue 환경이 생성되지 않았습니다');
   return { errors, warnings };
 }
 
