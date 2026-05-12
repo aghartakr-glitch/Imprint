@@ -1598,24 +1598,56 @@ export default function App() {
         clearTimeout(tid);
         const data = await res.json();
         const raw = (data.content || []).map(x => x.text || '').join('');
-        let bodyOnly = raw.replace(/```latex\n?/g, '').replace(/```/g, '').trim();
-        // \begin{document} 이전 모든 텍스트(AI 혼잣말 포함) 제거
-        const docStart = bodyOnly.indexOf('\\begin{document}');
-        if (docStart < 0) {
-          // \begin{document}가 아예 없으면 강제 wrap
-          bodyOnly = '\\begin{document}\n' + bodyOnly + '\n\\end{document}';
+        let bodyRaw = raw.replace(/```latex\n?/g, '').replace(/```/g, '').trim();
+        // Claude 출력에서 \begin{document}...\end{document} 사이 본문만 추출
+        // → mainTex에서 직접 감쌀 것이므로 document 환경 제거
+        let bodyContentOnly;
+        const docStart = bodyRaw.indexOf('\\begin{document}');
+        if (docStart >= 0) {
+          let afterBegin = bodyRaw.slice(docStart + '\\begin{document}'.length);
+          const docEnd = afterBegin.lastIndexOf('\\end{document}');
+          if (docEnd >= 0) afterBegin = afterBegin.slice(0, docEnd);
+          bodyContentOnly = afterBegin.trim();
         } else {
-          bodyOnly = bodyOnly.slice(docStart);
+          bodyContentOnly = bodyRaw;
         }
-        // \end{document} 없으면 추가
-        if (!bodyOnly.includes('\\end{document}')) {
-          if (bodyOnly.includes('\\begin{multicols}')) bodyOnly += '\n\\end{multicols}';
-          if (bodyOnly.includes('\\begin{paracol}')) bodyOnly += '\n\\end{paracol}';
-          bodyOnly += '\n\\end{document}';
+        // 미닫힌 환경 닫기
+        if (bodyContentOnly.includes('\\begin{multicols}') &&
+            !bodyContentOnly.includes('\\end{multicols}')) {
+          bodyContentOnly += '\n\\end{multicols}';
         }
-        // 프리앰블 + 본문 조립
-        const cleanLatex = preamble + '\n' + bodyOnly;
-        setLatex(mainTexHeader + cleanLatex);
+        if (bodyContentOnly.includes('\\begin{paracol}') &&
+            !bodyContentOnly.includes('\\end{paracol}')) {
+          bodyContentOnly += '\n\\end{paracol}';
+        }
+        // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문만
+        const mainTex = [
+          `% !TeX program = XeLaTeX`,
+          `% Compile: xelatex -interaction=nonstopmode main.tex`,
+          `% Engine: XeLaTeX 또는 LuaLaTeX 필수 (fontspec 사용) — pdfLaTeX 미지원`,
+          `\\documentclass[${p.b.크기}pt]{memoir}`,
+          `\\setstocksize{${p.f.h}mm}{${p.f.w}mm}`,
+          `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}`,
+          `\\usepackage{kotex}`,
+          `\\usepackage{imprint-style}`,
+          ``,
+          `\\begin{document}`,
+          `\\XeTeXlinebreaklocale "ko"`,
+          `\\XeTeXlinebreakskip=0pt plus 1pt`,
+          `\\pagestyle{fancy}\\fancyhf{}`,
+          ``,
+          bodyContentOnly,
+          ``,
+          `\\end{document}`,
+        ].join('\n');
+        // LaTeX 구조 검증
+        const _valErrors = validateLatexExport({ mainTex, sty: styContent });
+        if (_valErrors.length > 0) {
+          setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
+          pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
+          return;
+        }
+        setLatex(mainTex);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
