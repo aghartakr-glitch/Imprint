@@ -701,7 +701,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
       if (!buf.length) return;
       const raw = buf.join('\n').trim();
       if (!raw) { buf = []; return; }
-      const escaped = injectIntoEscaped(escapeLatex(raw));
+      const escaped = injectIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(raw)));
       if (inPreface) {
         lines.push('{\\itshape\\bodyf\\noindent');
         lines.push(escaped + '\\par}');
