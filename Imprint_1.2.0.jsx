@@ -2069,11 +2069,19 @@ REQUIRED OUTPUT FORMAT:
 
           {/* Run button */}
           <div style={{ padding:"16px 20px", borderTop:`1px solid ${T.border}` }}>
-            <button onClick={run} disabled={isRunning || !matchText}
+            {!apiKey && (
+              <div style={{ marginBottom:10, fontSize:11.5, color:"#7a6000", padding:"8px 12px",
+                background:"#fffbea", borderRadius:6, border:"1px solid #f0d060",
+                lineHeight:1.6 }}>
+                <strong>API 키 필요</strong> — 우측 상단 <strong>○ API 키 입력</strong> 클릭<br/>
+                <span style={{ color:T.muted }}>console.anthropic.com → 가입(claude.ai 계정) → API Keys</span>
+              </div>
+            )}
+            <button onClick={run} disabled={isRunning || !matchText || !apiKey}
               style={{ width:"100%", padding:"12px", fontSize:14, fontWeight:700,
                 border:"none", borderRadius:7,
-                background: (isRunning || !matchText) ? "#ccc" : T.ink,
-                color:"#fff", cursor:(isRunning || !matchText)?"not-allowed":"pointer",
+                background: (isRunning || !matchText || !apiKey) ? "#ccc" : T.ink,
+                color:"#fff", cursor:(isRunning || !matchText || !apiKey)?"not-allowed":"pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:10,
                 fontFamily:T.sans, letterSpacing:"0.01em", transition:"background 150ms" }}>
               {isRunning ? (
