@@ -611,14 +611,23 @@ function escapeLatex(s) {
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
 // 반각 CJK 문자(U+FF61-FF9F) → 전각 등가로 치환. 한국어 폰트 대부분이 전각만 지원.
-function sanitizeUnicodeForLatex(text) {
-  return text
-    .replace(/｢/g, '「')   // U+FF62 → U+300C
-    .replace(/｣/g, '」')   // U+FF63 → U+300D
-    .replace(/｡/g, '。')   // U+FF61 → U+3002
-    .replace(/､/g, '、')   // U+FF64 → U+3001
-    .replace(/･/g, '・')   // U+FF65 → U+30FB
-    .replace(/｡-ﾟ/g, ''); // 나머지 반각 가타카나 제거
+function sanitizeUnicodeForLatex(s) {
+  return String(s || '')
+    .replace(/｢/g, '「')  // ｢ → 「
+    .replace(/｣/g, '」')  // ｣ → 」
+    .replace(/｡/g, '。')  // ｡ → 。
+    .replace(/､/g, '、')  // ､ → 、
+    .replace(/･/g, '・')  // ･ → ・
+    .replace(/[ｦ-ﾟ]/g, ''); // 나머지 반각 가타카나 제거
+}
+
+function validateNoHalfwidthCJK(name, content) {
+  const bad = String(content || '').match(/[｡-ﾟ]/g);
+  if (bad) {
+    const unique = [...new Set(bad)].map(c => `${c}(U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')})`).join(' ');
+    return `${name} 에 반각 CJK 문자가 남아 있습니다: ${unique}`;
+  }
+  return null;
 }
 
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {

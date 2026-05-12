@@ -610,6 +610,17 @@ function escapeLatex(s) {
 }
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
+// 반각 CJK 문자(U+FF61-FF9F) → 전각 등가로 치환. 한국어 폰트 대부분이 전각만 지원.
+function sanitizeUnicodeForLatex(text) {
+  return text
+    .replace(/｢/g, '「')   // U+FF62 → U+300C
+    .replace(/｣/g, '」')   // U+FF63 → U+300D
+    .replace(/｡/g, '。')   // U+FF61 → U+3002
+    .replace(/､/g, '、')   // U+FF64 → U+3001
+    .replace(/･/g, '・')   // U+FF65 → U+30FB
+    .replace(/｡-ﾟ/g, ''); // 나머지 반각 가타카나 제거
+}
+
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   const t = escapeLatex(title);
   const st = escapeLatex(subtitle);
@@ -1882,6 +1893,7 @@ export default function App() {
         '# TEXT\n' + bodyBlock + '\n\n' +
         '# RULES\n' +
         'No preamble cmds in body. No \\hrule/\\rule. No microtype/polyglossia. No multicols>5. ' +
+        'Do NOT use halfwidth CJK characters (U+FF61–U+FF9F, e.g. ｢｣｡､) — Korean fonts lack them; use fullwidth equivalents (「」。、) or ASCII quotes instead. ' + +
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
@@ -1923,6 +1935,8 @@ export default function App() {
         } else {
           bodyContentOnly = bodyRaw;
         }
+        // 반각 CJK 문자 정규화 (UnBatang 폴백 폰트 누락 오류 방지)
+        bodyContentOnly = sanitizeUnicodeForLatex(bodyContentOnly);
         // 미닫힌 환경 닫기
         if (bodyContentOnly.includes('\\begin{multicols}') &&
             !bodyContentOnly.includes('\\end{multicols}')) {
