@@ -594,6 +594,80 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
 
 
 
+// LaTeX 특수문자 escape
+function escapeLatex(s) {
+  return String(s || '')
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/&/g, '\\&')
+    .replace(/%/g, '\\%')
+    .replace(/\$/g, '\\$')
+    .replace(/#/g, '\\#')
+    .replace(/_/g, '\\_')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\^/g, '\\textasciicircum{}');
+}
+
+// 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
+function buildBodyContent({ title, subtitle, body, footnote, runningHead, pn }) {
+  const t = escapeLatex(title);
+  const st = escapeLatex(subtitle);
+  const b = escapeLatex(body);
+  const fn = escapeLatex(footnote);
+  const rh = escapeLatex(runningHead);
+  const lines = [];
+  lines.push('% ============================================================');
+  lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
+  lines.push('% ============================================================');
+  lines.push('');
+  if (rh) {
+    lines.push(`\\lhead{\\small ${rh}}`);
+    lines.push(`\\rhead{\\small \\thepage}`);
+    lines.push('');
+  }
+  if (t) {
+    lines.push(`{\\hone ${t}\\par}`);
+    lines.push('\\vspace{20pt}');
+    lines.push('');
+  }
+  if (st) {
+    lines.push(`{\\htwo ${st}\\par}`);
+    lines.push('\\vspace{16pt}');
+    lines.push('');
+  }
+  if (b) {
+    lines.push('{\\bodyf');
+    lines.push(b + (fn ? `\\footnote{${fn}}` : ''));
+    lines.push('}');
+  }
+  lines.push('');
+  lines.push('% ============================================================');
+  lines.push('% 문서 본문 끝');
+  lines.push('% ============================================================');
+  return lines.join('\n');
+}
+
+function buildMissingBodyPlaceholder() {
+  return [
+    '% ============================================================',
+    '% BODY CONTENT MISSING',
+    '% 사용자가 입력한 본문이 이 위치에 들어가야 합니다.',
+    '% ============================================================',
+    '',
+    '{\\hone 제목을 여기에 입력하세요\\par}',
+    '\\vspace{20pt}',
+    '',
+    '{\\bodyf',
+    '본문을 여기에 붙여넣으세요.',
+    '}',
+    '',
+    '% ============================================================',
+    '% 문서 본문 끝',
+    '% ============================================================',
+  ].join('\n');
+}
+
 // LaTeX 출력 구조 검증 — .sty에 document body 코드가 없는지, main.tex 구조가 올바른지
 function validateLatexExport({ mainTex, sty }) {
   const errors = [];
