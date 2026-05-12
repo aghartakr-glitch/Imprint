@@ -735,7 +735,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
           : mH2 ? ['\\htwo', '10pt', mH2[1]]
           : ['\\hthree', '8pt', mH3[1]];
         lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{${macro} ${escapeLatex(text)}\\par}`);
+        lines.push(`{${macro} ${escapeLatex(sanitizeUnicodeForLatex(text))}\\par}`);
         lines.push(`\\vspace{${vsp}}`);
         lines.push('');
       } else if (prefaceRe.test(trimmed)) {
