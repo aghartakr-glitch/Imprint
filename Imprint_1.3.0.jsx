@@ -2492,3 +2492,4 @@ REQUIRED OUTPUT FORMAT:
   );
 }
 
+export default App;
