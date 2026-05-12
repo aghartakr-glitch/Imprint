@@ -1558,6 +1558,15 @@ export default function App() {
         `% Genre:     ${p.g} / ${p.pub_type}`,
         `% Generated: Imprint v${IMPRINT_VERSION} — ${new Date().toISOString().slice(0,10)}`,
         `% ============================================================`,
+        `%`,
+        `% ★ 필요한 폰트 파일 (main.tex과 같은 폴더에 저장하세요):`,
+        ...[...new Set([mainFont, sansFont, fnFont].filter(Boolean))].flatMap(name => {
+          const m = FONT_MANIFEST[name];
+          if (!m) return [];
+          return [m.upright, m.bold, m.italic, m.boldItalic]
+            .filter(Boolean).map(f => `%   ${f}.ttf`);
+        }),
+        `%`,
         `\\NeedsTeXFormat{LaTeX2e}`,
         `\\ProvidesPackage{imprint-style}[${_styDate} Imprint generated style]`,
         ``,
