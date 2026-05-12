@@ -487,7 +487,7 @@ async function generateRationale(p) {
     '이 편집 디자인의 핵심 의도를 한국어 3문장으로 설명해. 편집 디자이너 시각으로.';
   try {
     const res = await fetch('/anthropic/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY || '' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514', max_tokens: 180,
         system: '편집 디자이너. 한국어 3문장. 핵심만.',
@@ -798,7 +798,7 @@ export default function App() {
     const sysPrompt = 'Return ONLY valid JSON. Rules: topic/textForm/pubType from FULL style+structure, NOT single keywords. pubType=전시도록 ONLY if 2+ signals: work-list/exhibition-dates/venue/artist-bio/caption/curator-text/artwork-desc. exhibitEvidence=count(0-7). riskyKeywords=misleading words like 전시/작품/작가. If exhibitEvidence<2 set pubType=단행본 or 잡지.';
     try {
       const res = await fetch('/anthropic/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY || '' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514', max_tokens: 200,
           system: sysPrompt,
@@ -874,7 +874,7 @@ export default function App() {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 25000);
       const res = await fetch('/anthropic/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY || '' }, signal: ctrl.signal,
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey }, signal: ctrl.signal,
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514', max_tokens: 450,
           system: 'Return ONLY valid JSON, no other text.',
@@ -1543,7 +1543,7 @@ export default function App() {
         const tid = setTimeout(() => ctrl.abort(), 180000);
         const res = await fetch('/anthropic/v1/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY || '' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
           signal: ctrl.signal,
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
@@ -1926,6 +1926,48 @@ REQUIRED OUTPUT FORMAT:
         <span style={{ fontSize:11, color:T.muted }}>
           {DB.length} style packages loaded
         </span>
+
+        {/* API Key 입력 */}
+        <div style={{ marginLeft:16, position:"relative" }}>
+          {showApiInput ? (
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <input
+                type="password"
+                placeholder="sk-ant-api03-..."
+                defaultValue={apiKey}
+                autoFocus
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveApiKey(e.target.value.trim());
+                  if (e.key === 'Escape') setShowApiInput(false);
+                }}
+                style={{ width:220, padding:"5px 10px", fontSize:12, fontFamily:"monospace",
+                  border:`1.5px solid ${T.accent}`, borderRadius:6, outline:"none",
+                  background:T.surface, color:T.ink }}
+              />
+              <button
+                onClick={e => saveApiKey(e.target.closest('div').querySelector('input').value.trim())}
+                style={{ padding:"5px 12px", fontSize:12, fontWeight:700,
+                  border:"none", borderRadius:6, background:T.accent,
+                  color:"#fff", cursor:"pointer" }}>
+                저장
+              </button>
+              <button onClick={() => setShowApiInput(false)}
+                style={{ padding:"5px 8px", fontSize:12, border:`1px solid ${T.border}`,
+                  borderRadius:6, background:"transparent", cursor:"pointer", color:T.muted }}>
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowApiInput(true)}
+              style={{ padding:"5px 12px", fontSize:11, fontWeight:600,
+                border:`1px solid ${T.border}`, borderRadius:6,
+                background: apiKey ? "#f0fff0" : T.tagBg,
+                color: apiKey ? "#2a9d2a" : T.muted,
+                cursor:"pointer", fontFamily:T.sans, display:"flex", alignItems:"center", gap:5 }}>
+              <span>{apiKey ? "● API 연결됨" : "○ API 키 입력"}</span>
+            </button>
+          )}
+        </div>
       </header>
 
       {/* ── Body: Split Panel ───────────────────────────────────── */}
