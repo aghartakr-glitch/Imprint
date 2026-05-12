@@ -1885,7 +1885,11 @@ export default function App() {
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
-        'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move footnotes to a side column or separate block. ' +
+        (needsLLMFootnotes
+          ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
+          : hasFootnoteText
+            ? 'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
+            : 'FOOTNOTES: no footnotes — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
