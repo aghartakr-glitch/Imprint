@@ -743,7 +743,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
         flushBuf();
         inPreface = true;
         lines.push('\\Needspace{4\\baselineskip}');
-        lines.push(`{\\htwo ${escapeLatex(trimmed)}\\par}`);
+        lines.push(`{\\htwo ${escapeLatex(sanitizeUnicodeForLatex(trimmed))}\\par}`);
         lines.push('\\vspace{10pt}');
         lines.push('');
       } else if (hasTOCBlock && tocEntryRe.test(trimmed) &&
