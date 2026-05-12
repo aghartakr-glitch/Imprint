@@ -2491,5 +2491,3 @@ REQUIRED OUTPUT FORMAT:
     </div>
   );
 }
-
-export default App;
