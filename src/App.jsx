@@ -2264,8 +2264,8 @@ export default function App() {
           },
 
           output: {
-            latex_code: LOG_FULL_LATEX ? cleanLatex : '',
-            latex_length: cleanLatex.length,
+            latex_code: LOG_FULL_LATEX ? finalMainTex : '',
+            latex_length: finalMainTex.length,
             latex_hash: _latexHash,
             compile_status: 'not_tested',
             error_message: '',
