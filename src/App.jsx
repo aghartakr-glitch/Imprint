@@ -2286,7 +2286,7 @@ REQUIRED OUTPUT FORMAT:
                 </div>
 
                 {/* 스펙 그리드 — 무채색, 깔끔 */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)",
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
                   gap:0, marginTop:14, border:`1px solid ${T.border}`, borderRadius:6, overflow:"hidden" }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
