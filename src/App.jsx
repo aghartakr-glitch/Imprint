@@ -1250,14 +1250,37 @@ export default function App() {
       const fnFont = (mixedFnOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
       const rhFont = (mixedRhOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
 
-      // FONT_MANIFEST — 실제 파일명 + 확장자 기반 (fonts/ 하위 폴더)
-      // Pretendard = .otf / 나머지 = .ttf / NanumMyeongjo = -Regular 없음
+      // ── FONT_MANIFEST ──────────────────────────────────────────────
+      // 사용자 폴더에 실제 존재하는 폰트만 등록. 이 목록 외 폰트는 절대 출력 안 됨.
+      // Pretendard = .otf  /  나머지 = .ttf  /  NanumMyeongjo = -Regular 접미어 없음
       const FONT_MANIFEST = {
+        // ── 명조 계열
         NanumMyeongjo: {
           ext: '.ttf',
           upright: 'NanumMyeongjo', bold: 'NanumMyeongjoBold',
           italic: null, boldItalic: null,
         },
+        NotoSerif: {
+          ext: '.ttf',
+          upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
+          italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
+        },
+        NotoSerif_SemiCondensed: {
+          ext: '.ttf',
+          upright: 'NotoSerif_SemiCondensed-Regular', bold: 'NotoSerif_SemiCondensed-Bold',
+          italic: 'NotoSerif_SemiCondensed-Italic', boldItalic: 'NotoSerif_SemiCondensed-BoldItalic',
+        },
+        NotoSerif_Condensed: {
+          ext: '.ttf',
+          upright: 'NotoSerif_Condensed-Regular', bold: 'NotoSerif_Condensed-Bold',
+          italic: 'NotoSerif_Condensed-Italic', boldItalic: 'NotoSerif_Condensed-BoldItalic',
+        },
+        NotoSerif_ExtraCondensed: {
+          ext: '.ttf',
+          upright: 'NotoSerif_ExtraCondensed-Regular', bold: 'NotoSerif_ExtraCondensed-Bold',
+          italic: 'NotoSerif_ExtraCondensed-Italic', boldItalic: 'NotoSerif_ExtraCondensed-BoldItalic',
+        },
+        // ── 고딕 계열
         NotoSans: {
           ext: '.ttf',
           upright: 'NotoSans-Regular', bold: 'NotoSans-Bold',
@@ -1273,32 +1296,32 @@ export default function App() {
           upright: 'NotoSans_Condensed-Regular', bold: 'NotoSans_Condensed-Bold',
           italic: 'NotoSans_Condensed-Italic', boldItalic: 'NotoSans_Condensed-BoldItalic',
         },
-        NotoSerif: {
+        NotoSans_ExtraCondensed: {
           ext: '.ttf',
-          upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
-          italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
+          upright: 'NotoSans_ExtraCondensed-Regular', bold: 'NotoSans_ExtraCondensed-Bold',
+          italic: 'NotoSans_ExtraCondensed-Italic', boldItalic: 'NotoSans_ExtraCondensed-BoldItalic',
         },
-        NotoSerif_Condensed: {
-          ext: '.ttf',
-          upright: 'NotoSerif_Condensed-Regular', bold: 'NotoSerif_Condensed-Bold',
-          italic: 'NotoSerif_Condensed-Italic', boldItalic: 'NotoSerif_Condensed-BoldItalic',
-        },
+        // ── 디스플레이 / 혼용
         Pretendard: {
           ext: '.otf',
           upright: 'Pretendard-Regular', bold: 'Pretendard-Bold',
           italic: null, boldItalic: null,
         },
       };
+      const ALLOWED_FONTS = Object.keys(FONT_MANIFEST);
+
       function fontspecCmd(cmd, name) {
-        const m = FONT_MANIFEST[name] || FONT_MANIFEST['NotoSerif'];
+        // 목록 밖 폰트 요청 시 NotoSerif로 강제 fallback
+        const safeName = ALLOWED_FONTS.includes(name) ? name : 'NotoSerif';
+        const m = FONT_MANIFEST[safeName];
         const opts = [
-          'Path=./fonts/', `Extension=${m.ext || '.ttf'}`,
+          'Path=./fonts/', `Extension=${m.ext}`,
           `UprightFont=${m.upright}`,
           m.bold ? `BoldFont=${m.bold}` : null,
           m.italic ? `ItalicFont=${m.italic}` : null,
           m.boldItalic ? `BoldItalicFont=${m.boldItalic}` : null,
         ].filter(Boolean).join(',\n  ');
-        return `\\${cmd}{${name}}[\n  ${opts}\n]`;
+        return `\\${cmd}{${safeName}}[\n  ${opts}\n]`;
       }
       const fontBlock =
         `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans_SemiCondensed\n` +
