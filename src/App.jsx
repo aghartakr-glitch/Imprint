@@ -2540,6 +2540,32 @@ REQUIRED OUTPUT FORMAT:
                 {/* 최종 파일 */}
                 {tab === "final" && latex && (
                   <div style={{ padding:"20px 24px" }}>
+                    {/* 검증 체크리스트 */}
+                    {(() => {
+                      const { errors: ve, warnings: vw } = validateLatexExport({ mainTex: latex, sty: styCode || '' });
+                      const checks = [
+                        { ok: true, label: 'main.tex 생성됨' },
+                        { ok: !!styCode, label: 'imprint-style.sty 생성됨' },
+                        { ok: true, label: 'XeLaTeX 필수 (% !TeX program = XeLaTeX 포함)' },
+                        { ok: (latex.match(/\\documentclass/g)||[]).length === 1, label: '\\documentclass 1회' },
+                        { ok: (latex.match(/\\begin\{document\}/g)||[]).length === 1, label: '\\begin{document} 1회' },
+                        { ok: (latex.match(/\\end\{document\}/g)||[]).length === 1, label: '\\end{document} 1회' },
+                        { ok: vw.length === 0, label: vw.length > 0 ? '⚠ document body에 본문 내용 없음' : 'document body에 본문 있음', warn: vw.length > 0 },
+                      ];
+                      return (
+                        <div style={{ marginBottom:14, padding:"10px 14px", background:T.bg,
+                          borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5 }}>
+                          <div style={{ fontWeight:700, color:T.ink, marginBottom:6 }}>LaTeX 검증</div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px" }}>
+                            {checks.map((c,i) => (
+                              <span key={i} style={{ color: c.warn ? '#c44' : c.ok ? '#3a3' : '#c44' }}>
+                                {c.warn ? '⚠' : c.ok ? '✓' : '✗'} {c.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>
