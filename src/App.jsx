@@ -1733,32 +1733,61 @@ export default function App() {
             !bodyContentOnly.includes('\\end{paracol}')) {
           bodyContentOnly += '\n\\end{paracol}';
         }
-        // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문만
+
+        // Claude output이 실질적으로 비어있으면 사용자 입력으로 직접 조립
+        const claudeHasContent = bodyContentOnly.replace(/[\s\\%{}]/g, '').length > 30;
+        const hasUserInput = !!(fields.제목?.trim() || fields.본문?.trim());
+
+        let finalBodyContent;
+        if (claudeHasContent) {
+          finalBodyContent = bodyContentOnly;
+        } else if (hasUserInput) {
+          finalBodyContent = buildBodyContent({
+            title: fields.제목,
+            subtitle: fields.소제목,
+            body: injectFootnotes(fields.본문 || '', fields.각주 || ''),
+            footnote: '',
+            runningHead: fields.면주,
+          });
+        } else {
+          finalBodyContent = buildMissingBodyPlaceholder();
+        }
+
+        // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
         const mainTex = [
           `% !TeX program = XeLaTeX`,
           `% Compile: xelatex -interaction=nonstopmode main.tex`,
-          `% Engine: XeLaTeX 또는 LuaLaTeX 필수 (fontspec 사용) — pdfLaTeX 미지원`,
+          `% Engine: XeLaTeX 필수 (\\XeTeXlinebreaklocale 사용) — pdfLaTeX 미지원`,
+          ``,
           `\\documentclass[${p.b.크기}pt]{memoir}`,
           `\\setstocksize{${p.f.h}mm}{${p.f.w}mm}`,
           `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}`,
+          ``,
           `\\usepackage{kotex}`,
           `\\usepackage{imprint-style}`,
           ``,
           `\\begin{document}`,
+          ``,
           `\\XeTeXlinebreaklocale "ko"`,
           `\\XeTeXlinebreakskip=0pt plus 1pt`,
-          `\\pagestyle{fancy}\\fancyhf{}`,
           ``,
-          bodyContentOnly,
+          `\\pagestyle{fancy}`,
+          `\\fancyhf{}`,
+          ``,
+          finalBodyContent,
           ``,
           `\\end{document}`,
         ].join('\n');
+
         // LaTeX 구조 검증
-        const _valErrors = validateLatexExport({ mainTex, sty: styContent });
+        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex, sty: styContent });
         if (_valErrors.length > 0) {
           setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
           pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
           return;
+        }
+        if (_valWarnings.length > 0) {
+          setErr(_valWarnings.join('\n'));
         }
         setLatex(mainTex);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
