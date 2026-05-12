@@ -2451,10 +2451,15 @@ REQUIRED OUTPUT FORMAT:
                     </pre>
                     <div style={{ marginTop:12, padding:"12px 16px", background:T.surface,
                       borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5,
-                      color:T.muted, lineHeight:1.8 }}>
-                      <strong style={{ color:T.ink }}>Overleaf 사용법:</strong>{" "}
-                      1) 새 프로젝트 생성 → 2) main.tex에 위 코드 전체 붙여넣기 →
-                      3) 폰트 파일 (NotoSerif-Regular.ttf 등) 업로드 → 4) 컴파일
+                      color:T.muted, lineHeight:2 }}>
+                      <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
+                      1) main.tex + imprint-style.sty + 폰트 파일(.ttf)을 같은 폴더에 저장<br/>
+                      2) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> 선택 → 컴파일
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
+                        <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
+                        1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
+                        2) 컴파일러 설정: <strong style={{ color:T.ink }}>XeLaTeX</strong>
+                      </div>
                     </div>
                   </div>
                 )}
