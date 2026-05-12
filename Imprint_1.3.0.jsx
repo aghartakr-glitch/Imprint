@@ -594,6 +594,33 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
 
 
 
+// LaTeX 출력 구조 검증 — .sty에 document body 코드가 없는지, main.tex 구조가 올바른지
+function validateLatexExport({ mainTex, sty }) {
+  const errors = [];
+  function count(s, re) { return (s.match(re) || []).length; }
+  if (count(mainTex, /\\documentclass/g) !== 1)
+    errors.push('main.tex: \\documentclass 가 정확히 1개여야 합니다');
+  if (count(mainTex, /\\begin\{document\}/g) !== 1)
+    errors.push('main.tex: \\begin{document} 가 정확히 1개여야 합니다');
+  if (count(mainTex, /\\end\{document\}/g) !== 1)
+    errors.push('main.tex: \\end{document} 가 정확히 1개여야 합니다');
+  for (const [label, re] of [
+    ['\\documentclass', /\\documentclass/],
+    ['\\begin{document}', /\\begin\{document\}/],
+    ['\\end{document}', /\\end\{document\}/],
+    ['\\begin{multicols}', /\\begin\{multicols\}/],
+    ['\\begin{paracol}', /\\begin\{paracol\}/],
+  ]) {
+    if (re.test(sty))
+      errors.push(`imprint-style.sty: ${label} 은 .sty에 있으면 안 됩니다`);
+  }
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(sty))
+    errors.push('imprint-style.sty: 제어 문자 포함 (JS 백슬래시 escape 오류)');
+  if (!sty.includes('\\NeedsTeXFormat'))
+    errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
+  return errors;
+}
+
 // Imprint 1.0.0 — App Component
 // UI: Split-panel layout (Left: Input / Right: Package + Output)
 export default function App() {
@@ -1136,26 +1163,60 @@ export default function App() {
       const fnFont = (mixedFnOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
       const rhFont = (mixedRhOnly || (isMixedLayout && bodyIsSerif)) ? 'NotoSans' : mainFont;
 
-      // fontBlock 생성 (Overleaf 경로 기반)
-      function fontEntry(name, isNanum) {
-        if (isNanum) return name + '}[Path=./,Extension=.ttf,UprightFont=NanumMyeongjo,BoldFont=NanumMyeongjoBold,ExtraBoldFont=NanumMyeongjoExtraBold';
-        if (name === 'NotoSans_SemiCondensed') return name + '}[Path=./,Extension=.ttf,UprightFont=NotoSans_SemiCondensed-Regular,BoldFont=NotoSans_SemiCondensed-Bold,ItalicFont=NotoSans_SemiCondensed-Italic,BoldItalicFont=NotoSans_SemiCondensed-BoldItalic';
-        return name + '}[Path=./,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic';
+      // FONT_MANIFEST — 실제 파일명 기반 (XeLaTeX Path=./ 기준)
+      const FONT_MANIFEST = {
+        NanumMyeongjo: {
+          upright: 'NanumMyeongjo', bold: 'NanumMyeongjoBold',
+          italic: null, boldItalic: null,
+        },
+        NotoSans: {
+          upright: 'NotoSans-Regular', bold: 'NotoSans-Bold',
+          italic: 'NotoSans-Italic', boldItalic: 'NotoSans-BoldItalic',
+        },
+        NotoSans_SemiCondensed: {
+          upright: 'NotoSans_SemiCondensed-Regular', bold: 'NotoSans_SemiCondensed-Bold',
+          italic: 'NotoSans_SemiCondensed-Italic', boldItalic: 'NotoSans_SemiCondensed-BoldItalic',
+        },
+        NotoSans_Condensed: {
+          upright: 'NotoSans_Condensed-Regular', bold: 'NotoSans_Condensed-Bold',
+          italic: 'NotoSans_Condensed-Italic', boldItalic: 'NotoSans_Condensed-BoldItalic',
+        },
+        NotoSerif: {
+          upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
+          italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
+        },
+        NotoSerif_Condensed: {
+          upright: 'NotoSerif_Condensed-Regular', bold: 'NotoSerif_Condensed-Bold',
+          italic: 'NotoSerif_Condensed-Italic', boldItalic: 'NotoSerif_Condensed-BoldItalic',
+        },
+        Pretendard: {
+          upright: 'Pretendard-Regular', bold: 'Pretendard-Bold',
+          italic: null, boldItalic: null,
+        },
+      };
+      function fontspecCmd(cmd, name) {
+        const m = FONT_MANIFEST[name] || FONT_MANIFEST['NotoSerif'];
+        const opts = [
+          'Path=./', 'Extension=.ttf',
+          `UprightFont=${m.upright}`,
+          m.bold ? `BoldFont=${m.bold}` : null,
+          m.italic ? `ItalicFont=${m.italic}` : null,
+          m.boldItalic ? `BoldItalicFont=${m.boldItalic}` : null,
+        ].filter(Boolean).join(',\n  ');
+        return `\\${cmd}{${name}}[\n  ${opts}\n]`;
       }
-      const isNanumMain = mainFont === 'NanumMyeongjo';
-      const isNanumSans = sansFont === 'NanumMyeongjo';
       const fontBlock =
-        `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans / NotoSans_SemiCondensed\n` +
+        `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans_SemiCondensed\n` +
         `% 원본 서체: ${p.ty.이름} (${fontClass})\n` +
-        `\\setmainfont{${fontEntry(mainFont, isNanumMain)}]\n` +
+        fontspecCmd('setmainfont', mainFont) + '\n' +
         (mainFont !== sansFont
-          ? `\\setsansfont{${fontEntry(sansFont, isNanumSans)}]\n`
+          ? fontspecCmd('setsansfont', sansFont) + '\n'
           : `% sans = main (단일 서체군)\n`) +
         (isMixedLayout
           ? `% 혼합 레이아웃: 본문=\\rmfamily, 제목/소제목=\\sffamily\n`
           : '') +
         ((mixedFnOnly || mixedRhOnly) && fnFont !== mainFont
-          ? `\\newfontfamily\\fnfont{${fontEntry(fnFont, false)}] % 각주/면주 전용\n`
+          ? fontspecCmd('newfontfamily\\fnfont', fnFont) + ' % 각주/면주 전용\n'
           : '');
       // ── 단 구성 분석 ─────────────────────────────────────────────
       const 구성 = p.c.구성 || '';
@@ -1396,6 +1457,12 @@ export default function App() {
 
       // AI에게 보내는 preamble 요약 (fontBlock 제외 — 길어서 토큰 낭비)
       // ── .sty 파일 생성 (결정론적 — Claude API 없음) ─────────────
+      // ⚠️ JS template literal에서 \N \R \f \t 등은 escape로 처리됨 → 반드시 \\ 사용
+      const _styDate = new Date().toISOString().slice(0,10).replace(/-/g,'/');
+      // colPackages는 \usepackage → .sty에서는 \RequirePackage로 변환
+      const styColPkgs = colPackages.trim()
+        ? colPackages.trim().replace(/\\usepackage/g, '\\RequirePackage')
+        : null;
       const styContent = [
         `% ============================================================`,
         `% imprint-style.sty`,
@@ -1404,21 +1471,21 @@ export default function App() {
         `% Genre:     ${p.g} / ${p.pub_type}`,
         `% Generated: Imprint v${IMPRINT_VERSION} — ${new Date().toISOString().slice(0,10)}`,
         `% ============================================================`,
-        `\NeedsTeXFormat{LaTeX2e}`,
-        `\ProvidesPackage{imprint-style}[${new Date().toISOString().slice(0,10)} Imprint generated style]`,
+        `\\NeedsTeXFormat{LaTeX2e}`,
+        `\\ProvidesPackage{imprint-style}[${_styDate} Imprint generated style]`,
         ``,
         `% ── 필수 패키지 ───────────────────────────────────────────────`,
-        `\RequirePackage{fontspec}`,
-        `\RequirePackage{geometry}`,
-        `\RequirePackage{fancyhdr}`,
-        `\RequirePackage{needspace}`,
-        colPackages.trim() ? colPackages.trim() : null,
-        alignResult.alignment === 'ragged' ? `\RequirePackage{ragged2e}` : null,
+        `\\RequirePackage{fontspec}`,
+        `\\RequirePackage{geometry}`,
+        `\\RequirePackage{fancyhdr}`,
+        `\\RequirePackage{needspace}`,
+        styColPkgs || null,
+        alignResult.alignment === 'ragged' ? `\\RequirePackage{ragged2e}` : null,
         ``,
         `% ── 판형 / 여백 ───────────────────────────────────────────────`,
         `% ${p.f.w}×${p.f.h}mm — ${p.why_dim || ''}`,
         `% 여백 의도: ${p.why_margin || ''}`,
-        `\geometry{`,
+        `\\geometry{`,
         `  paperwidth=${p.f.w}mm, paperheight=${p.f.h}mm,`,
         `  top=${corrections.margins.상}mm, bottom=${corrections.margins.하}mm,`,
         `  inner=${corrections.margins.안}mm, outer=${corrections.margins.밖}mm,`,
@@ -1428,48 +1495,51 @@ export default function App() {
         ``,
         `% ── 서체 ──────────────────────────────────────────────────────`,
         `% 서체 선택 이유: ${p.why_font || ''}`,
+        `% XeLaTeX 전용 (fontspec) — pdfLaTeX 미지원`,
         fontBlock,
         ``,
         `% ── 본문 타이포그래피 ─────────────────────────────────────────`,
         `% ${adjustedBodySize}pt / 행간 ${adjustedBodyLead}pt / 자간 ${p.b.자간}`,
         `% 자간 이유: ${p.why_tracking || ''}`,
-        `\AtBeginDocument{\fontsize{${adjustedBodySize}pt}{${adjustedBodyLead}pt}\selectfont}`,
-        `\setlength{\parindent}{1em}`,
-        `\setlength{\parskip}{0pt}`,
-        `\widowpenalty=10000`,
-        `\clubpenalty=10000`,
-        `\displaywidowpenalty=10000`,
-        `\pretolerance=100`,
-        `\tolerance=400`,
-        `\emergencystretch=3em`,
+        `\\AtBeginDocument{\\fontsize{${adjustedBodySize}pt}{${adjustedBodyLead}pt}\\selectfont}`,
+        `\\setlength{\\parindent}{1em}`,
+        `\\setlength{\\parskip}{0pt}`,
+        `\\widowpenalty=10000`,
+        `\\clubpenalty=10000`,
+        `\\displaywidowpenalty=10000`,
+        `\\pretolerance=100`,
+        `\\tolerance=400`,
+        `\\emergencystretch=3em`,
         ``,
         `% ── 본문 정렬: ${p.align_body || '양쪽 정렬'} ────────────────────────────────`,
-        alignResult.alignment === 'ragged' ? `\AtBeginDocument{\RaggedRight}` : `% 기본 양쪽 정렬 (LaTeX 기본값)`,
+        alignResult.alignment === 'ragged' ? `\\AtBeginDocument{\\RaggedRight}` : `% 기본 양쪽 정렬 (LaTeX 기본값)`,
         ``,
         `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
-        colGap > 0 ? `\setlength{\columnsep}{${colGap}mm}` : null,
-        colSetupBlock.trim() ? colSetupBlock.trim() : null,
+        `% ⚠ 실제 다단 환경(\\begin{multicols} 등)은 main.tex 본문에 위치합니다`,
+        colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
         ``,
         `% ── 위계별 글자 크기 명령 ─────────────────────────────────────`,
-        `% (본문에서 \hone \htwo \hthree \bodyf 사용)`,
+        `% 본문에서 \\hone \\htwo \\hthree \\bodyf 사용`,
         headingCmdsBlock.trim(),
         ``,
         `% ── 각주 ──────────────────────────────────────────────────────`,
         `% 크기: ${p.footnote || '-'} / 정렬: ${p.align_note || '-'}`,
-        `\renewcommand{\footnoterule}{}`,
-        `\renewcommand{\thefootnote}{\arabic{footnote}}`,
-        hasFootnote ? `\renewcommand{\footnotesize}{\fontsize{${fnSize}pt}{${fnLead}pt}\selectfont}` : null,
-        `\makeatletter`,
-        `\renewcommand\@makefntext[1]{\noindent\makebox[1.2em][r]{\@thefnmark}\,#1}`,
-        `\makeatother`,
+        `\\renewcommand{\\footnoterule}{}`,
+        `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
+        hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
+        `\\makeatletter`,
+        `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
+        `\\makeatother`,
         ``,
         `% ── 면주 / 쪽번호 ─────────────────────────────────────────────`,
         `% 위치: ${p.pn || '-'} / 크기: ${p.pn_size || '-'} / 서체: ${p.pn_font || '-'}`,
         `% 스타일: ${p.pn_style || '-'} / 면주 크기: ${p.running || '-'}`,
-        `\renewcommand{\headrulewidth}{0pt}`,
-        `\renewcommand{\footrulewidth}{0pt}`,
-        `% → fancyhdr 명령은 main.tex \begin{document} 직후에 위치합니다`,
+        `\\renewcommand{\\headrulewidth}{0pt}`,
+        `\\renewcommand{\\footrulewidth}{0pt}`,
+        `% fancyhdr 설정(\\lhead \\rhead 등)은 main.tex \\begin{document} 직후에 위치합니다`,
+        ``,
+        `\\endinput`,
       ].filter(x => x !== null && x !== undefined).join('\n');
 
       setStyCode(styContent);
@@ -1555,24 +1625,56 @@ export default function App() {
         clearTimeout(tid);
         const data = await res.json();
         const raw = (data.content || []).map(x => x.text || '').join('');
-        let bodyOnly = raw.replace(/```latex\n?/g, '').replace(/```/g, '').trim();
-        // \begin{document} 이전 모든 텍스트(AI 혼잣말 포함) 제거
-        const docStart = bodyOnly.indexOf('\\begin{document}');
-        if (docStart < 0) {
-          // \begin{document}가 아예 없으면 강제 wrap
-          bodyOnly = '\\begin{document}\n' + bodyOnly + '\n\\end{document}';
+        let bodyRaw = raw.replace(/```latex\n?/g, '').replace(/```/g, '').trim();
+        // Claude 출력에서 \begin{document}...\end{document} 사이 본문만 추출
+        // → mainTex에서 직접 감쌀 것이므로 document 환경 제거
+        let bodyContentOnly;
+        const docStart = bodyRaw.indexOf('\\begin{document}');
+        if (docStart >= 0) {
+          let afterBegin = bodyRaw.slice(docStart + '\\begin{document}'.length);
+          const docEnd = afterBegin.lastIndexOf('\\end{document}');
+          if (docEnd >= 0) afterBegin = afterBegin.slice(0, docEnd);
+          bodyContentOnly = afterBegin.trim();
         } else {
-          bodyOnly = bodyOnly.slice(docStart);
+          bodyContentOnly = bodyRaw;
         }
-        // \end{document} 없으면 추가
-        if (!bodyOnly.includes('\\end{document}')) {
-          if (bodyOnly.includes('\\begin{multicols}')) bodyOnly += '\n\\end{multicols}';
-          if (bodyOnly.includes('\\begin{paracol}')) bodyOnly += '\n\\end{paracol}';
-          bodyOnly += '\n\\end{document}';
+        // 미닫힌 환경 닫기
+        if (bodyContentOnly.includes('\\begin{multicols}') &&
+            !bodyContentOnly.includes('\\end{multicols}')) {
+          bodyContentOnly += '\n\\end{multicols}';
         }
-        // 프리앰블 + 본문 조립
-        const cleanLatex = preamble + '\n' + bodyOnly;
-        setLatex(mainTexHeader + cleanLatex);
+        if (bodyContentOnly.includes('\\begin{paracol}') &&
+            !bodyContentOnly.includes('\\end{paracol}')) {
+          bodyContentOnly += '\n\\end{paracol}';
+        }
+        // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문만
+        const mainTex = [
+          `% !TeX program = XeLaTeX`,
+          `% Compile: xelatex -interaction=nonstopmode main.tex`,
+          `% Engine: XeLaTeX 또는 LuaLaTeX 필수 (fontspec 사용) — pdfLaTeX 미지원`,
+          `\\documentclass[${p.b.크기}pt]{memoir}`,
+          `\\setstocksize{${p.f.h}mm}{${p.f.w}mm}`,
+          `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}`,
+          `\\usepackage{kotex}`,
+          `\\usepackage{imprint-style}`,
+          ``,
+          `\\begin{document}`,
+          `\\XeTeXlinebreaklocale "ko"`,
+          `\\XeTeXlinebreakskip=0pt plus 1pt`,
+          `\\pagestyle{fancy}\\fancyhf{}`,
+          ``,
+          bodyContentOnly,
+          ``,
+          `\\end{document}`,
+        ].join('\n');
+        // LaTeX 구조 검증
+        const _valErrors = validateLatexExport({ mainTex, sty: styContent });
+        if (_valErrors.length > 0) {
+          setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
+          pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
+          return;
+        }
+        setLatex(mainTex);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
@@ -2326,11 +2428,11 @@ REQUIRED OUTPUT FORMAT:
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>
-                          Overleaf에 붙여넣을 완성 파일
+                          main.tex
                         </div>
-                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>
-                          이 코드를 Overleaf의 main.tex에 전체 복사하면 바로 컴파일됩니다.
-                          스타일과 본문이 하나의 파일에 통합되어 있습니다.
+                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.7 }}>
+                          <strong style={{ color:"#c44" }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
+                          imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
                         </div>
                       </div>
                       <button onClick={copy}
@@ -2349,10 +2451,15 @@ REQUIRED OUTPUT FORMAT:
                     </pre>
                     <div style={{ marginTop:12, padding:"12px 16px", background:T.surface,
                       borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5,
-                      color:T.muted, lineHeight:1.8 }}>
-                      <strong style={{ color:T.ink }}>Overleaf 사용법:</strong>{" "}
-                      1) 새 프로젝트 생성 → 2) main.tex에 위 코드 전체 붙여넣기 →
-                      3) 폰트 파일 (NotoSerif-Regular.ttf 등) 업로드 → 4) 컴파일
+                      color:T.muted, lineHeight:2 }}>
+                      <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
+                      1) main.tex + imprint-style.sty + 폰트 파일(.ttf)을 같은 폴더에 저장<br/>
+                      2) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> 선택 → 컴파일
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
+                        <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
+                        1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
+                        2) 컴파일러 설정: <strong style={{ color:T.ink }}>XeLaTeX</strong>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2366,10 +2473,11 @@ REQUIRED OUTPUT FORMAT:
                           스타일 파일 (imprint-style.sty)
                         </div>
                         <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.6 }}>
-                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 파일입니다.
+                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 패키지 파일입니다.<br/>
                           이 파일 하나로 본문 길이와 관계없이 동일한 스타일이 유지됩니다.<br/>
-                          <strong style={{ color:T.ink }}>사용법:</strong> Overleaf에 이 파일을 업로드하고,
-                          본문 tex 파일 상단에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>\usepackage{"{imprint-style}"}</code> 추가
+                          <strong style={{ color:T.ink }}>사용법:</strong> main.tex과 같은 폴더에 저장.
+                          main.tex에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>{"\\usepackage{imprint-style}"}</code> 이미 포함됨.<br/>
+                          <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
                       <button onClick={() => { navigator.clipboard.writeText(styCode); }}
@@ -2491,3 +2599,4 @@ REQUIRED OUTPUT FORMAT:
     </div>
   );
 }
+

@@ -2059,8 +2059,8 @@ REQUIRED OUTPUT FORMAT:
       </header>
 
       {/* ══ 3칼럼 본문 ════════════════════════════════════════════════ */}
-      <div style={{ flex:1, display:"grid", gridTemplateColumns:"360px 1fr 300px",
-        overflow:"hidden", minHeight:0 }}>
+      <div style={{ flex:1, display:"grid", gridTemplateColumns:"clamp(260px,25vw,380px) 1fr clamp(220px,22vw,320px)",
+        overflow:"hidden", minHeight:0, minWidth:0 }}>
 
         {/* ── 좌: 텍스트 입력 ──────────────────────────────────────── */}
         <div style={{ borderRight:`1px solid ${T.border}`, display:"flex",
