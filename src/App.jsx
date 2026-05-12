@@ -1934,6 +1934,8 @@ export default function App() {
         } else {
           bodyContentOnly = bodyRaw;
         }
+        // 반각 CJK 문자 정규화 (UnBatang 폴백 폰트 누락 오류 방지)
+        bodyContentOnly = sanitizeUnicodeForLatex(bodyContentOnly);
         // 미닫힌 환경 닫기
         if (bodyContentOnly.includes('\\begin{multicols}') &&
             !bodyContentOnly.includes('\\end{multicols}')) {
