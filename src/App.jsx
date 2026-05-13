@@ -822,6 +822,80 @@ function blockToLatex(block, fnMap, superMap) {
   }
 }
 
+// 역할별 행간 계산 (MEASURE-003 / SYSTEM-001)
+// Editorial Style Data의 실제 값이 있으면 그것을 우선 사용
+function computeLeading(sizePt, role) {
+  const size = parseFloat(sizePt);
+  const ratioByRole = {
+    title: 1.10, subtitle: 1.20, heading: 1.20, subheading: 1.25,
+    body: 1.55, quote: 1.50, footnote: 1.35, titleFootnote: 1.30,
+    caption: 1.30, folio: 1.20, runningHead: 1.20,
+  };
+  const ratio = ratioByRole[role] || 1.55;
+  return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
+}
+
+// memoir page style 생성 (fancyhdr 대체)
+// pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
+function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
+  const pos = (pnPos || '하단-외측').replace(/\s/g, '');
+  const isNone = pos === '없음' || pos === '-' || pos === '';
+
+  const pnCmd = `{\\foliof\\thepage}`;
+  const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : `{}`;
+  const mt = `{}`;
+
+  let oddHead = `${mt}${mt}${mt}`, evenHead = `${mt}${mt}${mt}`;
+  let oddFoot = `${mt}${mt}${mt}`, evenFoot = `${mt}${mt}${mt}`;
+
+  if (!isNone) {
+    const isTop    = pos.includes('상단');
+    const isOuter  = pos.includes('외측');
+    const isInner  = pos.includes('내측');
+
+    if (isTop) {
+      if (isOuter) {
+        oddHead  = `${rhCmd}${mt}${pnCmd}`;
+        evenHead = `${pnCmd}${mt}${rhCmd}`;
+      } else if (isInner) {
+        oddHead  = `${pnCmd}${mt}${rhCmd}`;
+        evenHead = `${rhCmd}${mt}${pnCmd}`;
+      } else {
+        oddHead  = `${mt}${pnCmd}${mt}`;
+        evenHead = `${mt}${pnCmd}${mt}`;
+      }
+    } else {
+      if (isOuter) {
+        oddFoot  = `${mt}${mt}${pnCmd}`;
+        evenFoot = `${pnCmd}${mt}${mt}`;
+      } else if (isInner) {
+        oddFoot  = `${pnCmd}${mt}${mt}`;
+        evenFoot = `${mt}${mt}${pnCmd}`;
+      } else {
+        oddFoot  = `${mt}${pnCmd}${mt}`;
+        evenFoot = `${mt}${pnCmd}${mt}`;
+      }
+    }
+  }
+
+  const folioSize = pnSizePt || 8;
+  const folioLead = computeLeading(folioSize, 'folio');
+
+  return [
+    `% ── 면주 / 쪽번호 macro (memoir 전용) ────────────────────────`,
+    `\\newcommand{\\foliof}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\runningheadf}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\imprintrunninghead}{}`,
+    `\\makepagestyle{imprint}`,
+    `\\makeheadrule{imprint}{\\textwidth}{0pt}`,
+    `\\makefootrule{imprint}{\\textwidth}{0pt}{0pt}`,
+    `\\makeoddhead{imprint}${oddHead}`,
+    `\\makeevenhead{imprint}${evenHead}`,
+    `\\makeoddfoot{imprint}${oddFoot}`,
+    `\\makeevenfoot{imprint}${evenFoot}`,
+  ].join('\n');
+}
+
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   const { fnMap, superMap } = parseFootnoteMap(footnote);
   const esc = t => escapeLatex(sanitizeUnicodeForLatex(t || ''));
