@@ -1952,13 +1952,19 @@ export default function App() {
         `% ── 판형 / 여백 ───────────────────────────────────────────────`,
         `% ${p.f.w}×${p.f.h}mm — ${p.why_dim || ''}`,
         `% 여백 의도: ${p.why_margin || ''}`,
-        `\\geometry{`,
-        `  paperwidth=${p.f.w}mm, paperheight=${p.f.h}mm,`,
-        `  top=${corrections.margins.상}mm, bottom=${corrections.margins.하}mm,`,
-        `  inner=${corrections.margins.안}mm, outer=${corrections.margins.밖}mm,`,
-        `  includehead=true, includefoot=false,`,
-        `  headheight=${pnAutoSize + 6}pt, headsep=4mm,`,
-        `}`,
+        (() => {
+          const pnIsBottom = !(p.pn || '').includes('상단');
+          return [
+            `\\geometry{`,
+            `  paperwidth=${p.f.w}mm, paperheight=${p.f.h}mm,`,
+            `  top=${corrections.margins.상}mm, bottom=${corrections.margins.하}mm,`,
+            `  inner=${corrections.margins.안}mm, outer=${corrections.margins.밖}mm,`,
+            `  includehead=true, includefoot=${pnIsBottom ? 'true' : 'false'},`,
+            `  headheight=${pnAutoSize + 6}pt, headsep=4mm,`,
+            pnIsBottom ? `  footskip=10mm,` : null,
+            `}`,
+          ].filter(Boolean).join('\n');
+        })(),
         ``,
         `% ── 서체 ──────────────────────────────────────────────────────`,
         `% 서체 선택 이유: ${p.why_font || ''}`,
