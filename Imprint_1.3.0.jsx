@@ -822,6 +822,80 @@ function blockToLatex(block, fnMap, superMap) {
   }
 }
 
+// 역할별 행간 계산 (MEASURE-003 / SYSTEM-001)
+// Editorial Style Data의 실제 값이 있으면 그것을 우선 사용
+function computeLeading(sizePt, role) {
+  const size = parseFloat(sizePt);
+  const ratioByRole = {
+    title: 1.10, subtitle: 1.20, heading: 1.20, subheading: 1.25,
+    body: 1.55, quote: 1.50, footnote: 1.35, titleFootnote: 1.30,
+    caption: 1.30, folio: 1.20, runningHead: 1.20,
+  };
+  const ratio = ratioByRole[role] || 1.55;
+  return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
+}
+
+// memoir page style 생성 (fancyhdr 대체)
+// pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
+function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
+  const pos = (pnPos || '하단-외측').replace(/\s/g, '');
+  const isNone = pos === '없음' || pos === '-' || pos === '';
+
+  const pnCmd = `{\\foliof\\thepage}`;
+  const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : `{}`;
+  const mt = `{}`;
+
+  let oddHead = `${mt}${mt}${mt}`, evenHead = `${mt}${mt}${mt}`;
+  let oddFoot = `${mt}${mt}${mt}`, evenFoot = `${mt}${mt}${mt}`;
+
+  if (!isNone) {
+    const isTop    = pos.includes('상단');
+    const isOuter  = pos.includes('외측');
+    const isInner  = pos.includes('내측');
+
+    if (isTop) {
+      if (isOuter) {
+        oddHead  = `${rhCmd}${mt}${pnCmd}`;
+        evenHead = `${pnCmd}${mt}${rhCmd}`;
+      } else if (isInner) {
+        oddHead  = `${pnCmd}${mt}${rhCmd}`;
+        evenHead = `${rhCmd}${mt}${pnCmd}`;
+      } else {
+        oddHead  = `${mt}${pnCmd}${mt}`;
+        evenHead = `${mt}${pnCmd}${mt}`;
+      }
+    } else {
+      if (isOuter) {
+        oddFoot  = `${mt}${mt}${pnCmd}`;
+        evenFoot = `${pnCmd}${mt}${mt}`;
+      } else if (isInner) {
+        oddFoot  = `${pnCmd}${mt}${mt}`;
+        evenFoot = `${mt}${mt}${pnCmd}`;
+      } else {
+        oddFoot  = `${mt}${pnCmd}${mt}`;
+        evenFoot = `${mt}${pnCmd}${mt}`;
+      }
+    }
+  }
+
+  const folioSize = pnSizePt || 8;
+  const folioLead = computeLeading(folioSize, 'folio');
+
+  return [
+    `% ── 면주 / 쪽번호 macro (memoir 전용) ────────────────────────`,
+    `\\newcommand{\\foliof}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\runningheadf}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\imprintrunninghead}{}`,
+    `\\makepagestyle{imprint}`,
+    `\\makeheadrule{imprint}{\\textwidth}{0pt}`,
+    `\\makefootrule{imprint}{\\textwidth}{0pt}{0pt}`,
+    `\\makeoddhead{imprint}${oddHead}`,
+    `\\makeevenhead{imprint}${evenHead}`,
+    `\\makeoddfoot{imprint}${oddFoot}`,
+    `\\makeevenfoot{imprint}${evenFoot}`,
+  ].join('\n');
+}
+
 function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   const { fnMap, superMap } = parseFootnoteMap(footnote);
   const esc = t => escapeLatex(sanitizeUnicodeForLatex(t || ''));
@@ -914,12 +988,18 @@ function validateLatexExport({ mainTex, sty }) {
   if (halfCJKSty) errors.push(halfCJKSty);
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
+  if (!sty.includes('\\makepagestyle{imprint}'))
+    errors.push('imprint-style.sty: memoir pagestyle \\makepagestyle{imprint} 없음');
+  if (!mainTex.includes('\\pagestyle{imprint}'))
+    errors.push('main.tex: \\pagestyle{imprint} 없음');
+  if (!sty.includes('\\thepage'))
+    errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
   // document body에 실제 내용 있는지 확인
   const bodyMatch = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
   const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
     .replace(/\\XeTeXlinebreakskip[^\n]*\n?/g, '')
     .replace(/\\pagestyle[^\n]*\n?/g, '')
-    .replace(/\\fancyhf[^\n]*\n?/g, '')
+    .replace(/\\renewcommand\{\\imprintrunninghead\}[^\n]*\n?/g, '')
     .replace(/^\s*%[^\n]*\n?/gm, '')
     .trim() : '';
   const warnings = [];
@@ -944,8 +1024,10 @@ export default function App() {
   const [inputTab, setInputTab] = useState(0);
 
   const [styleConfig, setStyleConfig] = useState({
-    mode: 'auto',        // 'auto'|'1'|'2'|'3'|'4'|'variable'
-    bodyNoteSplit: null, // null=auto, {body:N, note:M}
+    columnMode: 'auto',   // 'auto'|'fixed'|'variable'
+    fixedColumns: 1,      // 1~10 (columnMode==='fixed' 일 때)
+    variableGrid: { total: 8, body: 5, note: 3 }, // columnMode==='variable' 일 때
+    bodyNoteSplit: null,  // null=auto, {body:N, note:M} (legacy)
     extraDirective: '',
   });
 
@@ -1625,9 +1707,14 @@ export default function App() {
         }
       }
 
-      // styleConfig.mode가 'auto'가 아니면 사용자 지정 단 우선
-      const userMode = styleConfig.mode;
-      const userOverride = userMode !== 'auto';
+      // styleConfig.columnMode → 사용자 지정 단 우선
+      // 'auto': 데이터 기반 / 'fixed': fixedColumns 사용 / 'variable': variableGrid 사용
+      const colMode = styleConfig.columnMode || 'auto';
+      // legacy 호환: 'auto'|'fixed'|'variable'
+      const userMode = colMode === 'fixed' ? String(styleConfig.fixedColumns || 1)
+                     : colMode === 'variable' ? 'variable'
+                     : 'auto';
+      const userOverride = colMode !== 'auto';
 
       // 판면 너비 (mm) → 모듈 단위 폭 계산
       const textW = p.f.w - p.m.안 - p.m.밖;
@@ -1643,21 +1730,23 @@ export default function App() {
       let colPackages = '';
 
       if (userOverride && userMode === 'variable') {
-        const baseForVar = !isModuleGrid ? baseN : (bodyUnits || 2);
-        colPackages = '\\usepackage{multicol}\n\\usepackage{paracol}\n';
-        const combos = TYPO_BASE.columnCombinations(baseForVar);
-        const mainCombo = combos[0];
-        const bodyColN = mainCombo[0];
-        const noteColN = mainCombo[1];
-        const hasNoteCol = noteColN > 0;
-        const bodyFrac = bodyColN / (bodyColN + (noteColN || 1));
-        const bodyMm = hasNoteCol ? Math.round(textW * bodyFrac - colGap/2) : textW;
+        // 사용자 지정 가변 단: variableGrid.total / body / note
+        const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+        const totalG = vg.total || 8;
+        const bodyG  = vg.body  || Math.round(totalG * 0.625);
+        const noteG  = vg.note  || (totalG - bodyG);
+        const hasNoteCol = noteG > 0;
+        const bodyRatio = bodyG / totalG;
+        const bodyMm = hasNoteCol ? Math.round(textW * bodyRatio - (colGap||5)/2) : textW;
         const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
+        colPackages = '\\usepackage{paracol}\n';
         colSetupBlock =
-          'VAR:base=' + baseForVar + ' ' + textW + 'mm cols=' + combos.map(c=>c[0]+(c[1]>0?'+'+c[1]+'n':'')).join('/') + '\n' +
-          '\\begin{multicols}{' + bodyColN + '} ' + Math.round(textW/bodyColN) + 'mm/col\n' +
-          (hasNoteCol ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' : '') +
+          'VAR:total=' + totalG + ' body=' + bodyG + ' note=' + noteG + ' textwidth=' + textW + 'mm\n' +
           '\\setlength{\\columnsep}{' + (colGap||5) + 'mm}\n' +
+          (hasNoteCol
+            ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' +
+              '% <body content> \\switchcolumn <note content> \\end{paracol}\n'
+            : '% single column (no note column)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
 
@@ -1785,7 +1874,6 @@ export default function App() {
           'top=' + corrections.margins.상 + 'mm,bottom=' + corrections.margins.하 + 'mm,' +
           'inner=' + corrections.margins.안 + 'mm,outer=' + corrections.margins.밖 + 'mm,' +
           'includehead=true,includefoot=false]{geometry}',
-        '\\usepackage{fancyhdr}',
         colPackages.trim(),
         '',
         fontBlock,
@@ -1804,9 +1892,6 @@ export default function App() {
         '\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}',
         '\\makeatother',
         '',
-        '% no rules anywhere',
-        '\\renewcommand{\\headrulewidth}{0pt}',
-        '\\renewcommand{\\footrulewidth}{0pt}',
         colGap > 0 ? '\\setlength{\\columnsep}{' + colGap + 'mm}' : '',
         '',
         '% 헤더 높이 (면주/쪽번호 잘림 방지)',
@@ -1859,7 +1944,6 @@ export default function App() {
         `% ── 필수 패키지 ───────────────────────────────────────────────`,
         `\\RequirePackage{fontspec}`,
         `\\RequirePackage{geometry}`,
-        `\\RequirePackage{fancyhdr}`,
         `\\RequirePackage{needspace}`,
         styColPkgs || null,
         alignResult.alignment === 'ragged' ? `\\RequirePackage{ragged2e}` : null,
@@ -1914,12 +1998,13 @@ export default function App() {
         `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
         `\\makeatother`,
         ``,
-        `% ── 면주 / 쪽번호 ─────────────────────────────────────────────`,
-        `% 위치: ${p.pn || '-'} / 크기: ${p.pn_size || '-'} / 서체: ${p.pn_font || '-'}`,
-        `% 스타일: ${p.pn_style || '-'} / 면주 크기: ${p.running || '-'}`,
-        `\\renewcommand{\\headrulewidth}{0pt}`,
-        `\\renewcommand{\\footrulewidth}{0pt}`,
-        `% fancyhdr 설정(\\lhead \\rhead 등)은 main.tex \\begin{document} 직후에 위치합니다`,
+        `% ── 면주 / 쪽번호 (memoir pagestyle) ─────────────────────────`,
+        `% 위치: ${p.pn || '하단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'} / 서체: ${p.pn_font || '-'}`,
+        buildMemoirPageStyle({
+          pnPos: p.pn || '하단-외측',
+          pnSizePt: p.pn_size ? parseFloat(p.pn_size) : pnAutoSize,
+          hasRunningHead: !!(fields.면주 && fields.면주.trim()),
+        }),
         ``,
         `% ── 대화문 / 인용문 환경 ──────────────────────────────────────`,
         `% main.tex에서 \\begin{imprintdialogue}...\\end{imprintdialogue} 로 사용`,
@@ -1983,14 +2068,20 @@ export default function App() {
         `\\begin{document}\n` +
         `\\XeTeXlinebreaklocale "ko"\n` +
         `\\XeTeXlinebreakskip=0pt plus 1pt\n` +
-        `\\pagestyle{fancy}\\fancyhf{}\n`;
+        (fields.면주 && fields.면주.trim()
+          ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(fields.면주.trim())}}\n`
+          : '') +
+        `\\pagestyle{imprint}\n`;
 
             const latexPrompt =
         'XeLaTeX typesetter. Preamble is fixed — write ONLY \\begin{document}...\\end{document}.\n\n' +
         '# FIXED PREAMBLE\n' + preambleSummary + '\n\n' +
-        '# DOC START (add these first 4 lines after \\begin{document})\n' +
+        '# DOC START (add these first lines after \\begin{document})\n' +
         '\\XeTeXlinebreaklocale "ko"\n\\XeTeXlinebreakskip=0pt plus 1pt\n' +
-        '\\pagestyle{fancy}\\fancyhf{}\n\n' +
+        (fields.면주 && fields.면주.trim()
+          ? '\\renewcommand{\\imprintrunninghead}{' + escapeLatex(fields.면주.trim()) + '}\n'
+          : '') +
+        '\\pagestyle{imprint}\n\n' +
         '# TYPOGRAPHY\n' +
         'Body:' + adjustedBodySize + 'pt/' + adjustedBodyLead + 'pt' +
         (hasFootnote ? ' Fn:' + fnSize + 'pt/' + fnLead + 'pt' : '') +
@@ -2146,13 +2237,15 @@ export default function App() {
           `\\XeTeXlinebreaklocale "ko"`,
           `\\XeTeXlinebreakskip=0pt plus 1pt`,
           ``,
-          `\\pagestyle{fancy}`,
-          `\\fancyhf{}`,
+          (fields.면주 && fields.면주.trim())
+            ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(fields.면주.trim())}}`
+            : null,
+          `\\pagestyle{imprint}`,
           ``,
           finalBodyContent,
           ``,
           `\\end{document}`,
-        ].join('\n');
+        ].filter(x => x !== null && x !== undefined).join('\n');
 
         // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
         const finalMainTex = sanitizeUnicodeForLatex(mainTex);
@@ -2264,8 +2357,8 @@ export default function App() {
           },
 
           output: {
-            latex_code: LOG_FULL_LATEX ? cleanLatex : '',
-            latex_length: cleanLatex.length,
+            latex_code: LOG_FULL_LATEX ? finalMainTex : '',
+            latex_length: finalMainTex.length,
             latex_hash: _latexHash,
             compile_status: 'not_tested',
             error_message: '',
@@ -2628,12 +2721,14 @@ REQUIRED OUTPUT FORMAT:
                     letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:6 }}>
                     단 구성
                   </label>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {[["auto","자동"],["single","1단"],["double","2단"],["variable","가변"]].map(([val,label]) => {
-                      const active = styleConfig.mode === val;
+                  {/* 1행: 모드 선택 */}
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:6 }}>
+                    {[["auto","자동"],["fixed","고정단"],["variable","가변단"]].map(([val,label]) => {
+                      const active = (styleConfig.columnMode || 'auto') === val;
                       return (
-                        <button key={val} onClick={() => setStyleConfig(s => ({ ...s, mode:val }))}
-                          style={{ padding:"6px 14px", fontSize:12, fontWeight: active?700:400,
+                        <button key={val}
+                          onClick={() => setStyleConfig(s => ({ ...s, columnMode: val }))}
+                          style={{ padding:"5px 12px", fontSize:12, fontWeight: active?700:400,
                             border:`1.5px solid ${active ? T.ink : T.border}`,
                             borderRadius:5, background: active ? T.ink : "transparent",
                             color: active ? "#fff" : T.ink, cursor:"pointer" }}>
@@ -2642,6 +2737,51 @@ REQUIRED OUTPUT FORMAT:
                       );
                     })}
                   </div>
+                  {/* 고정단: 단 수 선택 (1~10) */}
+                  {styleConfig.columnMode === 'fixed' && (
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
+                      {[1,2,3,4,5,6,7,8,9,10].map(n => {
+                        const active = (styleConfig.fixedColumns || 1) === n;
+                        return (
+                          <button key={n}
+                            onClick={() => setStyleConfig(s => ({ ...s, fixedColumns: n }))}
+                            style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                              border:`1px solid ${active ? T.ink : T.border}`,
+                              borderRadius:4, background: active ? T.ink : "transparent",
+                              color: active ? "#fff" : T.ink, cursor:"pointer", minWidth:32 }}>
+                            {n}단
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* 가변단: 총/본문/주석 열 수 */}
+                  {styleConfig.columnMode === 'variable' && (
+                    <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                      {[
+                        { key:'total', label:'총 그리드' },
+                        { key:'body',  label:'본문 열' },
+                        { key:'note',  label:'주석 열' },
+                      ].map(({ key, label }) => (
+                        <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                            textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                          <input type="number" min={1} max={20}
+                            value={(styleConfig.variableGrid || {})[key] || ''}
+                            onChange={e => {
+                              const v = parseInt(e.target.value) || 1;
+                              setStyleConfig(s => ({
+                                ...s,
+                                variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
+                              }));
+                            }}
+                            style={{ width:52, padding:"5px 7px", fontSize:12,
+                              border:`1px solid ${T.border}`, borderRadius:4,
+                              background:T.bg, color:T.ink, textAlign:"center" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:10, fontWeight:700,
@@ -2781,32 +2921,30 @@ REQUIRED OUTPUT FORMAT:
                   </button>
                 </div>
 
-                {/* 스펙 그리드 — 무채색, 깔끔 */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
-                  gap:0, marginTop:14, border:`1px solid ${T.border}`, borderRadius:6, overflow:"hidden" }}>
+                {/* 스펙 칩 카드 */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12 }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
-                    ["여백", `${pkg.m.상}·${pkg.m.하}·${pkg.m.안}·${pkg.m.밖}`],
-                    ["단 구성", pkg.c.구성],
-                    ["본문", `${displayBodySize || pkg.b.크기}pt`],
-                    ["행간", `${pkg.b.행간}pt`],
+                    ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
                     ["자간", `${pkg.b.자간}`],
+                    ["단", pkg.c.구성],
                     ["서체", pkg.ty.분류?.split(' ')[0] || "—"],
                     ["정렬", pkg.align_body?.replace(' 정렬','') || "—"],
-                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : "—"],
-                    ["면주", pkg.running !== '-' ? pkg.running : "—"],
-                    ["각주", pkg.footnote !== '-' ? pkg.footnote : "—"],
-                    ["쪽번호", pkg.pn?.split('-')[0] || "—"],
-                  ].map(([label, value], i) => (
+                    ["여백", `상${pkg.m.상}·하${pkg.m.하}·안${pkg.m.안}·밖${pkg.m.밖}`],
+                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
+                    ["면주", pkg.running !== '-' ? pkg.running : null],
+                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
+                    ["쪽번호", pkg.pn || null],
+                  ].filter(([,v]) => v).map(([label, value]) => (
                     <div key={label} style={{
-                      padding:"9px 10px",
-                      borderRight: i % 6 < 5 ? `1px solid ${T.border}` : "none",
-                      borderBottom: i < 6 ? `1px solid ${T.border}` : "none",
-                      background: T.surface,
+                      display:"inline-flex", alignItems:"center", gap:5,
+                      padding:"5px 10px", borderRadius:20,
+                      border:`1px solid ${T.border}`, background:T.bg,
                     }}>
-                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em",
-                        textTransform:"uppercase", color:T.muted, marginBottom:3 }}>{label}</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:T.ink, fontFamily:T.mono }}>{value}</div>
+                      <span style={{ fontSize:9, fontWeight:700, color:T.muted,
+                        textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                      <span style={{ fontSize:11.5, fontWeight:600, color:T.ink,
+                        fontFamily:T.mono }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -2850,14 +2988,24 @@ REQUIRED OUTPUT FORMAT:
                       이 스타일을 선택한 이유
                     </div>
 
-                    {structuredReason ? (
+                    {(() => {
+                      // structuredReason이 없으면 pkg.why_* 필드로 fallback
+                      const reason = structuredReason || (pkg ? {
+                        reference_reason: pkg.summary || null,
+                        content_match: null,
+                        layout_reason: pkg.c?.구성 ? `${pkg.c.구성} 레이아웃 — ${pkg.layout_type || ''}` : null,
+                        typography_reason: pkg.why_font || null,
+                        margin_reason: pkg.why_margin || null,
+                      } : null);
+                      return reason ? (
                       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                         {[
-                          ["레퍼런스 선정", structuredReason.reference_reason],
-                          ["내용 매칭", structuredReason.content_match],
-                          ["레이아웃 판단", structuredReason.layout_reason],
-                          ["서체 선택", structuredReason.typography_reason],
-                          ["여백 설계", structuredReason.margin_reason],
+                          ["레퍼런스 선정", reason.reference_reason],
+                          ["내용 매칭", reason.content_match],
+                          ["레이아웃 판단", reason.layout_reason],
+                          ["서체 선택", reason.typography_reason || pkg?.why_font],
+                          ["여백 설계", reason.margin_reason || pkg?.why_margin],
+                          ["자간 설정", pkg?.why_tracking],
                         ].filter(([,v]) => v).map(([label, value]) => (
                           <div key={label} style={{ padding:"14px 16px", background:T.surface,
                             borderRadius:7, border:`1px solid ${T.border}` }}>
@@ -2897,7 +3045,7 @@ REQUIRED OUTPUT FORMAT:
                         </div>
 
                         {/* 탈락 패키지 */}
-                        {structuredReason.rejected?.length > 0 && (
+                        {structuredReason?.rejected?.length > 0 && (
                           <div style={{ padding:"14px 16px", background:T.surface,
                             borderRadius:7, border:`1px solid ${T.border}` }}>
                             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em",
@@ -2912,9 +3060,10 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div style={{ color:T.muted, fontSize:13 }}>아직 분석 결과가 없습니다.</div>
-                    )}
+                      ) : (
+                        <div style={{ color:T.muted, fontSize:13 }}>스타일을 먼저 생성하세요.</div>
+                      );
+                    })()}
                   </div>
                 )}
 

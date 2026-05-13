@@ -906,8 +906,9 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   lines.push('');
   const rh = esc(runningHead);
   if (rh) {
-    lines.push(`\\lhead{\\small ${rh}}`);
-    lines.push(`\\rhead{\\small \\thepage}`);
+    // memoir pagestyle: \imprintrunninghead는 main.tex 헤더에서 \renewcommand로 설정됨
+    // buildBodyContent는 body 내용만 생성 — \lhead/\rhead 사용 안 함
+    lines.push(`\\renewcommand{\\imprintrunninghead}{${rh}}`);
     lines.push('');
   }
   const t = esc(title);
