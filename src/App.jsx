@@ -835,6 +835,14 @@ function computeLeading(sizePt, role) {
   return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
 }
 
+// 고정 단 구성 wrapping: Claude가 multicols를 생성하지 않았을 때 JS에서 보장
+function wrapFixedColumns(body, n, colGapMm) {
+  if (n <= 1) return body;
+  if (body.includes('\\begin{multicols}') || body.includes('\\begin{paracol}')) return body;
+  const gap = colGapMm || 10;
+  return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols}{${n}}\n${body}\n\\end{multicols}`;
+}
+
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
