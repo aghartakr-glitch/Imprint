@@ -2164,7 +2164,11 @@ export default function App() {
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : hasFootnoteText
-            ? '\\footnote{} commands already injected inline in the body text above — they render at PAGE BOTTOM automatically. Do NOT move them.\n' +
+            ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
+              'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
+              'Do NOT remove, move, rewrite, or paraphrase them. ' +
+              'Do NOT replace with \\footnotemark/\\footnotetext. ' +
+              'They render automatically at page bottom — no extra action needed.\n' +
               (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
