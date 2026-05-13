@@ -2990,14 +2990,24 @@ REQUIRED OUTPUT FORMAT:
                       이 스타일을 선택한 이유
                     </div>
 
-                    {structuredReason ? (
+                    {(() => {
+                      // structuredReason이 없으면 pkg.why_* 필드로 fallback
+                      const reason = structuredReason || (pkg ? {
+                        reference_reason: pkg.summary || null,
+                        content_match: null,
+                        layout_reason: pkg.c?.구성 ? `${pkg.c.구성} 레이아웃 — ${pkg.layout_type || ''}` : null,
+                        typography_reason: pkg.why_font || null,
+                        margin_reason: pkg.why_margin || null,
+                      } : null);
+                      return reason ? (
                       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                         {[
-                          ["레퍼런스 선정", structuredReason.reference_reason],
-                          ["내용 매칭", structuredReason.content_match],
-                          ["레이아웃 판단", structuredReason.layout_reason],
-                          ["서체 선택", structuredReason.typography_reason],
-                          ["여백 설계", structuredReason.margin_reason],
+                          ["레퍼런스 선정", reason.reference_reason],
+                          ["내용 매칭", reason.content_match],
+                          ["레이아웃 판단", reason.layout_reason],
+                          ["서체 선택", reason.typography_reason || pkg?.why_font],
+                          ["여백 설계", reason.margin_reason || pkg?.why_margin],
+                          ["자간 설정", pkg?.why_tracking],
                         ].filter(([,v]) => v).map(([label, value]) => (
                           <div key={label} style={{ padding:"14px 16px", background:T.surface,
                             borderRadius:7, border:`1px solid ${T.border}` }}>
