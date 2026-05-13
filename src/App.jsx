@@ -2053,7 +2053,10 @@ export default function App() {
         `\\begin{document}\n` +
         `\\XeTeXlinebreaklocale "ko"\n` +
         `\\XeTeXlinebreakskip=0pt plus 1pt\n` +
-        `\\pagestyle{fancy}\\fancyhf{}\n`;
+        (fields.면주 && fields.면주.trim()
+          ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(fields.면주.trim())}}\n`
+          : '') +
+        `\\pagestyle{imprint}\n`;
 
             const latexPrompt =
         'XeLaTeX typesetter. Preamble is fixed — write ONLY \\begin{document}...\\end{document}.\n\n' +
