@@ -2242,6 +2242,11 @@ export default function App() {
           finalBodyContent = buildMissingBodyPlaceholder();
         }
 
+        // 고정 단 구성 보장: 사용자가 fixedColumns > 1 지정 시 multicols 래핑
+        if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
+          finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
+        }
+
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
         const mainTex = [
           `% !TeX program = XeLaTeX`,
