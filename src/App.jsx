@@ -1177,6 +1177,7 @@ export default function App() {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
   const [copied, setCopied] = useState(false);
+  const [copiedSty, setCopiedSty] = useState(false);
   const [refineInput, setRefineInput] = useState("");
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineHistory, setRefineHistory] = useState([]); // [{role, content, changes}]
