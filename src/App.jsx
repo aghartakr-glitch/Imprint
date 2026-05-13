@@ -2721,12 +2721,14 @@ REQUIRED OUTPUT FORMAT:
                     letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:6 }}>
                     단 구성
                   </label>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {[["auto","자동"],["single","1단"],["double","2단"],["variable","가변"]].map(([val,label]) => {
-                      const active = styleConfig.mode === val;
+                  {/* 1행: 모드 선택 */}
+                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:6 }}>
+                    {[["auto","자동"],["fixed","고정단"],["variable","가변단"]].map(([val,label]) => {
+                      const active = (styleConfig.columnMode || 'auto') === val;
                       return (
-                        <button key={val} onClick={() => setStyleConfig(s => ({ ...s, mode:val }))}
-                          style={{ padding:"6px 14px", fontSize:12, fontWeight: active?700:400,
+                        <button key={val}
+                          onClick={() => setStyleConfig(s => ({ ...s, columnMode: val }))}
+                          style={{ padding:"5px 12px", fontSize:12, fontWeight: active?700:400,
                             border:`1.5px solid ${active ? T.ink : T.border}`,
                             borderRadius:5, background: active ? T.ink : "transparent",
                             color: active ? "#fff" : T.ink, cursor:"pointer" }}>
@@ -2735,6 +2737,51 @@ REQUIRED OUTPUT FORMAT:
                       );
                     })}
                   </div>
+                  {/* 고정단: 단 수 선택 (1~10) */}
+                  {styleConfig.columnMode === 'fixed' && (
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
+                      {[1,2,3,4,5,6,7,8,9,10].map(n => {
+                        const active = (styleConfig.fixedColumns || 1) === n;
+                        return (
+                          <button key={n}
+                            onClick={() => setStyleConfig(s => ({ ...s, fixedColumns: n }))}
+                            style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                              border:`1px solid ${active ? T.ink : T.border}`,
+                              borderRadius:4, background: active ? T.ink : "transparent",
+                              color: active ? "#fff" : T.ink, cursor:"pointer", minWidth:32 }}>
+                            {n}단
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* 가변단: 총/본문/주석 열 수 */}
+                  {styleConfig.columnMode === 'variable' && (
+                    <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                      {[
+                        { key:'total', label:'총 그리드' },
+                        { key:'body',  label:'본문 열' },
+                        { key:'note',  label:'주석 열' },
+                      ].map(({ key, label }) => (
+                        <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                            textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                          <input type="number" min={1} max={20}
+                            value={(styleConfig.variableGrid || {})[key] || ''}
+                            onChange={e => {
+                              const v = parseInt(e.target.value) || 1;
+                              setStyleConfig(s => ({
+                                ...s,
+                                variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
+                              }));
+                            }}
+                            style={{ width:52, padding:"5px 7px", fontSize:12,
+                              border:`1px solid ${T.border}`, borderRadius:4,
+                              background:T.bg, color:T.ink, textAlign:"center" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:10, fontWeight:700,
