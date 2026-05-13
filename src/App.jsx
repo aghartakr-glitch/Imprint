@@ -2921,32 +2921,30 @@ REQUIRED OUTPUT FORMAT:
                   </button>
                 </div>
 
-                {/* 스펙 그리드 — 무채색, 깔끔 */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",
-                  gap:0, marginTop:14, border:`1px solid ${T.border}`, borderRadius:6, overflow:"hidden" }}>
+                {/* 스펙 칩 카드 */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12 }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
-                    ["여백", `${pkg.m.상}·${pkg.m.하}·${pkg.m.안}·${pkg.m.밖}`],
-                    ["단 구성", pkg.c.구성],
-                    ["본문", `${displayBodySize || pkg.b.크기}pt`],
-                    ["행간", `${pkg.b.행간}pt`],
+                    ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
                     ["자간", `${pkg.b.자간}`],
+                    ["단", pkg.c.구성],
                     ["서체", pkg.ty.분류?.split(' ')[0] || "—"],
                     ["정렬", pkg.align_body?.replace(' 정렬','') || "—"],
-                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : "—"],
-                    ["면주", pkg.running !== '-' ? pkg.running : "—"],
-                    ["각주", pkg.footnote !== '-' ? pkg.footnote : "—"],
-                    ["쪽번호", pkg.pn?.split('-')[0] || "—"],
-                  ].map(([label, value], i) => (
+                    ["여백", `상${pkg.m.상}·하${pkg.m.하}·안${pkg.m.안}·밖${pkg.m.밖}`],
+                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
+                    ["면주", pkg.running !== '-' ? pkg.running : null],
+                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
+                    ["쪽번호", pkg.pn || null],
+                  ].filter(([,v]) => v).map(([label, value]) => (
                     <div key={label} style={{
-                      padding:"9px 10px",
-                      borderRight: i % 6 < 5 ? `1px solid ${T.border}` : "none",
-                      borderBottom: i < 6 ? `1px solid ${T.border}` : "none",
-                      background: T.surface,
+                      display:"inline-flex", alignItems:"center", gap:5,
+                      padding:"5px 10px", borderRadius:20,
+                      border:`1px solid ${T.border}`, background:T.bg,
                     }}>
-                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em",
-                        textTransform:"uppercase", color:T.muted, marginBottom:3 }}>{label}</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:T.ink, fontFamily:T.mono }}>{value}</div>
+                      <span style={{ fontSize:9, fontWeight:700, color:T.muted,
+                        textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                      <span style={{ fontSize:11.5, fontWeight:600, color:T.ink,
+                        fontFamily:T.mono }}>{value}</span>
                     </div>
                   ))}
                 </div>
