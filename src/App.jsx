@@ -1933,7 +1933,6 @@ export default function App() {
         `% ── 필수 패키지 ───────────────────────────────────────────────`,
         `\\RequirePackage{fontspec}`,
         `\\RequirePackage{geometry}`,
-        `\\RequirePackage{fancyhdr}`,
         `\\RequirePackage{needspace}`,
         styColPkgs || null,
         alignResult.alignment === 'ragged' ? `\\RequirePackage{ragged2e}` : null,
