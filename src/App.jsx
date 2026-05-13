@@ -993,7 +993,7 @@ function validateLatexExport({ mainTex, sty }) {
   const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
     .replace(/\\XeTeXlinebreakskip[^\n]*\n?/g, '')
     .replace(/\\pagestyle[^\n]*\n?/g, '')
-    .replace(/\\fancyhf[^\n]*\n?/g, '')
+    .replace(/\\renewcommand\{\\imprintrunninghead\}[^\n]*\n?/g, '')
     .replace(/^\s*%[^\n]*\n?/gm, '')
     .trim() : '';
   const warnings = [];
