@@ -1707,9 +1707,14 @@ export default function App() {
         }
       }
 
-      // styleConfig.mode가 'auto'가 아니면 사용자 지정 단 우선
-      const userMode = styleConfig.mode;
-      const userOverride = userMode !== 'auto';
+      // styleConfig.columnMode → 사용자 지정 단 우선
+      // 'auto': 데이터 기반 / 'fixed': fixedColumns 사용 / 'variable': variableGrid 사용
+      const colMode = styleConfig.columnMode || 'auto';
+      // legacy 호환: 'auto'|'fixed'|'variable'
+      const userMode = colMode === 'fixed' ? String(styleConfig.fixedColumns || 1)
+                     : colMode === 'variable' ? 'variable'
+                     : 'auto';
+      const userOverride = colMode !== 'auto';
 
       // 판면 너비 (mm) → 모듈 단위 폭 계산
       const textW = p.f.w - p.m.안 - p.m.밖;
