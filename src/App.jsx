@@ -1859,7 +1859,6 @@ export default function App() {
           'top=' + corrections.margins.상 + 'mm,bottom=' + corrections.margins.하 + 'mm,' +
           'inner=' + corrections.margins.안 + 'mm,outer=' + corrections.margins.밖 + 'mm,' +
           'includehead=true,includefoot=false]{geometry}',
-        '\\usepackage{fancyhdr}',
         colPackages.trim(),
         '',
         fontBlock,
