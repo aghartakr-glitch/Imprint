@@ -1024,8 +1024,10 @@ export default function App() {
   const [inputTab, setInputTab] = useState(0);
 
   const [styleConfig, setStyleConfig] = useState({
-    mode: 'auto',        // 'auto'|'1'|'2'|'3'|'4'|'variable'
-    bodyNoteSplit: null, // null=auto, {body:N, note:M}
+    columnMode: 'auto',   // 'auto'|'fixed'|'variable'
+    fixedColumns: 1,      // 1~10 (columnMode==='fixed' 일 때)
+    variableGrid: { total: 8, body: 5, note: 3 }, // columnMode==='variable' 일 때
+    bodyNoteSplit: null,  // null=auto, {body:N, note:M} (legacy)
     extraDirective: '',
   });
 
