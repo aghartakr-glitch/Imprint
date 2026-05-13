@@ -3047,7 +3047,7 @@ REQUIRED OUTPUT FORMAT:
                         </div>
 
                         {/* 탈락 패키지 */}
-                        {structuredReason.rejected?.length > 0 && (
+                        {structuredReason?.rejected?.length > 0 && (
                           <div style={{ padding:"14px 16px", background:T.surface,
                             borderRadius:7, border:`1px solid ${T.border}` }}>
                             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em",
@@ -3062,9 +3062,10 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div style={{ color:T.muted, fontSize:13 }}>아직 분석 결과가 없습니다.</div>
-                    )}
+                      ) : (
+                        <div style={{ color:T.muted, fontSize:13 }}>스타일을 먼저 생성하세요.</div>
+                      );
+                    })()}
                   </div>
                 )}
 
