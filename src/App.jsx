@@ -3043,17 +3043,17 @@ REQUIRED OUTPUT FORMAT:
                             {pkg.summary}
                           </div>
                           {pkg.why_font && (
-                            <div style={{ marginTop:8, fontSize:12, color:T.muted }}>
+                            <div style={{ marginTop:8, fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>서체 선택 이유:</strong> {pkg.why_font}
                             </div>
                           )}
                           {pkg.why_margin && (
-                            <div style={{ fontSize:12, color:T.muted }}>
+                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>여백 의도:</strong> {pkg.why_margin}
                             </div>
                           )}
                           {pkg.why_tracking && (
-                            <div style={{ fontSize:12, color:T.muted }}>
+                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>자간 설정:</strong> {pkg.why_tracking}
                             </div>
                           )}
