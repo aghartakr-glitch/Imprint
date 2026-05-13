@@ -2285,7 +2285,7 @@ export default function App() {
             footnote_count: _fnCount,
             running_head_used: fields.면주 || '',
             genre_hint: h,
-            style_mode: styleConfig.mode,
+            style_mode: styleConfig.columnMode || 'auto',
           },
 
           text_analysis: {
