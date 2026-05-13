@@ -854,6 +854,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
     const isInner  = pos.includes('내측');
 
     if (isTop) {
+      // 쪽번호가 상단: 면주와 쪽번호를 같은 header에 배치
       if (isOuter) {
         oddHead  = `${rhCmd}${mt}${pnCmd}`;
         evenHead = `${pnCmd}${mt}${rhCmd}`;
@@ -865,6 +866,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
         evenHead = `${mt}${pnCmd}${mt}`;
       }
     } else {
+      // 쪽번호가 하단: footer에 쪽번호, header에 면주(별도)
       if (isOuter) {
         oddFoot  = `${mt}${mt}${pnCmd}`;
         evenFoot = `${pnCmd}${mt}${mt}`;
@@ -874,6 +876,11 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
       } else {
         oddFoot  = `${mt}${pnCmd}${mt}`;
         evenFoot = `${mt}${pnCmd}${mt}`;
+      }
+      // 면주는 항상 상단 외측에 별도 배치 (하단 쪽번호와 독립)
+      if (hasRunningHead) {
+        oddHead  = `${rhCmd}${mt}${mt}`;
+        evenHead = `${mt}${mt}${rhCmd}`;
       }
     }
   }

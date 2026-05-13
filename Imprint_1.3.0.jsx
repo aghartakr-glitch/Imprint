@@ -906,8 +906,9 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
   lines.push('');
   const rh = esc(runningHead);
   if (rh) {
-    lines.push(`\\lhead{\\small ${rh}}`);
-    lines.push(`\\rhead{\\small \\thepage}`);
+    // memoir pagestyle: \imprintrunninghead는 main.tex 헤더에서 \renewcommand로 설정됨
+    // buildBodyContent는 body 내용만 생성 — \lhead/\rhead 사용 안 함
+    lines.push(`\\renewcommand{\\imprintrunninghead}{${rh}}`);
     lines.push('');
   }
   const t = esc(title);
@@ -1951,13 +1952,19 @@ export default function App() {
         `% ── 판형 / 여백 ───────────────────────────────────────────────`,
         `% ${p.f.w}×${p.f.h}mm — ${p.why_dim || ''}`,
         `% 여백 의도: ${p.why_margin || ''}`,
-        `\\geometry{`,
-        `  paperwidth=${p.f.w}mm, paperheight=${p.f.h}mm,`,
-        `  top=${corrections.margins.상}mm, bottom=${corrections.margins.하}mm,`,
-        `  inner=${corrections.margins.안}mm, outer=${corrections.margins.밖}mm,`,
-        `  includehead=true, includefoot=false,`,
-        `  headheight=${pnAutoSize + 6}pt, headsep=4mm,`,
-        `}`,
+        (() => {
+          const pnIsBottom = !(p.pn || '').includes('상단');
+          return [
+            `\\geometry{`,
+            `  paperwidth=${p.f.w}mm, paperheight=${p.f.h}mm,`,
+            `  top=${corrections.margins.상}mm, bottom=${corrections.margins.하}mm,`,
+            `  inner=${corrections.margins.안}mm, outer=${corrections.margins.밖}mm,`,
+            `  includehead=true, includefoot=${pnIsBottom ? 'true' : 'false'},`,
+            `  headheight=${pnAutoSize + 6}pt, headsep=4mm,`,
+            pnIsBottom ? `  footskip=10mm,` : null,
+            `}`,
+          ].filter(Boolean).join('\n');
+        })(),
         ``,
         `% ── 서체 ──────────────────────────────────────────────────────`,
         `% 서체 선택 이유: ${p.why_font || ''}`,
@@ -2002,7 +2009,7 @@ export default function App() {
         `% 위치: ${p.pn || '하단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'} / 서체: ${p.pn_font || '-'}`,
         buildMemoirPageStyle({
           pnPos: p.pn || '하단-외측',
-          pnSizePt: p.pn_size ? parseFloat(p.pn_size) : pnAutoSize,
+          pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!(fields.면주 && fields.면주.trim()),
         }),
         ``,
@@ -2284,7 +2291,7 @@ export default function App() {
             footnote_count: _fnCount,
             running_head_used: fields.면주 || '',
             genre_hint: h,
-            style_mode: styleConfig.mode,
+            style_mode: styleConfig.columnMode || 'auto',
           },
 
           text_analysis: {
@@ -2320,7 +2327,7 @@ export default function App() {
           style_features_used: {
             genre_filter: !!h,
             semantic_rerank: matchMethod === 'semantic',
-            style_composition: styleConfig.mode !== 'auto',
+            style_composition: (styleConfig.columnMode || 'auto') !== 'auto',
             TYPO_BASE: true,
             heading_system: true,
             mixed_typeface: isMixedLayout,
