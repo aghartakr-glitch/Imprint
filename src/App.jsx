@@ -988,6 +988,12 @@ function validateLatexExport({ mainTex, sty }) {
   if (halfCJKSty) errors.push(halfCJKSty);
   if (!sty.includes('\\NeedsTeXFormat'))
     errors.push('imprint-style.sty: \\NeedsTeXFormat 없음');
+  if (!sty.includes('\\makepagestyle{imprint}'))
+    errors.push('imprint-style.sty: memoir pagestyle \\makepagestyle{imprint} 없음');
+  if (!mainTex.includes('\\pagestyle{imprint}'))
+    errors.push('main.tex: \\pagestyle{imprint} 없음');
+  if (!sty.includes('\\thepage'))
+    errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
   // document body에 실제 내용 있는지 확인
   const bodyMatch = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
   const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
