@@ -2061,9 +2061,12 @@ export default function App() {
             const latexPrompt =
         'XeLaTeX typesetter. Preamble is fixed — write ONLY \\begin{document}...\\end{document}.\n\n' +
         '# FIXED PREAMBLE\n' + preambleSummary + '\n\n' +
-        '# DOC START (add these first 4 lines after \\begin{document})\n' +
+        '# DOC START (add these first lines after \\begin{document})\n' +
         '\\XeTeXlinebreaklocale "ko"\n\\XeTeXlinebreakskip=0pt plus 1pt\n' +
-        '\\pagestyle{fancy}\\fancyhf{}\n\n' +
+        (fields.면주 && fields.면주.trim()
+          ? '\\renewcommand{\\imprintrunninghead}{' + escapeLatex(fields.면주.trim()) + '}\n'
+          : '') +
+        '\\pagestyle{imprint}\n\n' +
         '# TYPOGRAPHY\n' +
         'Body:' + adjustedBodySize + 'pt/' + adjustedBodyLead + 'pt' +
         (hasFootnote ? ' Fn:' + fnSize + 'pt/' + fnLead + 'pt' : '') +
