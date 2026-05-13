@@ -2321,7 +2321,7 @@ export default function App() {
           style_features_used: {
             genre_filter: !!h,
             semantic_rerank: matchMethod === 'semantic',
-            style_composition: styleConfig.mode !== 'auto',
+            style_composition: (styleConfig.columnMode || 'auto') !== 'auto',
             TYPO_BASE: true,
             heading_system: true,
             mixed_typeface: isMixedLayout,
