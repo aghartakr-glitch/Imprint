@@ -1730,21 +1730,23 @@ export default function App() {
       let colPackages = '';
 
       if (userOverride && userMode === 'variable') {
-        const baseForVar = !isModuleGrid ? baseN : (bodyUnits || 2);
-        colPackages = '\\usepackage{multicol}\n\\usepackage{paracol}\n';
-        const combos = TYPO_BASE.columnCombinations(baseForVar);
-        const mainCombo = combos[0];
-        const bodyColN = mainCombo[0];
-        const noteColN = mainCombo[1];
-        const hasNoteCol = noteColN > 0;
-        const bodyFrac = bodyColN / (bodyColN + (noteColN || 1));
-        const bodyMm = hasNoteCol ? Math.round(textW * bodyFrac - colGap/2) : textW;
+        // 사용자 지정 가변 단: variableGrid.total / body / note
+        const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+        const totalG = vg.total || 8;
+        const bodyG  = vg.body  || Math.round(totalG * 0.625);
+        const noteG  = vg.note  || (totalG - bodyG);
+        const hasNoteCol = noteG > 0;
+        const bodyRatio = bodyG / totalG;
+        const bodyMm = hasNoteCol ? Math.round(textW * bodyRatio - (colGap||5)/2) : textW;
         const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
+        colPackages = '\\usepackage{paracol}\n';
         colSetupBlock =
-          'VAR:base=' + baseForVar + ' ' + textW + 'mm cols=' + combos.map(c=>c[0]+(c[1]>0?'+'+c[1]+'n':'')).join('/') + '\n' +
-          '\\begin{multicols}{' + bodyColN + '} ' + Math.round(textW/bodyColN) + 'mm/col\n' +
-          (hasNoteCol ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' : '') +
+          'VAR:total=' + totalG + ' body=' + bodyG + ' note=' + noteG + ' textwidth=' + textW + 'mm\n' +
           '\\setlength{\\columnsep}{' + (colGap||5) + 'mm}\n' +
+          (hasNoteCol
+            ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' +
+              '% <body content> \\switchcolumn <note content> \\end{paracol}\n'
+            : '% single column (no note column)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
 
