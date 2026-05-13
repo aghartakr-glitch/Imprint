@@ -2230,7 +2230,7 @@ export default function App() {
           finalBodyContent,
           ``,
           `\\end{document}`,
-        ].join('\n');
+        ].filter(x => x !== null && x !== undefined).join('\n');
 
         // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
         const finalMainTex = sanitizeUnicodeForLatex(mainTex);
