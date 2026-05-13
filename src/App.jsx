@@ -1052,46 +1052,72 @@ export default function App() {
   // LaTeX \footnote{} 명령으로 인라인 삽입
   function injectFootnotes(bodyText, footnoteText) {
     if (!footnoteText || !footnoteText.trim()) return bodyText;
+    // 번호 마커 정규화 테이블
     const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
-    const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v])=>[v,k]));
-    // 각주 텍스트 파싱: "1. 내용" / "¹ 내용" / 연속 줄 이어붙이기
-    const fnMap = {};
+    const circleMap = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+    const symOrder = ['*','**','†','‡','※']; // 순서 기반 기호 마커
+    const allNumMarkers = {...superMap, ...circleMap};
+    // 각주 텍스트 파싱
+    // 지원 패턴: "1. 내용" / "1) 내용" / "¹ 내용" / "① 내용" / "(1) 내용"
+    //            "* 내용" / "** 내용" / "† 내용" / "※ 내용" / "※1 내용"
+    const fnMap = {};  // key → content (key = 숫자 문자열 or 기호)
     let cur = null, buf = [];
+    const flush = () => { if (cur !== null) { fnMap[cur] = buf.join(' ').trim(); cur = null; buf = []; } };
     for (const line of footnoteText.split('\n')) {
-      const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
-      const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
-      if (m1) {
-        if (cur) fnMap[cur] = buf.join(' ').trim();
-        cur = m1[1]; buf = [m1[2]];
-      } else if (m2) {
-        if (cur) fnMap[cur] = buf.join(' ').trim();
-        cur = superMap[m2[1]]; buf = [m2[2]];
-      } else if (cur && line.trim()) {
-        buf.push(line.trim());
-      }
+      const m_num   = line.match(/^(\d+)[.)]\s+(.+)/);       // "1. 내용" / "1) 내용"
+      const m_paren = line.match(/^\((\d+)\)\s+(.+)/);        // "(1) 내용"
+      const m_sup   = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s+(.+)/);  // "¹ 내용"
+      const m_circ  = line.match(/^([①②③④⑤⑥⑦⑧⑨⑩])\s+(.+)/);// "① 내용"
+      const m_note  = line.match(/^(※(\d+)|※)\s+(.+)/);       // "※1 내용" / "※ 내용"
+      const m_sym   = line.match(/^(\*\*|\*|†|‡)\s+(.+)/);    // "* 내용" / "† 내용"
+      if (m_num)   { flush(); cur = m_num[1];                      buf = [m_num[2]];   }
+      else if (m_paren) { flush(); cur = m_paren[1];               buf = [m_paren[2]]; }
+      else if (m_sup)  { flush(); cur = superMap[m_sup[1]];        buf = [m_sup[2]];   }
+      else if (m_circ) { flush(); cur = circleMap[m_circ[1]];      buf = [m_circ[2]];  }
+      else if (m_note) { flush(); cur = m_note[2] ? `※${m_note[2]}` : '※'; buf = [m_note[3]]; }
+      else if (m_sym)  { flush(); cur = m_sym[1];                  buf = [m_sym[2]];   }
+      else if (cur !== null && line.trim()) { buf.push(line.trim()); }
     }
-    if (cur) fnMap[cur] = buf.join(' ').trim();
+    flush();
     if (!Object.keys(fnMap).length) return bodyText;
     // LaTeX 특수문자 이스케이프
     const esc = s => s
       .replace(/\\/g, '\\textbackslash{}')
       .replace(/~/g, '\\textasciitilde{}')
       .replace(/\^/g, '\\textasciicircum{}')
-      .replace(/\$/g, '\\$')
-      .replace(/\{/g, '\\{')
-      .replace(/\}/g, '\\}')
-      .replace(/&/g, '\\&')
-      .replace(/%/g, '\\%')
-      .replace(/#/g, '\\#')
-      .replace(/_/g, '\\_');
-    // 본문에서 마커 치환 (큰 번호 먼저 → 부분 매칭 방지)
+      .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+      .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+    // 본문에서 마커 치환 (긴 패턴/큰 번호 먼저 → 부분 매칭 방지)
     let result = bodyText;
+    // 기호 마커 치환 (symOrder 순서 유지)
+    for (const sym of ['**', '*', '†', '‡']) {
+      if (fnMap[sym]) {
+        result = result.split(sym).join(`\\footnote{${esc(fnMap[sym])}}`);
+        delete fnMap[sym];
+      }
+    }
+    // ※N / ※ 마커 치환
+    const noteKeys = Object.keys(fnMap).filter(k => k.startsWith('※')).sort((a,b) => b.length - a.length || b.localeCompare(a));
+    for (const k of noteKeys) {
+      const escaped = k.replace('※', '※'); // literal
+      result = result.split(k).join(`\\footnote{${esc(fnMap[k])}}`);
+      delete fnMap[k];
+    }
+    // 숫자 마커 치환 (큰 번호 먼저 → 10보다 1이 먼저 치환되어 '10'이 '1'+'0'으로 깨지는 일 방지)
     const nums = Object.keys(fnMap).sort((a,b) => +b - +a);
     for (const n of nums) {
       const content = esc(fnMap[n]);
-      const sup = numToSuper[n];
-      if (sup) result = result.split(sup).join(`\\footnote{${content}}`);
+      // 위첨자 유니코드 (¹²³...)
+      const supChar = Object.entries(superMap).find(([,v]) => v === n)?.[0];
+      if (supChar) result = result.split(supChar).join(`\\footnote{${content}}`);
+      // 원문자 유니코드 (①②③...)
+      const circChar = Object.entries(circleMap).find(([,v]) => v === n)?.[0];
+      if (circChar) result = result.split(circChar).join(`\\footnote{${content}}`);
+      // [N] 브래킷
       result = result.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
+      // (N) 괄호
+      result = result.replace(new RegExp('\\(' + n + '\\)', 'g'), `\\footnote{${content}}`);
+      // ^N 캐럿
       result = result.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
     }
     return result;
