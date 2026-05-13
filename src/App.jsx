@@ -2009,7 +2009,7 @@ export default function App() {
         `% 위치: ${p.pn || '하단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'} / 서체: ${p.pn_font || '-'}`,
         buildMemoirPageStyle({
           pnPos: p.pn || '하단-외측',
-          pnSizePt: p.pn_size ? parseFloat(p.pn_size) : pnAutoSize,
+          pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!(fields.면주 && fields.면주.trim()),
         }),
         ``,
