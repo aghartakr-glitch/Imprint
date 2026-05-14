@@ -2408,16 +2408,23 @@ export default function App() {
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
         }
-        // 가변단 paracol 보장: ===NOTE=== 구분자 기반으로 JS가 래핑
-        if (colMode === 'variable' && finalBodyContent.includes(PARACOL_MARKER)) {
-          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-          const totalG = vg.total || 8;
-          const bodyG  = vg.body  || Math.round(totalG * 0.625);
-          const noteG  = vg.note  || (totalG - bodyG);
-          const gap    = p.c.간격 || 8;
-          const bodyMm = noteG > 0 ? Math.round(textW * (bodyG / totalG) - gap / 2) : textW;
-          const noteMm = noteG > 0 ? (textW - bodyMm - gap) : 0;
-          if (noteG > 0) finalBodyContent = wrapParacol(finalBodyContent, bodyMm, noteMm, gap);
+        // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
+        if (colMode === 'variable') {
+          const vg   = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const grid = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          const notePosition = styleConfig.notePosition || 'right';
+
+          if (grid.noteG > 0) {
+            // ===NOTE=== 구분자 → %%PARACOL_SWITCHCOLUMN%% 마커 기준으로 본문/주석 분리
+            let bodyLatex = finalBodyContent;
+            let noteLatex = '';
+            if (finalBodyContent.includes(PARACOL_MARKER)) {
+              const idx = finalBodyContent.indexOf(PARACOL_MARKER);
+              bodyLatex = finalBodyContent.slice(0, idx).trim();
+              noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
+            }
+            finalBodyContent = wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
+          }
         }
 
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
