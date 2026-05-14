@@ -2876,6 +2876,15 @@ REQUIRED OUTPUT FORMAT:
                         </div>
                       ))}
                     </div>
+                    <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
+                      borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
+                      color:T.muted, lineHeight:1.7 }}>
+                      본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
+                      <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
+                        padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
+                      를 단독 줄로 입력하세요.<br/>
+                      <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
+                    </div>
                   )}
                 </div>
                 <div>
