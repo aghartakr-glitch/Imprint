@@ -1425,7 +1425,10 @@ export default function App() {
     const hasFootnoteText = !!(fields.각주?.trim());
     const hasFootnoteMarkers = /[¹²³⁴⁵⁶⁷⁸⁹]|\[\d+\]|\^\d+(?!\d)|\*(?!\*)|\†|\‡|※|[①②③④⑤⑥⑦⑧⑨⑩]/.test(fields.본문 || '');
     const needsLLMFootnotes = hasFootnoteMarkers && !hasFootnoteText;
-    const processedBody = injectFootnotes(fields.본문, fields.각주);
+    // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
+    const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
+    const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
+    const processedBody = injectFootnotes(bodyForProcess, fields.각주);
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
