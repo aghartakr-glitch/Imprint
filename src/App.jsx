@@ -835,6 +835,26 @@ function computeLeading(sizePt, role) {
   return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
 }
 
+// 가변단 paracol wrapping: %%PARACOL_SWITCHCOLUMN%% 마커 기준으로 본문/주석 분리
+const PARACOL_MARKER = '%%PARACOL_SWITCHCOLUMN%%';
+const PARACOL_SEP_RE = /===NOTE===|---NOTE---/gi;
+function wrapParacol(body, bodyMm, noteMm, colGapMm) {
+  if (!body.includes(PARACOL_MARKER)) return body;
+  const gap = colGapMm || 8;
+  const idx = body.indexOf(PARACOL_MARKER);
+  const mainPart = body.slice(0, idx).trim();
+  const notePart = body.slice(idx + PARACOL_MARKER.length).trim();
+  return [
+    `\\setlength{\\columnsep}{${gap}mm}`,
+    `\\begin{paracol}{2}`,
+    `\\setcolumnwidth{${bodyMm}mm,${noteMm}mm}`,
+    mainPart,
+    `\\switchcolumn`,
+    notePart,
+    `\\end{paracol}`,
+  ].join('\n');
+}
+
 // 고정 단 구성 wrapping: Claude가 multicols를 생성하지 않았을 때 JS에서 보장
 function wrapFixedColumns(body, n, colGapMm) {
   if (n <= 1) return body;
