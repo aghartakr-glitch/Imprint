@@ -2850,41 +2850,43 @@ REQUIRED OUTPUT FORMAT:
                       })}
                     </div>
                   )}
-                  {/* 가변단: 총/본문/주석 열 수 */}
+                  {/* 가변단: 총/본문/주석 열 수 + 사용법 안내 */}
                   {styleConfig.columnMode === 'variable' && (
-                    <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
-                      {[
-                        { key:'total', label:'총 그리드' },
-                        { key:'body',  label:'본문 열' },
-                        { key:'note',  label:'주석 열' },
-                      ].map(({ key, label }) => (
-                        <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                            textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-                          <input type="number" min={1} max={20}
-                            value={(styleConfig.variableGrid || {})[key] || ''}
-                            onChange={e => {
-                              const v = parseInt(e.target.value) || 1;
-                              setStyleConfig(s => ({
-                                ...s,
-                                variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
-                              }));
-                            }}
-                            style={{ width:52, padding:"5px 7px", fontSize:12,
-                              border:`1px solid ${T.border}`, borderRadius:4,
-                              background:T.bg, color:T.ink, textAlign:"center" }} />
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
-                      borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
-                      color:T.muted, lineHeight:1.7 }}>
-                      본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
-                      <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
-                        padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
-                      를 단독 줄로 입력하세요.<br/>
-                      <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
-                    </div>
+                    <>
+                      <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                        {[
+                          { key:'total', label:'총 그리드' },
+                          { key:'body',  label:'본문 열' },
+                          { key:'note',  label:'주석 열' },
+                        ].map(({ key, label }) => (
+                          <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                            <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                              textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                            <input type="number" min={1} max={20}
+                              value={(styleConfig.variableGrid || {})[key] || ''}
+                              onChange={e => {
+                                const v = parseInt(e.target.value) || 1;
+                                setStyleConfig(s => ({
+                                  ...s,
+                                  variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
+                                }));
+                              }}
+                              style={{ width:52, padding:"5px 7px", fontSize:12,
+                                border:`1px solid ${T.border}`, borderRadius:4,
+                                background:T.bg, color:T.ink, textAlign:"center" }} />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
+                        borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
+                        color:T.muted, lineHeight:1.7 }}>
+                        본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
+                        <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
+                          padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
+                        를 단독 줄로 입력하세요.<br/>
+                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div>
