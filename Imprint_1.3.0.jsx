@@ -1494,6 +1494,9 @@ export default function App() {
     const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
     const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
     const processedBody = injectFootnotes(bodyForProcess, fields.각주);
+    // 마커가 없어서 injection이 안 된 경우: 각주 텍스트를 Claude에 별도 전달
+    const footnotesInjected = hasFootnoteText && processedBody.includes('\\footnote{');
+    const footnoteTextForClaude = hasFootnoteText && !footnotesInjected ? fields.각주.trim() : null;
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
@@ -1502,6 +1505,7 @@ export default function App() {
       fields.면주   && `RUNNING HEAD: ${fields.면주}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
       contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
+      footnoteTextForClaude && `FOOTNOTES (place inline as \\footnote{}):\n${footnoteTextForClaude}`,
     ].filter(Boolean).join('\n\n');
 
     try {
@@ -2293,12 +2297,18 @@ export default function App() {
             'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
-          : hasFootnoteText
+          : footnotesInjected
             ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
               'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
               'Do NOT remove, move, rewrite, or paraphrase them. ' +
               'Do NOT replace with \\footnotemark/\\footnotetext. ' +
               'They render automatically at page bottom — no extra action needed.\n' +
+              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+          : footnoteTextForClaude
+            ? 'User provided footnote texts in the FOOTNOTES section below. ' +
+              'Place each footnote as \\footnote{content} inline — immediately after the sentence or phrase it annotates. ' +
+              'Match by number order (footnote 1 → first natural annotation point in body, etc.). ' +
+              'Use EXACT footnote text as provided. Do NOT paraphrase.\n' +
               (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
@@ -2335,10 +2345,12 @@ export default function App() {
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
         (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
-          ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
-          : hasFootnoteText
-            ? 'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
-            : 'FOOTNOTES: no footnotes — do NOT add \\footnote{} commands. ') +
+          ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
+          : footnotesInjected
+            ? 'FOOTNOTES: \\footnote{} already in body — preserve VERBATIM, PAGE BOTTOM only. Do NOT move. '
+            : footnoteTextForClaude
+              ? 'FOOTNOTES: place provided footnote texts as \\footnote{} inline in body, in number order. PAGE BOTTOM only. '
+              : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
@@ -3417,12 +3429,16 @@ REQUIRED OUTPUT FORMAT:
                           <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(styCode); setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); }}
+                      <button onClick={() => {
+                          navigator.clipboard.writeText(styCode)
+                            .then(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); })
+                            .catch(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); });
+                        }}
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
                           background:copiedSty ? T.ink : T.surface,
                           color:copiedSty ? "#fff" : T.ink, cursor:"pointer", flexShrink:0, transition:"all 150ms" }}>
-                        {copiedSty ? "복사됨" : "복사"}
+                        {copiedSty ? "복사됨 ✓" : "복사"}
                       </button>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
