@@ -2608,7 +2608,9 @@ REQUIRED OUTPUT FORMAT:
   }
 
   function copy() {
-    navigator.clipboard.writeText(latex).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(latex)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+      .catch(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); // 실패해도 피드백은 표시
   }
 
   const pkg = DB[selIdx];

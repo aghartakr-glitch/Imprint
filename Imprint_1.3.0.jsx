@@ -835,6 +835,14 @@ function computeLeading(sizePt, role) {
   return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
 }
 
+// 고정 단 구성 wrapping: Claude가 multicols를 생성하지 않았을 때 JS에서 보장
+function wrapFixedColumns(body, n, colGapMm) {
+  if (n <= 1) return body;
+  if (body.includes('\\begin{multicols}') || body.includes('\\begin{paracol}')) return body;
+  const gap = colGapMm || 10;
+  return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols}{${n}}\n${body}\n\\end{multicols}`;
+}
+
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
@@ -854,6 +862,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
     const isInner  = pos.includes('내측');
 
     if (isTop) {
+      // 쪽번호가 상단: 면주와 쪽번호를 같은 header에 배치
       if (isOuter) {
         oddHead  = `${rhCmd}${mt}${pnCmd}`;
         evenHead = `${pnCmd}${mt}${rhCmd}`;
@@ -865,6 +874,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
         evenHead = `${mt}${pnCmd}${mt}`;
       }
     } else {
+      // 쪽번호가 하단: footer에 쪽번호, header에 면주(별도)
       if (isOuter) {
         oddFoot  = `${mt}${mt}${pnCmd}`;
         evenFoot = `${pnCmd}${mt}${mt}`;
@@ -874,6 +884,11 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
       } else {
         oddFoot  = `${mt}${pnCmd}${mt}`;
         evenFoot = `${mt}${pnCmd}${mt}`;
+      }
+      // 면주는 항상 상단 외측에 별도 배치 (하단 쪽번호와 독립)
+      if (hasRunningHead) {
+        oddHead  = `${rhCmd}${mt}${mt}`;
+        evenHead = `${mt}${mt}${rhCmd}`;
       }
     }
   }
@@ -1037,46 +1052,72 @@ export default function App() {
   // LaTeX \footnote{} 명령으로 인라인 삽입
   function injectFootnotes(bodyText, footnoteText) {
     if (!footnoteText || !footnoteText.trim()) return bodyText;
+    // 번호 마커 정규화 테이블
     const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
-    const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v])=>[v,k]));
-    // 각주 텍스트 파싱: "1. 내용" / "¹ 내용" / 연속 줄 이어붙이기
-    const fnMap = {};
+    const circleMap = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+    const symOrder = ['*','**','†','‡','※']; // 순서 기반 기호 마커
+    const allNumMarkers = {...superMap, ...circleMap};
+    // 각주 텍스트 파싱
+    // 지원 패턴: "1. 내용" / "1) 내용" / "¹ 내용" / "① 내용" / "(1) 내용"
+    //            "* 내용" / "** 내용" / "† 내용" / "※ 내용" / "※1 내용"
+    const fnMap = {};  // key → content (key = 숫자 문자열 or 기호)
     let cur = null, buf = [];
+    const flush = () => { if (cur !== null) { fnMap[cur] = buf.join(' ').trim(); cur = null; buf = []; } };
     for (const line of footnoteText.split('\n')) {
-      const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
-      const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
-      if (m1) {
-        if (cur) fnMap[cur] = buf.join(' ').trim();
-        cur = m1[1]; buf = [m1[2]];
-      } else if (m2) {
-        if (cur) fnMap[cur] = buf.join(' ').trim();
-        cur = superMap[m2[1]]; buf = [m2[2]];
-      } else if (cur && line.trim()) {
-        buf.push(line.trim());
-      }
+      const m_num   = line.match(/^(\d+)[.)]\s+(.+)/);       // "1. 내용" / "1) 내용"
+      const m_paren = line.match(/^\((\d+)\)\s+(.+)/);        // "(1) 내용"
+      const m_sup   = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s+(.+)/);  // "¹ 내용"
+      const m_circ  = line.match(/^([①②③④⑤⑥⑦⑧⑨⑩])\s+(.+)/);// "① 내용"
+      const m_note  = line.match(/^(※(\d+)|※)\s+(.+)/);       // "※1 내용" / "※ 내용"
+      const m_sym   = line.match(/^(\*\*|\*|†|‡)\s+(.+)/);    // "* 내용" / "† 내용"
+      if (m_num)   { flush(); cur = m_num[1];                      buf = [m_num[2]];   }
+      else if (m_paren) { flush(); cur = m_paren[1];               buf = [m_paren[2]]; }
+      else if (m_sup)  { flush(); cur = superMap[m_sup[1]];        buf = [m_sup[2]];   }
+      else if (m_circ) { flush(); cur = circleMap[m_circ[1]];      buf = [m_circ[2]];  }
+      else if (m_note) { flush(); cur = m_note[2] ? `※${m_note[2]}` : '※'; buf = [m_note[3]]; }
+      else if (m_sym)  { flush(); cur = m_sym[1];                  buf = [m_sym[2]];   }
+      else if (cur !== null && line.trim()) { buf.push(line.trim()); }
     }
-    if (cur) fnMap[cur] = buf.join(' ').trim();
+    flush();
     if (!Object.keys(fnMap).length) return bodyText;
     // LaTeX 특수문자 이스케이프
     const esc = s => s
       .replace(/\\/g, '\\textbackslash{}')
       .replace(/~/g, '\\textasciitilde{}')
       .replace(/\^/g, '\\textasciicircum{}')
-      .replace(/\$/g, '\\$')
-      .replace(/\{/g, '\\{')
-      .replace(/\}/g, '\\}')
-      .replace(/&/g, '\\&')
-      .replace(/%/g, '\\%')
-      .replace(/#/g, '\\#')
-      .replace(/_/g, '\\_');
-    // 본문에서 마커 치환 (큰 번호 먼저 → 부분 매칭 방지)
+      .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+      .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+    // 본문에서 마커 치환 (긴 패턴/큰 번호 먼저 → 부분 매칭 방지)
     let result = bodyText;
+    // 기호 마커 치환 (symOrder 순서 유지)
+    for (const sym of ['**', '*', '†', '‡']) {
+      if (fnMap[sym]) {
+        result = result.split(sym).join(`\\footnote{${esc(fnMap[sym])}}`);
+        delete fnMap[sym];
+      }
+    }
+    // ※N / ※ 마커 치환
+    const noteKeys = Object.keys(fnMap).filter(k => k.startsWith('※')).sort((a,b) => b.length - a.length || b.localeCompare(a));
+    for (const k of noteKeys) {
+      const escaped = k.replace('※', '※'); // literal
+      result = result.split(k).join(`\\footnote{${esc(fnMap[k])}}`);
+      delete fnMap[k];
+    }
+    // 숫자 마커 치환 (큰 번호 먼저 → 10보다 1이 먼저 치환되어 '10'이 '1'+'0'으로 깨지는 일 방지)
     const nums = Object.keys(fnMap).sort((a,b) => +b - +a);
     for (const n of nums) {
       const content = esc(fnMap[n]);
-      const sup = numToSuper[n];
-      if (sup) result = result.split(sup).join(`\\footnote{${content}}`);
+      // 위첨자 유니코드 (¹²³...)
+      const supChar = Object.entries(superMap).find(([,v]) => v === n)?.[0];
+      if (supChar) result = result.split(supChar).join(`\\footnote{${content}}`);
+      // 원문자 유니코드 (①②③...)
+      const circChar = Object.entries(circleMap).find(([,v]) => v === n)?.[0];
+      if (circChar) result = result.split(circChar).join(`\\footnote{${content}}`);
+      // [N] 브래킷
       result = result.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\footnote{${content}}`);
+      // (N) 괄호
+      result = result.replace(new RegExp('\\(' + n + '\\)', 'g'), `\\footnote{${content}}`);
+      // ^N 캐럿
       result = result.replace(new RegExp('\\^' + n + '(?!\\d)', 'g'), `\\footnote{${content}}`);
     }
     return result;
@@ -1170,6 +1211,7 @@ export default function App() {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
   const [copied, setCopied] = useState(false);
+  const [copiedSty, setCopiedSty] = useState(false);
   const [refineInput, setRefineInput] = useState("");
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineHistory, setRefineHistory] = useState([]); // [{role, content, changes}]
@@ -2122,7 +2164,11 @@ export default function App() {
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : hasFootnoteText
-            ? '\\footnote{} commands already injected inline in the body text above — they render at PAGE BOTTOM automatically. Do NOT move them.\n' +
+            ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
+              'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
+              'Do NOT remove, move, rewrite, or paraphrase them. ' +
+              'Do NOT replace with \\footnotemark/\\footnotetext. ' +
+              'They render automatically at page bottom — no extra action needed.\n' +
               (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
@@ -2224,6 +2270,11 @@ export default function App() {
           });
         } else {
           finalBodyContent = buildMissingBodyPlaceholder();
+        }
+
+        // 고정 단 구성 보장: 사용자가 fixedColumns > 1 지정 시 multicols 래핑
+        if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
+          finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
         }
 
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
@@ -3035,17 +3086,17 @@ REQUIRED OUTPUT FORMAT:
                             {pkg.summary}
                           </div>
                           {pkg.why_font && (
-                            <div style={{ marginTop:8, fontSize:12, color:T.muted }}>
+                            <div style={{ marginTop:8, fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>서체 선택 이유:</strong> {pkg.why_font}
                             </div>
                           )}
                           {pkg.why_margin && (
-                            <div style={{ fontSize:12, color:T.muted }}>
+                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>여백 의도:</strong> {pkg.why_margin}
                             </div>
                           )}
                           {pkg.why_tracking && (
-                            <div style={{ fontSize:12, color:T.muted }}>
+                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
                               <strong style={{ color:T.ink }}>자간 설정:</strong> {pkg.why_tracking}
                             </div>
                           )}
@@ -3178,11 +3229,12 @@ REQUIRED OUTPUT FORMAT:
                           <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(styCode); }}
+                      <button onClick={() => { navigator.clipboard.writeText(styCode); setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); }}
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
-                          background:T.surface, color:T.ink, cursor:"pointer", flexShrink:0 }}>
-                        복사
+                          background:copiedSty ? T.ink : T.surface,
+                          color:copiedSty ? "#fff" : T.ink, cursor:"pointer", flexShrink:0, transition:"all 150ms" }}>
+                        {copiedSty ? "복사됨" : "복사"}
                       </button>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
