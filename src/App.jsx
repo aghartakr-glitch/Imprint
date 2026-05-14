@@ -2345,10 +2345,12 @@ export default function App() {
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
         (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
-          ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
-          : hasFootnoteText
-            ? 'FOOTNOTES: \\footnote{} commands already injected in body text — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
-            : 'FOOTNOTES: no footnotes — do NOT add \\footnote{} commands. ') +
+          ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
+          : footnotesInjected
+            ? 'FOOTNOTES: \\footnote{} already in body — preserve VERBATIM, PAGE BOTTOM only. Do NOT move. '
+            : footnoteTextForClaude
+              ? 'FOOTNOTES: place provided footnote texts as \\footnote{} inline in body, in number order. PAGE BOTTOM only. '
+              : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
