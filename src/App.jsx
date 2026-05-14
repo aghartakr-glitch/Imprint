@@ -2977,7 +2977,7 @@ REQUIRED OUTPUT FORMAT:
                       border:`1px solid ${T.border}`, borderRadius:5,
                       background:copied ? T.ink : T.surface,
                       color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
-                    {copied ? "복사됨" : "전체 복사"}
+                    {copied ? "복사됨 ✓" : "전체 복사"}
                   </button>
                 </div>
 
