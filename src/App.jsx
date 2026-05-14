@@ -2965,9 +2965,10 @@ REQUIRED OUTPUT FORMAT:
                       })}
                     </div>
                   )}
-                  {/* 가변단: 총/본문/주석 열 수 + 사용법 안내 */}
+                  {/* 가변단: 총/본문/주석 열 수 + 주석 위치 + 사용법 안내 */}
                   {styleConfig.columnMode === 'variable' && (
                     <>
+                      {/* 그리드 수치 입력 */}
                       <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
                         {[
                           { key:'total', label:'총 그리드' },
@@ -2992,14 +2993,38 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         ))}
                       </div>
+                      {/* 주석 위치 선택 */}
+                      <div style={{ marginTop:8 }}>
+                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                          textTransform:"uppercase", letterSpacing:"0.07em",
+                          marginBottom:4, display:"block" }}>주석 위치</span>
+                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => {
+                            const active = (styleConfig.notePosition || 'right') === val;
+                            return (
+                              <button key={val}
+                                onClick={() => setStyleConfig(s => ({ ...s, notePosition: val }))}
+                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                                  border:`1px solid ${active ? T.ink : T.border}`,
+                                  borderRadius:4, background: active ? T.ink : "transparent",
+                                  color: active ? "#fff" : T.ink, cursor:"pointer",
+                                  transition:"all 150ms" }}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* 사용법 안내 */}
                       <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
                         borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
                         color:T.muted, lineHeight:1.7 }}>
-                        본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
+                        주석 없이 생성 시: 본문을 <strong style={{color:T.ink}}>본문 열 폭</strong>으로 자동 배치<br/>
+                        주석 컬럼 있을 때: 본문 중 주석 시작 위치에<br/>
                         <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
                           padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
-                        를 단독 줄로 입력하세요.<br/>
-                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
+                        를 단독 줄로 입력<br/>
+                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 / 아래 = 주석 컬럼</span>
                       </div>
                     </>
                   )}
