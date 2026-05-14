@@ -1863,21 +1863,18 @@ export default function App() {
       if (userOverride && userMode === 'variable') {
         // 사용자 지정 가변 단: variableGrid.total / body / note
         const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-        const totalG = vg.total || 8;
-        const bodyG  = vg.body  || Math.round(totalG * 0.625);
-        const noteG  = vg.note  || (totalG - bodyG);
-        const hasNoteCol = noteG > 0;
-        const bodyRatio = bodyG / totalG;
-        const bodyMm = hasNoteCol ? Math.round(textW * bodyRatio - (colGap||5)/2) : textW;
-        const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
-        colPackages = '\\usepackage{paracol}\n';
+        const vGrid = calcVariableGrid(vg, textW, colGap || 8);
+        const hasNoteCol = vGrid.noteG > 0;
+        colPackages = '\\usepackage{paracol}\n\\usepackage{changepage}\n';
+        // JS가 wrapping 보장 — Claude는 순수 텍스트 LaTeX만 생성
         colSetupBlock =
-          'TWO-COLUMN PARACOL LAYOUT — body ' + bodyMm + 'mm / note ' + noteMm + 'mm\n' +
-          (hasNoteCol
-            ? 'REQUIRED: Wrap ALL content with \\begin{imprintlayout}...\\switchcolumn...\\end{imprintlayout}\n' +
-              'imprintlayout is defined in imprint-style.sty — do NOT use \\begin{paracol} directly.\n' +
-              'Structure: \\begin{imprintlayout} <body text> \\switchcolumn <note/annotation text> \\end{imprintlayout}\n'
-            : '% single column (no note column)\n') +
+          '% VARIABLE GRID: body=' + vGrid.bodyW + 'mm / note=' + vGrid.noteW + 'mm / gap=' + vGrid.gap + 'mm\n' +
+          '% (' + vGrid.bodyG + '/' + vGrid.totalG + ' body cols + ' + vGrid.noteG + '/' + vGrid.totalG + ' note cols, 1unit=' + vGrid.unitW + 'mm)\n' +
+          '% JS HANDLES LAYOUT WRAPPING — do NOT add \\begin{imprintlayout} or \\begin{paracol}\n' +
+          (hasNoteCol && hasParacolSep
+            ? '% NOTE SPLIT DETECTED: Write body content, then %%PARACOL_SWITCHCOLUMN%% on its own line, then note content\n' +
+              '% CRITICAL: preserve %%PARACOL_SWITCHCOLUMN%% verbatim — do NOT remove or paraphrase it\n'
+            : '% No note separator → write body content only (JS will use imprintbodyspan for correct column width)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
 
