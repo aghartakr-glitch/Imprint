@@ -1807,11 +1807,11 @@ export default function App() {
         const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
         colPackages = '\\usepackage{paracol}\n';
         colSetupBlock =
-          'VAR:total=' + totalG + ' body=' + bodyG + ' note=' + noteG + ' textwidth=' + textW + 'mm\n' +
-          '\\setlength{\\columnsep}{' + (colGap||5) + 'mm}\n' +
+          'TWO-COLUMN PARACOL LAYOUT — body ' + bodyMm + 'mm / note ' + noteMm + 'mm\n' +
           (hasNoteCol
-            ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' +
-              '% <body content> \\switchcolumn <note content> \\end{paracol}\n'
+            ? 'REQUIRED: Wrap ALL content with \\begin{imprintlayout}...\\switchcolumn...\\end{imprintlayout}\n' +
+              'imprintlayout is defined in imprint-style.sty — do NOT use \\begin{paracol} directly.\n' +
+              'Structure: \\begin{imprintlayout} <body text> \\switchcolumn <note/annotation text> \\end{imprintlayout}\n'
             : '% single column (no note column)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
