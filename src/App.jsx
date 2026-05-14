@@ -840,18 +840,16 @@ const PARACOL_MARKER = '%%PARACOL_SWITCHCOLUMN%%';
 const PARACOL_SEP_RE = /===NOTE===|---NOTE---/gi;
 function wrapParacol(body, bodyMm, noteMm, colGapMm) {
   if (!body.includes(PARACOL_MARKER)) return body;
-  const gap = colGapMm || 8;
   const idx = body.indexOf(PARACOL_MARKER);
   const mainPart = body.slice(0, idx).trim();
   const notePart = body.slice(idx + PARACOL_MARKER.length).trim();
+  // imprintlayout 환경 사용 (.sty에 정의됨 — \begin{paracol} 직접 사용 안 함)
   return [
-    `\\setlength{\\columnsep}{${gap}mm}`,
-    `\\begin{paracol}{2}`,
-    `\\setcolumnwidth{${bodyMm}mm,${noteMm}mm}`,
+    `\\begin{imprintlayout}`,
     mainPart,
     `\\switchcolumn`,
     notePart,
-    `\\end{paracol}`,
+    `\\end{imprintlayout}`,
   ].join('\n');
 }
 
