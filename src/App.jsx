@@ -1010,7 +1010,7 @@ function validateLatexExport({ mainTex, sty }) {
     ['\\begin{document}', /\\begin\{document\}/],
     ['\\end{document}', /\\end\{document\}/],
     ['\\begin{multicols}', /\\begin\{multicols\}/],
-    ['\\begin{paracol}', /\\begin\{paracol\}/],
+    // \begin{paracol}은 \newenvironment{imprintlayout} 안에서 정당하게 사용 — 블랙리스트 제외
   ]) {
     if (re.test(styCode))
       errors.push(`imprint-style.sty: ${label} 은 .sty에 있으면 안 됩니다`);
