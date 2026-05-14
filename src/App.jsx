@@ -2117,20 +2117,19 @@ export default function App() {
         `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
-        // 가변단: imprintlayout 환경 정의 (본문+주석 paracol)
+        // 가변단: imprintlayout / imprintbodyspan / imprintnotearea 환경 정의
         (() => {
           if (colMode !== 'variable') return null;
           const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-          const totalG = vg.total || 8;
-          const bodyG  = vg.body  || Math.round(totalG * 0.625);
-          const noteG  = vg.note  || (totalG - bodyG);
-          if (noteG <= 0) return null;
-          const gap    = p.c.간격 || 8;
-          const bMm    = Math.round(textW * (bodyG / totalG) - gap / 2);
-          const nMm    = textW - bMm - gap;
+          const vg2 = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          if (vg2.noteG <= 0) return null;
+          const { bodyW: bMm, noteW: nMm, gap } = vg2;
           return [
-            `% 가변단 — 본문 ${bMm}mm / 주석 ${nMm}mm (판면 ${textW}mm, 간격 ${gap}mm)`,
-            `% main.tex 사용법: \\begin{imprintlayout} 본문 \\switchcolumn 주석 \\end{imprintlayout}`,
+            `% ── 가변단 환경 ────────────────────────────────────────────────`,
+            `% 그리드: ${vg2.bodyG}/${vg2.totalG} 본문(${bMm}mm) + ${vg2.noteG}/${vg2.totalG} 주석(${nMm}mm), 간격 ${gap}mm`,
+            `\\RequirePackage{changepage}`,
+            ``,
+            `% 본문+주석 paracol (주석 오른쪽/왼쪽)`,
             `\\newlength{\\imprintbodywidth}`,
             `\\setlength{\\imprintbodywidth}{${bMm}mm}`,
             `\\newlength{\\imprintnotewidth}`,
@@ -2141,6 +2140,27 @@ export default function App() {
             `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
             `}{%`,
             `  \\end{paracol}%`,
+            `}`,
+            ``,
+            `% 본문만 (주석 없음): 본문을 bodyW 폭으로 제한하고 반대쪽 여백 확보`,
+            `% 사용법: \\begin{imprintbodyspan}{leftadd}{rightadd} ... \\end{imprintbodyspan}`,
+            `\\newenvironment{imprintbodyspan}[2]{%`,
+            `  \\begin{adjustwidth}{#1}{#2}%`,
+            `}{%`,
+            `  \\end{adjustwidth}%`,
+            `}`,
+            ``,
+            `% 주석 블록 (상단/하단 배치)`,
+            `% 사용법: \\begin{imprintnotearea} ... \\end{imprintnotearea}`,
+            `\\newenvironment{imprintnotearea}{%`,
+            `  \\par\\vspace{0.3\\baselineskip}%`,
+            `  \\begingroup%`,
+            `  \\footnotesize%`,
+            `  \\setlength{\\leftskip}{0pt}%`,
+            `  \\noindent%`,
+            `}{%`,
+            `  \\endgroup%`,
+            `  \\par\\vspace{0.3\\baselineskip}%`,
             `}`,
           ].join('\n');
         })(),
