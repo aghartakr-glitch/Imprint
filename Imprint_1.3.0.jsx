@@ -840,18 +840,16 @@ const PARACOL_MARKER = '%%PARACOL_SWITCHCOLUMN%%';
 const PARACOL_SEP_RE = /===NOTE===|---NOTE---/gi;
 function wrapParacol(body, bodyMm, noteMm, colGapMm) {
   if (!body.includes(PARACOL_MARKER)) return body;
-  const gap = colGapMm || 8;
   const idx = body.indexOf(PARACOL_MARKER);
   const mainPart = body.slice(0, idx).trim();
   const notePart = body.slice(idx + PARACOL_MARKER.length).trim();
+  // imprintlayout 환경 사용 (.sty에 정의됨 — \begin{paracol} 직접 사용 안 함)
   return [
-    `\\setlength{\\columnsep}{${gap}mm}`,
-    `\\begin{paracol}{2}`,
-    `\\setcolumnwidth{${bodyMm}mm,${noteMm}mm}`,
+    `\\begin{imprintlayout}`,
     mainPart,
     `\\switchcolumn`,
     notePart,
-    `\\end{paracol}`,
+    `\\end{imprintlayout}`,
   ].join('\n');
 }
 
@@ -1010,7 +1008,7 @@ function validateLatexExport({ mainTex, sty }) {
     ['\\begin{document}', /\\begin\{document\}/],
     ['\\end{document}', /\\end\{document\}/],
     ['\\begin{multicols}', /\\begin\{multicols\}/],
-    ['\\begin{paracol}', /\\begin\{paracol\}/],
+    // \begin{paracol}은 \newenvironment{imprintlayout} 안에서 정당하게 사용 — 블랙리스트 제외
   ]) {
     if (re.test(styCode))
       errors.push(`imprint-style.sty: ${label} 은 .sty에 있으면 안 됩니다`);
@@ -1807,11 +1805,11 @@ export default function App() {
         const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
         colPackages = '\\usepackage{paracol}\n';
         colSetupBlock =
-          'VAR:total=' + totalG + ' body=' + bodyG + ' note=' + noteG + ' textwidth=' + textW + 'mm\n' +
-          '\\setlength{\\columnsep}{' + (colGap||5) + 'mm}\n' +
+          'TWO-COLUMN PARACOL LAYOUT — body ' + bodyMm + 'mm / note ' + noteMm + 'mm\n' +
           (hasNoteCol
-            ? '\\begin{paracol}{2}\\setcolumnwidth{' + bodyMm + 'mm,' + noteMm + 'mm}\n' +
-              '% <body content> \\switchcolumn <note content> \\end{paracol}\n'
+            ? 'REQUIRED: Wrap ALL content with \\begin{imprintlayout}...\\switchcolumn...\\end{imprintlayout}\n' +
+              'imprintlayout is defined in imprint-style.sty — do NOT use \\begin{paracol} directly.\n' +
+              'Structure: \\begin{imprintlayout} <body text> \\switchcolumn <note/annotation text> \\end{imprintlayout}\n'
             : '% single column (no note column)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
@@ -2054,8 +2052,34 @@ export default function App() {
         ``,
         `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
-        `% ⚠ 실제 다단 환경(\\begin{multicols} 등)은 main.tex 본문에 위치합니다`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
+        // 가변단: imprintlayout 환경 정의 (본문+주석 paracol)
+        (() => {
+          if (colMode !== 'variable') return null;
+          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const totalG = vg.total || 8;
+          const bodyG  = vg.body  || Math.round(totalG * 0.625);
+          const noteG  = vg.note  || (totalG - bodyG);
+          if (noteG <= 0) return null;
+          const gap    = p.c.간격 || 8;
+          const bMm    = Math.round(textW * (bodyG / totalG) - gap / 2);
+          const nMm    = textW - bMm - gap;
+          return [
+            `% 가변단 — 본문 ${bMm}mm / 주석 ${nMm}mm (판면 ${textW}mm, 간격 ${gap}mm)`,
+            `% main.tex 사용법: \\begin{imprintlayout} 본문 \\switchcolumn 주석 \\end{imprintlayout}`,
+            `\\newlength{\\imprintbodywidth}`,
+            `\\setlength{\\imprintbodywidth}{${bMm}mm}`,
+            `\\newlength{\\imprintnotewidth}`,
+            `\\setlength{\\imprintnotewidth}{${nMm}mm}`,
+            `\\newenvironment{imprintlayout}{%`,
+            `  \\setlength{\\columnsep}{${gap}mm}%`,
+            `  \\begin{paracol}{2}%`,
+            `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
+            `}{%`,
+            `  \\end{paracol}%`,
+            `}`,
+          ].join('\n');
+        })(),
         ``,
         `% ── 위계별 글자 크기 명령 ─────────────────────────────────────`,
         `% 본문에서 \\hone \\htwo \\hthree \\bodyf 사용`,

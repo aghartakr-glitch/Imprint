@@ -861,6 +861,73 @@ function wrapFixedColumns(body, n, colGapMm) {
   return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols}{${n}}\n${body}\n\\end{multicols}`;
 }
 
+// 가변단 그리드 계산: vg={total,body,note}, textW=판면너비(mm), colGap=단간격(mm)
+// 반환: { unitW, bodyW, noteW, gap, bodyG, noteG, totalG }
+function calcVariableGrid(vg, textW, colGap) {
+  const totalG = (vg && vg.total) || 8;
+  const bodyG  = (vg && vg.body)  || Math.round(totalG * 0.625);
+  const noteG  = (vg && vg.note)  || (totalG - bodyG);
+  const gap    = typeof colGap === 'number' ? colGap : 8;
+  // 모듈 단위 폭: textW = totalG * unitW + (totalG-1) * gap
+  const unitW  = (textW - (totalG - 1) * gap) / totalG;
+  // 컬럼 폭: N개 모듈 * unitW + (N-1)개 gap
+  const bodyW  = Math.round(unitW * bodyG + (bodyG - 1) * gap);
+  const noteW  = textW - bodyW - gap;  // 반올림 오차 흡수
+  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap, bodyG, noteG, totalG };
+}
+
+// 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
+// notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
+// hasNote=false → imprintbodyspan (본문 너비만 사용, 주석 영역 공백)
+// hasNote=true, right/left → imprintlayout (paracol)
+// hasNote=true, top/bottom → imprintnotearea (adjustwidth 블록)
+function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
+  const { bodyW, noteW, gap } = grid;
+  const pos = notePosition || 'right';
+  const hasNote = !!(noteLatex && noteLatex.trim());
+
+  if (!hasNote) {
+    // 주석 없음 → imprintbodyspan: 본문을 bodyW 폭으로 제한
+    const leftAdj  = (pos === 'left') ? `${noteW + gap}mm` : `0pt`;
+    const rightAdj = (pos === 'left') ? `0pt` : `${noteW + gap}mm`;
+    return [
+      `\\begin{imprintbodyspan}{${leftAdj}}{${rightAdj}}`,
+      bodyLatex.trim(),
+      `\\end{imprintbodyspan}`,
+    ].join('\n');
+  }
+
+  if (pos === 'top') {
+    return [
+      `\\begin{imprintnotearea}`,
+      noteLatex.trim(),
+      `\\end{imprintnotearea}`,
+      `\\vspace{${gap}mm}`,
+      bodyLatex.trim(),
+    ].join('\n');
+  }
+
+  if (pos === 'bottom') {
+    return [
+      bodyLatex.trim(),
+      `\\vspace{${gap}mm}`,
+      `\\begin{imprintnotearea}`,
+      noteLatex.trim(),
+      `\\end{imprintnotearea}`,
+    ].join('\n');
+  }
+
+  // right (기본) 또는 left → imprintlayout (paracol)
+  const isLeft = pos === 'left';
+  return [
+    `\\begin{imprintlayout}`,
+    isLeft ? noteLatex.trim() : bodyLatex.trim(),
+    `\\switchcolumn`,
+    isLeft ? bodyLatex.trim() : noteLatex.trim(),
+    `\\end{imprintlayout}`,
+  ].join('\n');
+}
+
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
