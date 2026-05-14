@@ -3417,12 +3417,16 @@ REQUIRED OUTPUT FORMAT:
                           <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(styCode); setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); }}
+                      <button onClick={() => {
+                          navigator.clipboard.writeText(styCode)
+                            .then(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); })
+                            .catch(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); });
+                        }}
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
                           background:copiedSty ? T.ink : T.surface,
                           color:copiedSty ? "#fff" : T.ink, cursor:"pointer", flexShrink:0, transition:"all 150ms" }}>
-                        {copiedSty ? "복사됨" : "복사"}
+                        {copiedSty ? "복사됨 ✓" : "복사"}
                       </button>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,

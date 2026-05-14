@@ -861,6 +861,73 @@ function wrapFixedColumns(body, n, colGapMm) {
   return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols}{${n}}\n${body}\n\\end{multicols}`;
 }
 
+// 가변단 그리드 계산: vg={total,body,note}, textW=판면너비(mm), colGap=단간격(mm)
+// 반환: { unitW, bodyW, noteW, gap, bodyG, noteG, totalG }
+function calcVariableGrid(vg, textW, colGap) {
+  const totalG = (vg && vg.total) || 8;
+  const bodyG  = (vg && vg.body)  || Math.round(totalG * 0.625);
+  const noteG  = (vg && vg.note)  || (totalG - bodyG);
+  const gap    = typeof colGap === 'number' ? colGap : 8;
+  // 모듈 단위 폭: textW = totalG * unitW + (totalG-1) * gap
+  const unitW  = (textW - (totalG - 1) * gap) / totalG;
+  // 컬럼 폭: N개 모듈 * unitW + (N-1)개 gap
+  const bodyW  = Math.round(unitW * bodyG + (bodyG - 1) * gap);
+  const noteW  = textW - bodyW - gap;  // 반올림 오차 흡수
+  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap, bodyG, noteG, totalG };
+}
+
+// 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
+// notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
+// hasNote=false → imprintbodyspan (본문 너비만 사용, 주석 영역 공백)
+// hasNote=true, right/left → imprintlayout (paracol)
+// hasNote=true, top/bottom → imprintnotearea (adjustwidth 블록)
+function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
+  const { bodyW, noteW, gap } = grid;
+  const pos = notePosition || 'right';
+  const hasNote = !!(noteLatex && noteLatex.trim());
+
+  if (!hasNote) {
+    // 주석 없음 → imprintbodyspan: 본문을 bodyW 폭으로 제한
+    const leftAdj  = (pos === 'left') ? `${noteW + gap}mm` : `0pt`;
+    const rightAdj = (pos === 'left') ? `0pt` : `${noteW + gap}mm`;
+    return [
+      `\\begin{imprintbodyspan}{${leftAdj}}{${rightAdj}}`,
+      bodyLatex.trim(),
+      `\\end{imprintbodyspan}`,
+    ].join('\n');
+  }
+
+  if (pos === 'top') {
+    return [
+      `\\begin{imprintnotearea}`,
+      noteLatex.trim(),
+      `\\end{imprintnotearea}`,
+      `\\vspace{${gap}mm}`,
+      bodyLatex.trim(),
+    ].join('\n');
+  }
+
+  if (pos === 'bottom') {
+    return [
+      bodyLatex.trim(),
+      `\\vspace{${gap}mm}`,
+      `\\begin{imprintnotearea}`,
+      noteLatex.trim(),
+      `\\end{imprintnotearea}`,
+    ].join('\n');
+  }
+
+  // right (기본) 또는 left → imprintlayout (paracol)
+  const isLeft = pos === 'left';
+  return [
+    `\\begin{imprintlayout}`,
+    isLeft ? noteLatex.trim() : bodyLatex.trim(),
+    `\\switchcolumn`,
+    isLeft ? bodyLatex.trim() : noteLatex.trim(),
+    `\\end{imprintlayout}`,
+  ].join('\n');
+}
+
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
@@ -1796,21 +1863,18 @@ export default function App() {
       if (userOverride && userMode === 'variable') {
         // 사용자 지정 가변 단: variableGrid.total / body / note
         const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-        const totalG = vg.total || 8;
-        const bodyG  = vg.body  || Math.round(totalG * 0.625);
-        const noteG  = vg.note  || (totalG - bodyG);
-        const hasNoteCol = noteG > 0;
-        const bodyRatio = bodyG / totalG;
-        const bodyMm = hasNoteCol ? Math.round(textW * bodyRatio - (colGap||5)/2) : textW;
-        const noteMm = hasNoteCol ? (textW - bodyMm - (colGap||5)) : 0;
-        colPackages = '\\usepackage{paracol}\n';
+        const vGrid = calcVariableGrid(vg, textW, colGap || 8);
+        const hasNoteCol = vGrid.noteG > 0;
+        colPackages = '\\usepackage{paracol}\n\\usepackage{changepage}\n';
+        // JS가 wrapping 보장 — Claude는 순수 텍스트 LaTeX만 생성
         colSetupBlock =
-          'TWO-COLUMN PARACOL LAYOUT — body ' + bodyMm + 'mm / note ' + noteMm + 'mm\n' +
-          (hasNoteCol
-            ? 'REQUIRED: Wrap ALL content with \\begin{imprintlayout}...\\switchcolumn...\\end{imprintlayout}\n' +
-              'imprintlayout is defined in imprint-style.sty — do NOT use \\begin{paracol} directly.\n' +
-              'Structure: \\begin{imprintlayout} <body text> \\switchcolumn <note/annotation text> \\end{imprintlayout}\n'
-            : '% single column (no note column)\n') +
+          '% VARIABLE GRID: body=' + vGrid.bodyW + 'mm / note=' + vGrid.noteW + 'mm / gap=' + vGrid.gap + 'mm\n' +
+          '% (' + vGrid.bodyG + '/' + vGrid.totalG + ' body cols + ' + vGrid.noteG + '/' + vGrid.totalG + ' note cols, 1unit=' + vGrid.unitW + 'mm)\n' +
+          '% JS HANDLES LAYOUT WRAPPING — do NOT add \\begin{imprintlayout} or \\begin{paracol}\n' +
+          (hasNoteCol && hasParacolSep
+            ? '% NOTE SPLIT DETECTED: Write body content, then %%PARACOL_SWITCHCOLUMN%% on its own line, then note content\n' +
+              '% CRITICAL: preserve %%PARACOL_SWITCHCOLUMN%% verbatim — do NOT remove or paraphrase it\n'
+            : '% No note separator → write body content only (JS will use imprintbodyspan for correct column width)\n') +
           (styleConfig.extraDirective ? 'Directive:' + styleConfig.extraDirective + '\n' : '');
 
 
@@ -2053,20 +2117,18 @@ export default function App() {
         `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
-        // 가변단: imprintlayout 환경 정의 (본문+주석 paracol)
+        // 가변단: imprintlayout / imprintbodyspan / imprintnotearea 환경 정의
         (() => {
           if (colMode !== 'variable') return null;
           const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-          const totalG = vg.total || 8;
-          const bodyG  = vg.body  || Math.round(totalG * 0.625);
-          const noteG  = vg.note  || (totalG - bodyG);
-          if (noteG <= 0) return null;
-          const gap    = p.c.간격 || 8;
-          const bMm    = Math.round(textW * (bodyG / totalG) - gap / 2);
-          const nMm    = textW - bMm - gap;
+          const vg2 = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          if (vg2.noteG <= 0) return null;
+          const { bodyW: bMm, noteW: nMm, gap } = vg2;
           return [
-            `% 가변단 — 본문 ${bMm}mm / 주석 ${nMm}mm (판면 ${textW}mm, 간격 ${gap}mm)`,
-            `% main.tex 사용법: \\begin{imprintlayout} 본문 \\switchcolumn 주석 \\end{imprintlayout}`,
+            `% ── 가변단 환경 ────────────────────────────────────────────────`,
+            `% 그리드: ${vg2.bodyG}/${vg2.totalG} 본문(${bMm}mm) + ${vg2.noteG}/${vg2.totalG} 주석(${nMm}mm), 간격 ${gap}mm`,
+            ``,
+            `% 본문+주석 paracol (주석 오른쪽/왼쪽)`,
             `\\newlength{\\imprintbodywidth}`,
             `\\setlength{\\imprintbodywidth}{${bMm}mm}`,
             `\\newlength{\\imprintnotewidth}`,
@@ -2077,6 +2139,27 @@ export default function App() {
             `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
             `}{%`,
             `  \\end{paracol}%`,
+            `}`,
+            ``,
+            `% 본문만 (주석 없음): 본문을 bodyW 폭으로 제한하고 반대쪽 여백 확보`,
+            `% 사용법: \\begin{imprintbodyspan}{leftadd}{rightadd} ... \\end{imprintbodyspan}`,
+            `\\newenvironment{imprintbodyspan}[2]{%`,
+            `  \\begin{adjustwidth}{#1}{#2}%`,
+            `}{%`,
+            `  \\end{adjustwidth}%`,
+            `}`,
+            ``,
+            `% 주석 블록 (상단/하단 배치)`,
+            `% 사용법: \\begin{imprintnotearea} ... \\end{imprintnotearea}`,
+            `\\newenvironment{imprintnotearea}{%`,
+            `  \\par\\vspace{0.3\\baselineskip}%`,
+            `  \\begingroup%`,
+            `  \\footnotesize%`,
+            `  \\setlength{\\leftskip}{0pt}%`,
+            `  \\noindent%`,
+            `}{%`,
+            `  \\endgroup%`,
+            `  \\par\\vspace{0.3\\baselineskip}%`,
             `}`,
           ].join('\n');
         })(),
@@ -2324,16 +2407,23 @@ export default function App() {
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
         }
-        // 가변단 paracol 보장: ===NOTE=== 구분자 기반으로 JS가 래핑
-        if (colMode === 'variable' && finalBodyContent.includes(PARACOL_MARKER)) {
-          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-          const totalG = vg.total || 8;
-          const bodyG  = vg.body  || Math.round(totalG * 0.625);
-          const noteG  = vg.note  || (totalG - bodyG);
-          const gap    = p.c.간격 || 8;
-          const bodyMm = noteG > 0 ? Math.round(textW * (bodyG / totalG) - gap / 2) : textW;
-          const noteMm = noteG > 0 ? (textW - bodyMm - gap) : 0;
-          if (noteG > 0) finalBodyContent = wrapParacol(finalBodyContent, bodyMm, noteMm, gap);
+        // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
+        if (colMode === 'variable') {
+          const vg   = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const grid = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          const notePosition = styleConfig.notePosition || 'right';
+
+          if (grid.noteG > 0) {
+            // ===NOTE=== 구분자 → %%PARACOL_SWITCHCOLUMN%% 마커 기준으로 본문/주석 분리
+            let bodyLatex = finalBodyContent;
+            let noteLatex = '';
+            if (finalBodyContent.includes(PARACOL_MARKER)) {
+              const idx = finalBodyContent.indexOf(PARACOL_MARKER);
+              bodyLatex = finalBodyContent.slice(0, idx).trim();
+              noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
+            }
+            finalBodyContent = wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
+          }
         }
 
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
@@ -2874,9 +2964,10 @@ REQUIRED OUTPUT FORMAT:
                       })}
                     </div>
                   )}
-                  {/* 가변단: 총/본문/주석 열 수 + 사용법 안내 */}
+                  {/* 가변단: 총/본문/주석 열 수 + 주석 위치 + 사용법 안내 */}
                   {styleConfig.columnMode === 'variable' && (
                     <>
+                      {/* 그리드 수치 입력 */}
                       <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
                         {[
                           { key:'total', label:'총 그리드' },
@@ -2901,14 +2992,38 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         ))}
                       </div>
+                      {/* 주석 위치 선택 */}
+                      <div style={{ marginTop:8 }}>
+                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                          textTransform:"uppercase", letterSpacing:"0.07em",
+                          marginBottom:4, display:"block" }}>주석 위치</span>
+                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => {
+                            const active = (styleConfig.notePosition || 'right') === val;
+                            return (
+                              <button key={val}
+                                onClick={() => setStyleConfig(s => ({ ...s, notePosition: val }))}
+                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                                  border:`1px solid ${active ? T.ink : T.border}`,
+                                  borderRadius:4, background: active ? T.ink : "transparent",
+                                  color: active ? "#fff" : T.ink, cursor:"pointer",
+                                  transition:"all 150ms" }}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* 사용법 안내 */}
                       <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
                         borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
                         color:T.muted, lineHeight:1.7 }}>
-                        본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
+                        주석 없이 생성 시: 본문을 <strong style={{color:T.ink}}>본문 열 폭</strong>으로 자동 배치<br/>
+                        주석 컬럼 있을 때: 본문 중 주석 시작 위치에<br/>
                         <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
                           padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
-                        를 단독 줄로 입력하세요.<br/>
-                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
+                        를 단독 줄로 입력<br/>
+                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 / 아래 = 주석 컬럼</span>
                       </div>
                     </>
                   )}
