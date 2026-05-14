@@ -2226,6 +2226,7 @@ export default function App() {
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
+        (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
           ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
           : hasFootnoteText
