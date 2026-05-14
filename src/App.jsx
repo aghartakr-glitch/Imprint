@@ -2054,8 +2054,34 @@ export default function App() {
         ``,
         `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
-        `% ⚠ 실제 다단 환경(\\begin{multicols} 등)은 main.tex 본문에 위치합니다`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
+        // 가변단: imprintlayout 환경 정의 (본문+주석 paracol)
+        (() => {
+          if (colMode !== 'variable') return null;
+          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const totalG = vg.total || 8;
+          const bodyG  = vg.body  || Math.round(totalG * 0.625);
+          const noteG  = vg.note  || (totalG - bodyG);
+          if (noteG <= 0) return null;
+          const gap    = p.c.간격 || 8;
+          const bMm    = Math.round(textW * (bodyG / totalG) - gap / 2);
+          const nMm    = textW - bMm - gap;
+          return [
+            `% 가변단 — 본문 ${bMm}mm / 주석 ${nMm}mm (판면 ${textW}mm, 간격 ${gap}mm)`,
+            `% main.tex 사용법: \\begin{imprintlayout} 본문 \\switchcolumn 주석 \\end{imprintlayout}`,
+            `\\newlength{\\imprintbodywidth}`,
+            `\\setlength{\\imprintbodywidth}{${bMm}mm}`,
+            `\\newlength{\\imprintnotewidth}`,
+            `\\setlength{\\imprintnotewidth}{${nMm}mm}`,
+            `\\newenvironment{imprintlayout}{%`,
+            `  \\setlength{\\columnsep}{${gap}mm}%`,
+            `  \\begin{paracol}{2}%`,
+            `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
+            `}{%`,
+            `  \\end{paracol}%`,
+            `}`,
+          ].join('\n');
+        })(),
         ``,
         `% ── 위계별 글자 크기 명령 ─────────────────────────────────────`,
         `% 본문에서 \\hone \\htwo \\hthree \\bodyf 사용`,

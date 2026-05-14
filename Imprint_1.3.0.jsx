@@ -835,6 +835,26 @@ function computeLeading(sizePt, role) {
   return Math.round(size * ratio * 2) / 2; // 0.5pt 단위로 반올림
 }
 
+// 가변단 paracol wrapping: %%PARACOL_SWITCHCOLUMN%% 마커 기준으로 본문/주석 분리
+const PARACOL_MARKER = '%%PARACOL_SWITCHCOLUMN%%';
+const PARACOL_SEP_RE = /===NOTE===|---NOTE---/gi;
+function wrapParacol(body, bodyMm, noteMm, colGapMm) {
+  if (!body.includes(PARACOL_MARKER)) return body;
+  const gap = colGapMm || 8;
+  const idx = body.indexOf(PARACOL_MARKER);
+  const mainPart = body.slice(0, idx).trim();
+  const notePart = body.slice(idx + PARACOL_MARKER.length).trim();
+  return [
+    `\\setlength{\\columnsep}{${gap}mm}`,
+    `\\begin{paracol}{2}`,
+    `\\setcolumnwidth{${bodyMm}mm,${noteMm}mm}`,
+    mainPart,
+    `\\switchcolumn`,
+    notePart,
+    `\\end{paracol}`,
+  ].join('\n');
+}
+
 // 고정 단 구성 wrapping: Claude가 multicols를 생성하지 않았을 때 JS에서 보장
 function wrapFixedColumns(body, n, colGapMm) {
   if (n <= 1) return body;
@@ -1405,7 +1425,10 @@ export default function App() {
     const hasFootnoteText = !!(fields.각주?.trim());
     const hasFootnoteMarkers = /[¹²³⁴⁵⁶⁷⁸⁹]|\[\d+\]|\^\d+(?!\d)|\*(?!\*)|\†|\‡|※|[①②③④⑤⑥⑦⑧⑨⑩]/.test(fields.본문 || '');
     const needsLLMFootnotes = hasFootnoteMarkers && !hasFootnoteText;
-    const processedBody = injectFootnotes(fields.본문, fields.각주);
+    // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
+    const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
+    const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
+    const processedBody = injectFootnotes(bodyForProcess, fields.각주);
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
@@ -2203,6 +2226,7 @@ export default function App() {
         'No \\colorbox, no \\fbox, no \\color, no \\textcolor, no xcolor commands — these cause literal text output. ' +
         'Do NOT redeclare \\fontsize/\\linespread in body. ' +
         'OVERFLOW: never wrap body in minipage — use normal flow; insert \\newpage if needed. ' +
+        (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
           ? 'FOOTNOTES: you are generating footnote content inline as \\footnote{} — they render at PAGE BOTTOM automatically. Do NOT move to a side column. '
           : hasFootnoteText
@@ -2275,6 +2299,17 @@ export default function App() {
         // 고정 단 구성 보장: 사용자가 fixedColumns > 1 지정 시 multicols 래핑
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
+        }
+        // 가변단 paracol 보장: ===NOTE=== 구분자 기반으로 JS가 래핑
+        if (colMode === 'variable' && finalBodyContent.includes(PARACOL_MARKER)) {
+          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const totalG = vg.total || 8;
+          const bodyG  = vg.body  || Math.round(totalG * 0.625);
+          const noteG  = vg.note  || (totalG - bodyG);
+          const gap    = p.c.간격 || 8;
+          const bodyMm = noteG > 0 ? Math.round(textW * (bodyG / totalG) - gap / 2) : textW;
+          const noteMm = noteG > 0 ? (textW - bodyMm - gap) : 0;
+          if (noteG > 0) finalBodyContent = wrapParacol(finalBodyContent, bodyMm, noteMm, gap);
         }
 
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
@@ -2608,7 +2643,9 @@ REQUIRED OUTPUT FORMAT:
   }
 
   function copy() {
-    navigator.clipboard.writeText(latex).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(latex)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+      .catch(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); // 실패해도 피드백은 표시
   }
 
   const pkg = DB[selIdx];
@@ -2813,32 +2850,43 @@ REQUIRED OUTPUT FORMAT:
                       })}
                     </div>
                   )}
-                  {/* 가변단: 총/본문/주석 열 수 */}
+                  {/* 가변단: 총/본문/주석 열 수 + 사용법 안내 */}
                   {styleConfig.columnMode === 'variable' && (
-                    <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
-                      {[
-                        { key:'total', label:'총 그리드' },
-                        { key:'body',  label:'본문 열' },
-                        { key:'note',  label:'주석 열' },
-                      ].map(({ key, label }) => (
-                        <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                            textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-                          <input type="number" min={1} max={20}
-                            value={(styleConfig.variableGrid || {})[key] || ''}
-                            onChange={e => {
-                              const v = parseInt(e.target.value) || 1;
-                              setStyleConfig(s => ({
-                                ...s,
-                                variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
-                              }));
-                            }}
-                            style={{ width:52, padding:"5px 7px", fontSize:12,
-                              border:`1px solid ${T.border}`, borderRadius:4,
-                              background:T.bg, color:T.ink, textAlign:"center" }} />
-                        </div>
-                      ))}
-                    </div>
+                    <>
+                      <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                        {[
+                          { key:'total', label:'총 그리드' },
+                          { key:'body',  label:'본문 열' },
+                          { key:'note',  label:'주석 열' },
+                        ].map(({ key, label }) => (
+                          <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                            <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                              textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                            <input type="number" min={1} max={20}
+                              value={(styleConfig.variableGrid || {})[key] || ''}
+                              onChange={e => {
+                                const v = parseInt(e.target.value) || 1;
+                                setStyleConfig(s => ({
+                                  ...s,
+                                  variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
+                                }));
+                              }}
+                              style={{ width:52, padding:"5px 7px", fontSize:12,
+                                border:`1px solid ${T.border}`, borderRadius:4,
+                                background:T.bg, color:T.ink, textAlign:"center" }} />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
+                        borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
+                        color:T.muted, lineHeight:1.7 }}>
+                        본문 입력 중 주석 컬럼이 시작되는 위치에<br/>
+                        <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
+                          padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
+                        를 단독 줄로 입력하세요.<br/>
+                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 컬럼 / 아래 = 주석 컬럼</span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div>
@@ -2975,7 +3023,7 @@ REQUIRED OUTPUT FORMAT:
                       border:`1px solid ${T.border}`, borderRadius:5,
                       background:copied ? T.ink : T.surface,
                       color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
-                    {copied ? "복사됨" : "전체 복사"}
+                    {copied ? "복사됨 ✓" : "전체 복사"}
                   </button>
                 </div>
 
@@ -3168,8 +3216,9 @@ REQUIRED OUTPUT FORMAT:
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
                           background:copied ? T.ink : T.surface,
-                          color:copied ? "#fff" : T.ink, cursor:"pointer", flexShrink:0 }}>
-                        {copied ? "복사됨" : "전체 복사"}
+                          color:copied ? "#fff" : T.ink, cursor:"pointer", flexShrink:0,
+                          transition:"all 150ms" }}>
+                        {copied ? "복사됨 ✓" : "전체 복사"}
                       </button>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
