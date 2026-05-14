@@ -3170,8 +3170,9 @@ REQUIRED OUTPUT FORMAT:
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
                           background:copied ? T.ink : T.surface,
-                          color:copied ? "#fff" : T.ink, cursor:"pointer", flexShrink:0 }}>
-                        {copied ? "복사됨" : "전체 복사"}
+                          color:copied ? "#fff" : T.ink, cursor:"pointer", flexShrink:0,
+                          transition:"all 150ms" }}>
+                        {copied ? "복사됨 ✓" : "전체 복사"}
                       </button>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
