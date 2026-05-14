@@ -2297,12 +2297,18 @@ export default function App() {
             'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
-          : hasFootnoteText
+          : footnotesInjected
             ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
               'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
               'Do NOT remove, move, rewrite, or paraphrase them. ' +
               'Do NOT replace with \\footnotemark/\\footnotetext. ' +
               'They render automatically at page bottom — no extra action needed.\n' +
+              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+          : footnoteTextForClaude
+            ? 'User provided footnote texts in the FOOTNOTES section below. ' +
+              'Place each footnote as \\footnote{content} inline — immediately after the sentence or phrase it annotates. ' +
+              'Match by number order (footnote 1 → first natural annotation point in body, etc.). ' +
+              'Use EXACT footnote text as provided. Do NOT paraphrase.\n' +
               (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
