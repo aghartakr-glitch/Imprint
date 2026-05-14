@@ -2127,7 +2127,6 @@ export default function App() {
           return [
             `% ── 가변단 환경 ────────────────────────────────────────────────`,
             `% 그리드: ${vg2.bodyG}/${vg2.totalG} 본문(${bMm}mm) + ${vg2.noteG}/${vg2.totalG} 주석(${nMm}mm), 간격 ${gap}mm`,
-            `\\RequirePackage{changepage}`,
             ``,
             `% 본문+주석 paracol (주석 오른쪽/왼쪽)`,
             `\\newlength{\\imprintbodywidth}`,
