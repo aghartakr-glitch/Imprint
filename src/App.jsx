@@ -2300,6 +2300,17 @@ export default function App() {
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
         }
+        // 가변단 paracol 보장: ===NOTE=== 구분자 기반으로 JS가 래핑
+        if (colMode === 'variable' && finalBodyContent.includes(PARACOL_MARKER)) {
+          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const totalG = vg.total || 8;
+          const bodyG  = vg.body  || Math.round(totalG * 0.625);
+          const noteG  = vg.note  || (totalG - bodyG);
+          const gap    = p.c.간격 || 8;
+          const bodyMm = noteG > 0 ? Math.round(textW * (bodyG / totalG) - gap / 2) : textW;
+          const noteMm = noteG > 0 ? (textW - bodyMm - gap) : 0;
+          if (noteG > 0) finalBodyContent = wrapParacol(finalBodyContent, bodyMm, noteMm, gap);
+        }
 
         // 2-파일 아키텍처: main.tex = 헤더 + \usepackage{imprint-style} + 본문
         const mainTex = [
