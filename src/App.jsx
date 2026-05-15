@@ -3101,11 +3101,21 @@ REQUIRED OUTPUT FORMAT:
                             <input type="number" min={1} max={20}
                               value={(styleConfig.variableGrid || {})[key] || ''}
                               onChange={e => {
-                                const v = parseInt(e.target.value) || 1;
-                                setStyleConfig(s => ({
-                                  ...s,
-                                  variableGrid: { ...(s.variableGrid || { total:8, body:5, note:3 }), [key]: v }
-                                }));
+                                const v = Math.max(1, parseInt(e.target.value) || 1);
+                                setStyleConfig(s => {
+                                  const prev = s.variableGrid || { total:8, body:5, note:3 };
+                                  const next = { ...prev, [key]: v };
+                                  // 본문+주석은 총 그리드를 넘을 수 없음
+                                  if (key === 'total') {
+                                    if (next.body + next.note > v) next.note = Math.max(1, v - next.body);
+                                    if (next.body + next.note > v) next.body = Math.max(1, v - 1);
+                                  } else if (key === 'body') {
+                                    if (v + next.note > next.total) next.note = Math.max(1, next.total - v);
+                                  } else if (key === 'note') {
+                                    if (next.body + v > next.total) next.body = Math.max(1, next.total - v);
+                                  }
+                                  return { ...s, variableGrid: next };
+                                });
                               }}
                               style={{ width:52, padding:"5px 7px", fontSize:12,
                                 border:`1px solid ${T.border}`, borderRadius:4,
