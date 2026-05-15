@@ -2546,10 +2546,6 @@ export default function App() {
         // ── 각주 최종 강제 치환 ────────────────────────────────────────
         // 이 시점에서 finalMainTex의 [N] / \ImpFN{N}을 \footnote{내용}으로 직접 치환.
         // 위의 모든 주입 로직이 실패해도 여기서 반드시 처리됨.
-        const _dbgFnField = (fields.각주 || '').trim();
-        const _dbgHasMarker = /\[\d+\]/.test(finalMainTex);
-        // main.tex 맨 위에 각주 상태 주석 출력 (진단용 — 나중에 제거 가능)
-        finalMainTex = `% [각주상태] 각주필드=${_dbgFnField ? '있음(' + _dbgFnField.slice(0,30) + '...)' : '비어있음'} | 본문마커=${_dbgHasMarker ? '있음([N])' : '없음'}\n` + finalMainTex;
         if (fields.각주?.trim()) {
           const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
           const _finalKeys = Object.keys(_finalFnMap);
