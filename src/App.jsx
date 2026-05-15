@@ -648,6 +648,22 @@ function parseFootnoteMap(footnoteText) {
   return { fnMap, superMap };
 }
 
+// 각주 마커 위치 anchor 추출: Claude가 \ImpFN{N}을 완전히 삭제했을 때 복원에 사용
+// 반환: { '1': '앞 텍스트 최대 25자', ... }
+function extractFootnoteAnchors(bodyText) {
+  const anchors = {};
+  // [N] 형식 마커만 대상 (원본 입력 기준)
+  const re = /\[(\d+)\]/g;
+  let m;
+  while ((m = re.exec(bodyText)) !== null) {
+    const n = m[1];
+    const before = bodyText.slice(Math.max(0, m.index - 40), m.index);
+    // 공백 정리 후 마지막 25자 — 한국어 3~5어절
+    anchors[n] = before.replace(/\s+/g, ' ').trim().slice(-25);
+  }
+  return anchors;
+}
+
 // 각주 마커 사전 치환: Claude 전송 전 [N] ¹ ① ^N → \ImpFN{N}
 // Claude는 미지의 LaTeX 명령을 그대로 유지하므로, 마커 손실 없이 post-processing이 \footnote{}로 치환
 function preReplaceFnMarkers(bodyText) {
