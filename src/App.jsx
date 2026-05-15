@@ -2317,10 +2317,10 @@ export default function App() {
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : footnoteTextForClaude
-            ? 'Footnote content is provided in the FOOTNOTES section of the body text above. ' +
-              'IMPORTANT: Do NOT convert markers ([1], ¹, ①, etc.) to \\footnote{} — JS post-processing handles this. ' +
-              'Just PRESERVE all footnote markers ([1], ¹, ^1, ①, *, †, ※) exactly as-is in your LaTeX output. ' +
-              'Do NOT remove markers. Do NOT add \\footnote{} commands yourself.\n'
+            ? 'Footnote markers in the body have been converted to \\ImpFN{N} LaTeX commands (e.g. \\ImpFN{1}, \\ImpFN{2}). ' +
+              'CRITICAL: Include ALL \\ImpFN{N} commands VERBATIM in your output at their exact positions. ' +
+              'Do NOT remove, rename, or replace \\ImpFN{N} with \\footnote{}. JS will handle the conversion. ' +
+              'Do NOT add any new \\footnote{} commands yourself.\n'
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
