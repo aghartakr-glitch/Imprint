@@ -1511,9 +1511,9 @@ export default function App() {
     // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
     const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
     const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
-    // 각주 pre-injection 제거: Claude가 \footnote{} → [1]로 되돌리는 문제 방지
-    // JS post-processing이 100% 보장하므로 Claude에는 원문 마커([1] 등) 그대로 전달
-    const processedBody = bodyForProcess;
+    // 각주 마커를 \ImpFN{N} LaTeX 명령으로 사전 치환: Claude가 LaTeX 명령을 그대로 보존하므로 손실 없음
+    // post-processing에서 \ImpFN{N} → \footnote{내용}으로 치환 (100% JS 보장)
+    const processedBody = hasFootnoteText ? preReplaceFnMarkers(bodyForProcess) : bodyForProcess;
     const footnotesInjected = false; // post-processing 담당
     const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
     const contentStructureHints = detectContentStructure(fields.본문 || '');
