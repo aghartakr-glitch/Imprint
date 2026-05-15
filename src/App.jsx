@@ -2577,9 +2577,8 @@ export default function App() {
         const finalStyContent = sanitizeUnicodeForLatex(styContent);
 
         // ── 각주 최종 강제 치환 ────────────────────────────────────────
-        // 이 시점에서 finalMainTex의 [N] / \ImpFN{N}을 \footnote{내용}으로 직접 치환.
-        // 위의 모든 주입 로직이 실패해도 여기서 반드시 처리됨.
-        if (fields.각주?.trim()) {
+        // side-column 모드면 이미 처리 완료 → nuclear fix 스킵
+        if (fields.각주?.trim() && !useSideNoteFootnote) {
           const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
           const _finalKeys = Object.keys(_finalFnMap);
           if (_finalKeys.length > 0) {
