@@ -2443,7 +2443,9 @@ export default function App() {
               bodyLatex = finalBodyContent.slice(0, idx).trim();
               noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
             }
-            finalBodyContent = wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
+            // 그리드 정보 주석 삽입 (검증용)
+            const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
+            finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
           }
         }
 
