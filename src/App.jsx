@@ -1493,10 +1493,11 @@ export default function App() {
     // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
     const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
     const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
-    const processedBody = injectFootnotes(bodyForProcess, fields.각주);
-    // 마커가 없어서 injection이 안 된 경우: 각주 텍스트를 Claude에 별도 전달
-    const footnotesInjected = hasFootnoteText && processedBody.includes('\\footnote{');
-    const footnoteTextForClaude = hasFootnoteText && !footnotesInjected ? fields.각주.trim() : null;
+    // 각주 pre-injection 제거: Claude가 \footnote{} → [1]로 되돌리는 문제 방지
+    // JS post-processing이 100% 보장하므로 Claude에는 원문 마커([1] 등) 그대로 전달
+    const processedBody = bodyForProcess;
+    const footnotesInjected = false; // post-processing 담당
+    const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
@@ -1505,7 +1506,7 @@ export default function App() {
       fields.면주   && `RUNNING HEAD: ${fields.면주}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
       contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
-      footnoteTextForClaude && `FOOTNOTES (place inline as \\footnote{}):\n${footnoteTextForClaude}`,
+      footnoteTextForClaude && `FOOTNOTES:\n${footnoteTextForClaude}`,
     ].filter(Boolean).join('\n\n');
 
     try {
