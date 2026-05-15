@@ -2159,7 +2159,7 @@ export default function App() {
             `\\newenvironment{imprintlayout}{%`,
             `  \\setlength{\\columnsep}{${gap}mm}%`,
             `  \\begin{paracol}{2}%`,
-            `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
+            `  \\setcolumnwidth{\\imprintbodywidth}%`,
             `}{%`,
             `  \\end{paracol}%`,
             `}`,
