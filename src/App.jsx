@@ -2339,11 +2339,9 @@ export default function App() {
         (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
           ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
-          : footnotesInjected
-            ? 'FOOTNOTES: \\footnote{} already in body — preserve VERBATIM, PAGE BOTTOM only. Do NOT move. '
-            : footnoteTextForClaude
-              ? 'FOOTNOTES: place provided footnote texts as \\footnote{} inline in body, in number order. PAGE BOTTOM only. '
-              : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
+          : footnoteTextForClaude
+            ? 'FOOTNOTES: PRESERVE markers [1] ¹ ① exactly — do NOT convert to \\footnote{}. JS injects after. '
+            : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
