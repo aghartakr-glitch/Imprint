@@ -907,13 +907,13 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   if (!hasNote) {
     // 주석 없음: paracol로 본문 열 폭 보장 (\footnote이 memoir+adjustwidth에서 깨지는 문제 방지)
     // right: 본문(bodyW) → 빈 주석(noteW) / left: 빈 주석(noteW) → 본문(bodyW)
-    // \mbox{}: 빈 컬럼에 실제 콘텐츠 필요 — LaTeX 주석(%)만 있으면 paracol이 공간을 무시함
+    // \setcolumnwidth는 반드시 \begin{paracol} 이전에 선언해야 적용됨 (paracol 스펙)
     const isLeft = pos === 'left';
     const firstColW = isLeft ? `${noteW}mm` : `${bodyW}mm`;
     return [
       `\\setlength{\\columnsep}{${gap}mm}`,
-      `\\begin{paracol}{2}`,
       `\\setcolumnwidth{${firstColW}}`,
+      `\\begin{paracol}{2}`,
       isLeft ? `\\mbox{}` : bodyLatex.trim(),
       `\\switchcolumn`,
       isLeft ? bodyLatex.trim() : `\\mbox{}`,
