@@ -896,22 +896,27 @@ function calcVariableGrid(vg, textW, colGap) {
 
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
 // notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
-// hasNote=false → imprintbodyspan (본문 너비만 사용, 주석 영역 공백)
-// hasNote=true, right/left → imprintlayout (paracol)
-// hasNote=true, top/bottom → imprintnotearea (adjustwidth 블록)
+// hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
+// hasNote=true, right/left → paracol (imprintlayout)
+// hasNote=true, top/bottom → imprintnotearea 블록
 function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   const { bodyW, noteW, gap } = grid;
   const pos = notePosition || 'right';
   const hasNote = !!(noteLatex && noteLatex.trim());
 
   if (!hasNote) {
-    // 주석 없음 → imprintbodyspan: 본문을 bodyW 폭으로 제한
-    const leftAdj  = (pos === 'left') ? `${noteW + gap}mm` : `0pt`;
-    const rightAdj = (pos === 'left') ? `0pt` : `${noteW + gap}mm`;
+    // 주석 없음: paracol로 본문 열 폭 보장 (\footnote이 memoir+adjustwidth에서 깨지는 문제 방지)
+    // right: 본문(bodyW) → 빈 주석(noteW) / left: 빈 주석(noteW) → 본문(bodyW)
+    const isLeft = pos === 'left';
+    const firstColW = isLeft ? `${noteW}mm` : `${bodyW}mm`;
     return [
-      `\\begin{imprintbodyspan}{${leftAdj}}{${rightAdj}}`,
-      bodyLatex.trim(),
-      `\\end{imprintbodyspan}`,
+      `\\setlength{\\columnsep}{${gap}mm}`,
+      `\\begin{paracol}{2}`,
+      `\\setcolumnwidth{${firstColW}}`,
+      isLeft ? `% 주석 영역 예약 (주석 없음)` : bodyLatex.trim(),
+      `\\switchcolumn`,
+      isLeft ? bodyLatex.trim() : `% 주석 영역 예약 (주석 없음)`,
+      `\\end{paracol}`,
     ].join('\n');
   }
 

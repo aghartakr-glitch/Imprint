@@ -648,6 +648,24 @@ function parseFootnoteMap(footnoteText) {
   return { fnMap, superMap };
 }
 
+// 각주 마커 사전 치환: Claude 전송 전 [N] ¹ ① ^N → \ImpFN{N}
+// Claude는 미지의 LaTeX 명령을 그대로 유지하므로, 마커 손실 없이 post-processing이 \footnote{}로 치환
+function preReplaceFnMarkers(bodyText) {
+  if (!bodyText) return bodyText;
+  const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+  const circleMap = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+  let result = bodyText;
+  // 위첨자 유니코드 (¹²³...)
+  for (const [ch, n] of Object.entries(superMap)) result = result.split(ch).join(`\\ImpFN{${n}}`);
+  // 원문자 (①②③...)
+  for (const [ch, n] of Object.entries(circleMap)) result = result.split(ch).join(`\\ImpFN{${n}}`);
+  // [N] 대괄호
+  result = result.replace(/\[(\d+)\]/g, (_, n) => `\\ImpFN{${n}}`);
+  // ^N 캐럿 (숫자 뒤에 다른 숫자 없을 때만)
+  result = result.replace(/\^(\d+)(?!\d)/g, (_, n) => `\\ImpFN{${n}}`);
+  return result;
+}
+
 function injectFnIntoEscaped(text, fnMap, superMap) {
   if (!Object.keys(fnMap).length) return text;
   const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v]) => [v, k]));
@@ -1493,9 +1511,9 @@ export default function App() {
     // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
     const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
     const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
-    // 각주 pre-injection 제거: Claude가 \footnote{} → [1]로 되돌리는 문제 방지
-    // JS post-processing이 100% 보장하므로 Claude에는 원문 마커([1] 등) 그대로 전달
-    const processedBody = bodyForProcess;
+    // 각주 마커를 \ImpFN{N} LaTeX 명령으로 사전 치환: Claude가 LaTeX 명령을 그대로 보존하므로 손실 없음
+    // post-processing에서 \ImpFN{N} → \footnote{내용}으로 치환 (100% JS 보장)
+    const processedBody = hasFootnoteText ? preReplaceFnMarkers(bodyForProcess) : bodyForProcess;
     const footnotesInjected = false; // post-processing 담당
     const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
     const contentStructureHints = detectContentStructure(fields.본문 || '');
@@ -2141,7 +2159,7 @@ export default function App() {
             `\\newenvironment{imprintlayout}{%`,
             `  \\setlength{\\columnsep}{${gap}mm}%`,
             `  \\begin{paracol}{2}%`,
-            `  \\setcolumnwidth{\\imprintbodywidth,\\imprintnotewidth}%`,
+            `  \\setcolumnwidth{\\imprintbodywidth}%`,
             `}{%`,
             `  \\end{paracol}%`,
             `}`,
@@ -2299,10 +2317,10 @@ export default function App() {
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : footnoteTextForClaude
-            ? 'Footnote content is provided in the FOOTNOTES section of the body text above. ' +
-              'IMPORTANT: Do NOT convert markers ([1], ¹, ①, etc.) to \\footnote{} — JS post-processing handles this. ' +
-              'Just PRESERVE all footnote markers ([1], ¹, ^1, ①, *, †, ※) exactly as-is in your LaTeX output. ' +
-              'Do NOT remove markers. Do NOT add \\footnote{} commands yourself.\n'
+            ? 'Footnote markers in the body have been converted to \\ImpFN{N} LaTeX commands (e.g. \\ImpFN{1}, \\ImpFN{2}). ' +
+              'CRITICAL: Include ALL \\ImpFN{N} commands VERBATIM in your output at their exact positions. ' +
+              'Do NOT remove, rename, or replace \\ImpFN{N} with \\footnote{}. JS will handle the conversion. ' +
+              'Do NOT add any new \\footnote{} commands yourself.\n'
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
@@ -2340,7 +2358,7 @@ export default function App() {
         (needsLLMFootnotes
           ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
           : footnoteTextForClaude
-            ? 'FOOTNOTES: PRESERVE markers [1] ¹ ① exactly — do NOT convert to \\footnote{}. JS injects after. '
+            ? 'FOOTNOTES: body has \\ImpFN{N} markers — keep them VERBATIM, do NOT remove or convert to \\footnote{}. JS injects after. '
             : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
@@ -2425,17 +2443,33 @@ export default function App() {
               bodyLatex = finalBodyContent.slice(0, idx).trim();
               noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
             }
-            finalBodyContent = wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
+            // 그리드 정보 주석 삽입 (검증용)
+            const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
+            finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
           }
         }
 
         // ── 각주 후처리 (무조건 실행 — Claude 의존 없이 JS가 100% 보장) ──────────
         if (hasFootnoteText) {
-          // 1단계: Claude 출력에 남아있는 [1] ¹ ① (1) ^1 * † ※ 마커를 \footnote{}로 치환
-          // injectFootnotes는 run() 스코프 함수 — 가장 광범위한 마커 패턴 지원
+          // 0단계: \ImpFN{N} → \footnote{내용} 치환 (사전 치환 마커, 가장 우선)
+          // preReplaceFnMarkers()가 [1] → \ImpFN{1}로 변환 → Claude가 보존 → 여기서 최종 치환
+          if (finalBodyContent.includes('\\ImpFN{')) {
+            const { fnMap } = parseFootnoteMap(fields.각주);
+            const latexEscFn = s => s
+              .replace(/\\/g, '\\textbackslash{}')
+              .replace(/~/g, '\\textasciitilde{}')
+              .replace(/\^/g, '\\textasciicircum{}')
+              .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+              .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+            finalBodyContent = finalBodyContent.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
+              const content = fnMap[n];
+              return content ? `\\footnote{${latexEscFn(content)}}` : '';
+            });
+          }
+
+          // 1단계: 혹시 남아있는 원문 마커 ([1] ¹ ① 등) → \footnote{} 치환 (fallback)
           const afterInject = injectFootnotes(finalBodyContent, fields.각주);
           if (afterInject !== finalBodyContent) {
-            // 마커 치환 성공
             finalBodyContent = afterInject;
           }
 
