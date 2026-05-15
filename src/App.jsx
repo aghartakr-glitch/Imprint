@@ -638,7 +638,7 @@ function parseFootnoteMap(footnoteText) {
   if (!footnoteText || !footnoteText.trim()) return { fnMap, superMap };
   let cur = null, buf = [];
   for (const line of footnoteText.split('\n')) {
-    const m1 = line.match(/^(\d+)[.)]\s*(.+)/);
+    const m1 = line.match(/^["''"「『\s]*(\d+)[.)]\s*(.+)/);
     const m2 = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s*(.+)/);
     if (m1)      { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = m1[1]; buf = [m1[2]]; }
     else if (m2) { if (cur) fnMap[cur] = buf.join(' ').trim(); cur = superMap[m2[1]]; buf = [m2[2]]; }
