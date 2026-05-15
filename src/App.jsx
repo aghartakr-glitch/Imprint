@@ -2358,7 +2358,7 @@ export default function App() {
         (needsLLMFootnotes
           ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
           : footnoteTextForClaude
-            ? 'FOOTNOTES: PRESERVE markers [1] ¹ ① exactly — do NOT convert to \\footnote{}. JS injects after. '
+            ? 'FOOTNOTES: body has \\ImpFN{N} markers — keep them VERBATIM, do NOT remove or convert to \\footnote{}. JS injects after. '
             : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
