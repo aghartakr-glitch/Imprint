@@ -941,14 +941,17 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
     ].join('\n');
   }
 
-  // right (기본) 또는 left → imprintlayout (paracol)
+  // right(기본) 또는 left → paracol 직접 조립 (imprintlayout은 항상 1열=bodyW라 pos='left' 시 비율 뒤집힘)
   const isLeft = pos === 'left';
+  const firstColW = isLeft ? `${noteW}mm` : `${bodyW}mm`;
   return [
-    `\\begin{imprintlayout}`,
+    `\\setlength{\\columnsep}{${gap}mm}`,
+    `\\begin{paracol}{2}`,
+    `\\setcolumnwidth{${firstColW}}`,
     isLeft ? noteLatex.trim() : bodyLatex.trim(),
     `\\switchcolumn`,
     isLeft ? bodyLatex.trim() : noteLatex.trim(),
-    `\\end{imprintlayout}`,
+    `\\end{paracol}`,
   ].join('\n');
 }
 
