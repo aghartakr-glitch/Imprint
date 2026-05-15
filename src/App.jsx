@@ -2433,75 +2433,59 @@ export default function App() {
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
         }
-        // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
-        if (colMode === 'variable') {
-          const vg   = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
-          const grid = calcVariableGrid(vg, textW, p.c.간격 || 8);
-          const notePosition = styleConfig.notePosition || 'right';
 
-          if (grid.noteG > 0) {
-            // ===NOTE=== 구분자 → %%PARACOL_SWITCHCOLUMN%% 마커 기준으로 본문/주석 분리
-            let bodyLatex = finalBodyContent;
-            let noteLatex = '';
-            if (finalBodyContent.includes(PARACOL_MARKER)) {
-              const idx = finalBodyContent.indexOf(PARACOL_MARKER);
-              bodyLatex = finalBodyContent.slice(0, idx).trim();
-              noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
-            }
-            // 그리드 정보 주석 삽입 (검증용)
-            const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
-            finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
-          }
-        }
-
-        // ── 각주 후처리 (무조건 실행 — Claude 의존 없이 JS가 100% 보장) ──────────
+        // ── 각주 후처리 — wrapVariableLayout 전에 실행 (paracol 내에서 \footnote 동작 보장) ──
         if (hasFootnoteText) {
-          // 0단계: \ImpFN{N} → \footnote{내용} 치환 (사전 치환 마커, 가장 우선)
-          // preReplaceFnMarkers()가 [1] → \ImpFN{1}로 변환 → Claude가 보존 → 여기서 최종 치환
+          const latexEscFn = s => s
+            .replace(/\\/g, '\\textbackslash{}')
+            .replace(/~/g, '\\textasciitilde{}')
+            .replace(/\^/g, '\\textasciicircum{}')
+            .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+            .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+
+          // 0단계: \ImpFN{N} → \footnote{내용} (preReplaceFnMarkers가 삽입한 마커)
           if (finalBodyContent.includes('\\ImpFN{')) {
             const { fnMap } = parseFootnoteMap(fields.각주);
-            const latexEscFn = s => s
-              .replace(/\\/g, '\\textbackslash{}')
-              .replace(/~/g, '\\textasciitilde{}')
-              .replace(/\^/g, '\\textasciicircum{}')
-              .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
-              .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
             finalBodyContent = finalBodyContent.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
               const content = fnMap[n];
               return content ? `\\footnote{${latexEscFn(content)}}` : '';
             });
           }
 
-          // 1단계: 혹시 남아있는 원문 마커 ([1] ¹ ① 등) → \footnote{} 치환 (fallback)
-          const afterInject = injectFootnotes(finalBodyContent, fields.각주);
-          if (afterInject !== finalBodyContent) {
-            finalBodyContent = afterInject;
+          // 1단계: 원문 마커 ([1] ¹ ① 등) 직접 치환 (Claude가 \ImpFN을 [1]로 되돌린 경우 대비)
+          if (!finalBodyContent.includes('\\footnote{')) {
+            const afterInject = injectFootnotes(finalBodyContent, fields.각주);
+            if (afterInject !== finalBodyContent) finalBodyContent = afterInject;
           }
 
-          // 2단계: 여전히 \footnote{} 없음 → \par 위치에 강제 분배 삽입
+          // 2단계: 여전히 \footnote{} 없음 → \par 또는 본문 말미에 강제 삽입
+          // (Claude가 마커를 완전히 제거한 경우 최종 보장)
           if (!finalBodyContent.includes('\\footnote{')) {
             const { fnMap } = parseFootnoteMap(fields.각주);
             const fnNums = Object.keys(fnMap);
             if (fnNums.length > 0) {
-              const latexEsc = s => s
+              const latexEscSimple = s => s
                 .replace(/&/g,'\\&').replace(/%/g,'\\%')
                 .replace(/#/g,'\\#').replace(/_/g,'\\_').replace(/\$/g,'\\$');
               const sorted = fnNums.sort((a,b) =>
                 (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
+              // \par 위치 찾기
               const parRe = /\\par\b/g;
               const parPositions = [];
               let pm;
               while ((pm = parRe.exec(finalBodyContent)) !== null) parPositions.push(pm.index);
 
               if (parPositions.length === 0) {
-                finalBodyContent += sorted.map(n => `\\footnote{${latexEsc(fnMap[n])}}`).join('');
+                // \par 없음: 본문 맨 끝에 삽입 (paracol 이므로 컴파일 가능)
+                finalBodyContent += '\n' + sorted.map(n => `\\footnote{${latexEscSimple(fnMap[n])}}`).join('');
               } else {
+                // \par 앞에 분산 삽입 (뒤에서부터 처리해 offset 유지)
                 const insertions = sorted.map((n, i) => {
                   const pi = Math.min(
                     Math.floor((i + 0.5) * parPositions.length / sorted.length),
                     parPositions.length - 1
                   );
-                  return { at: parPositions[pi], cmd: `\\footnote{${latexEsc(fnMap[n])}}` };
+                  return { at: parPositions[pi], cmd: `\\footnote{${latexEscSimple(fnMap[n])}}` };
                 }).sort((a, b) => b.at - a.at);
                 let result = finalBodyContent;
                 for (const { at, cmd } of insertions) {
@@ -2510,6 +2494,25 @@ export default function App() {
                 finalBodyContent = result;
               }
             }
+          }
+        }
+
+        // 가변단 레이아웃 조립 — 각주 주입 후 실행 (JS 보장, Claude 의존 없음)
+        if (colMode === 'variable') {
+          const vg   = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const grid = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          const notePosition = styleConfig.notePosition || 'right';
+
+          if (grid.noteG > 0) {
+            let bodyLatex = finalBodyContent;
+            let noteLatex = '';
+            if (finalBodyContent.includes(PARACOL_MARKER)) {
+              const idx = finalBodyContent.indexOf(PARACOL_MARKER);
+              bodyLatex = finalBodyContent.slice(0, idx).trim();
+              noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
+            }
+            const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
+            finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
           }
         }
 
