@@ -2298,19 +2298,11 @@ export default function App() {
             'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
-          : footnotesInjected
-            ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
-              'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
-              'Do NOT remove, move, rewrite, or paraphrase them. ' +
-              'Do NOT replace with \\footnotemark/\\footnotetext. ' +
-              'They render automatically at page bottom — no extra action needed.\n' +
-              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : footnoteTextForClaude
-            ? 'User provided footnote texts in the FOOTNOTES section below. ' +
-              'Place each footnote as \\footnote{content} inline — immediately after the sentence or phrase it annotates. ' +
-              'Match by number order (footnote 1 → first natural annotation point in body, etc.). ' +
-              'Use EXACT footnote text as provided. Do NOT paraphrase.\n' +
-              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+            ? 'Footnote content is provided in the FOOTNOTES section of the body text above. ' +
+              'IMPORTANT: Do NOT convert markers ([1], ¹, ①, etc.) to \\footnote{} — JS post-processing handles this. ' +
+              'Just PRESERVE all footnote markers ([1], ¹, ^1, ①, *, †, ※) exactly as-is in your LaTeX output. ' +
+              'Do NOT remove markers. Do NOT add \\footnote{} commands yourself.\n'
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
