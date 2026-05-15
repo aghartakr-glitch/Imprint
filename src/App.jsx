@@ -1893,7 +1893,7 @@ export default function App() {
         const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
         const vGrid = calcVariableGrid(vg, textW, colGap || 8);
         const hasNoteCol = vGrid.noteG > 0;
-        colPackages = '\\usepackage{paracol}\n\\usepackage{changepage}\n';
+        colPackages = '\\usepackage{paracol}\n';
         // JS가 wrapping 보장 — Claude는 순수 텍스트 LaTeX만 생성
         colSetupBlock =
           '% VARIABLE GRID: body=' + vGrid.bodyW + 'mm / note=' + vGrid.noteW + 'mm / gap=' + vGrid.gap + 'mm\n' +
