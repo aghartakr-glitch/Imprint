@@ -2625,6 +2625,26 @@ export default function App() {
               const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
               if (_circChars[_n]) finalMainTex = finalMainTex.split(_circChars[_n]).join(_fn);
             }
+
+            // ── anchor 복원: Claude가 \ImpFN{N}을 완전히 삭제한 경우 ──────
+            // 마커가 여전히 없는 번호를 찾아 원본 앞 텍스트(anchor)로 위치 복원
+            const _anchorSorted = _finalKeys.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
+            for (const _n of _anchorSorted) {
+              const _fn = `\\footnote{${_fesc(_finalFnMap[_n])}}`;
+              // 이미 주입됐으면 스킵
+              if (finalMainTex.includes(_fn)) continue;
+              const _anchor = fnAnchors[_n];
+              if (!_anchor || _anchor.length < 4) continue;
+              // anchor 텍스트를 이스케이프해서 검색
+              const _anchorEsc = _anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const _anchorRe = new RegExp(_anchorEsc);
+              const _match = _anchorRe.exec(finalMainTex);
+              if (_match) {
+                // anchor 바로 뒤에 각주 삽입
+                const _pos = _match.index + _match[0].length;
+                finalMainTex = finalMainTex.slice(0, _pos) + _fn + finalMainTex.slice(_pos);
+              }
+            }
           }
         }
 
