@@ -2513,6 +2513,32 @@ export default function App() {
               bodyLatex = finalBodyContent.slice(0, idx).trim();
               noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
             }
+
+            // 가변단 left/right + 각주 필드 있음 + ===NOTE=== 없음 → 각주를 side column으로
+            if (useSideNoteFootnote) {
+              const { fnMap } = parseFootnoteMap(fields.각주);
+              const fnNums = Object.keys(fnMap);
+              if (fnNums.length > 0) {
+                const latexEscFn = s => s
+                  .replace(/\\/g, '\\textbackslash{}').replace(/~/g, '\\textasciitilde{}')
+                  .replace(/\^/g, '\\textasciicircum{}').replace(/\$/g, '\\$')
+                  .replace(/\{/g, '\\{').replace(/\}/g, '\\}').replace(/&/g, '\\&')
+                  .replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+                const sorted = fnNums.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
+                // 본문: [N] / \ImpFN{N} → \textsuperscript{N} (각주 번호만 표시)
+                for (const n of sorted) {
+                  bodyLatex = bodyLatex.replace(new RegExp('\\\\ImpFN\\{' + n + '\\}', 'g'), `\\textsuperscript{${n}}`);
+                  bodyLatex = bodyLatex.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\textsuperscript{${n}}`);
+                }
+                // 주석 열: 번호 + 각주 내용
+                noteLatex = [
+                  `{\\bodyf`,
+                  ...sorted.map(n => `\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip`),
+                  `}`,
+                ].join('\n');
+              }
+            }
+
             const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
             finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
           }
