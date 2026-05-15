@@ -1493,10 +1493,11 @@ export default function App() {
     // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
     const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
     const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
-    const processedBody = injectFootnotes(bodyForProcess, fields.각주);
-    // 마커가 없어서 injection이 안 된 경우: 각주 텍스트를 Claude에 별도 전달
-    const footnotesInjected = hasFootnoteText && processedBody.includes('\\footnote{');
-    const footnoteTextForClaude = hasFootnoteText && !footnotesInjected ? fields.각주.trim() : null;
+    // 각주 pre-injection 제거: Claude가 \footnote{} → [1]로 되돌리는 문제 방지
+    // JS post-processing이 100% 보장하므로 Claude에는 원문 마커([1] 등) 그대로 전달
+    const processedBody = bodyForProcess;
+    const footnotesInjected = false; // post-processing 담당
+    const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
@@ -1505,7 +1506,7 @@ export default function App() {
       fields.면주   && `RUNNING HEAD: ${fields.면주}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
       contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
-      footnoteTextForClaude && `FOOTNOTES (place inline as \\footnote{}):\n${footnoteTextForClaude}`,
+      footnoteTextForClaude && `FOOTNOTES:\n${footnoteTextForClaude}`,
     ].filter(Boolean).join('\n\n');
 
     try {
@@ -2297,19 +2298,11 @@ export default function App() {
             'You MUST generate contextually appropriate footnote content for EACH marker found in the body. ' +
             'Write \\footnote{your generated content} inline at the marker position. Keep footnotes factual, concise (1–2 sentences).\n' +
             (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
-          : footnotesInjected
-            ? 'CRITICAL: Body text already contains \\footnote{...} commands. ' +
-              'You MUST copy these VERBATIM into the output at the EXACT same position. ' +
-              'Do NOT remove, move, rewrite, or paraphrase them. ' +
-              'Do NOT replace with \\footnotemark/\\footnotetext. ' +
-              'They render automatically at page bottom — no extra action needed.\n' +
-              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
           : footnoteTextForClaude
-            ? 'User provided footnote texts in the FOOTNOTES section below. ' +
-              'Place each footnote as \\footnote{content} inline — immediately after the sentence or phrase it annotates. ' +
-              'Match by number order (footnote 1 → first natural annotation point in body, etc.). ' +
-              'Use EXACT footnote text as provided. Do NOT paraphrase.\n' +
-              (isMultiColLayout ? 'Place \\footnote{} inside column. No \\footnotemark/\\footnotetext.\n' : '')
+            ? 'Footnote content is provided in the FOOTNOTES section of the body text above. ' +
+              'IMPORTANT: Do NOT convert markers ([1], ¹, ①, etc.) to \\footnote{} — JS post-processing handles this. ' +
+              'Just PRESERVE all footnote markers ([1], ¹, ^1, ①, *, †, ※) exactly as-is in your LaTeX output. ' +
+              'Do NOT remove markers. Do NOT add \\footnote{} commands yourself.\n'
             : 'No footnotes in this document. Do NOT add any \\footnote{} commands.\n') + '\n' +
         '# ALIGNMENT — LOCKED (do NOT override)\n' +
         'selectedAlignment=' + alignResult.alignment + ' source=' + alignResult.source + '\n' +
@@ -2346,11 +2339,9 @@ export default function App() {
         (hasParacolSep ? 'PARACOL: Body contains %%PARACOL_SWITCHCOLUMN%% marker. Preserve it VERBATIM at the exact position — do NOT remove or rewrite it. JS will convert it to \\switchcolumn after. ' : '') +
         (needsLLMFootnotes
           ? 'FOOTNOTES: generate \\footnote{content} inline at each marker position. PAGE BOTTOM only. '
-          : footnotesInjected
-            ? 'FOOTNOTES: \\footnote{} already in body — preserve VERBATIM, PAGE BOTTOM only. Do NOT move. '
-            : footnoteTextForClaude
-              ? 'FOOTNOTES: place provided footnote texts as \\footnote{} inline in body, in number order. PAGE BOTTOM only. '
-              : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
+          : footnoteTextForClaude
+            ? 'FOOTNOTES: PRESERVE markers [1] ¹ ① exactly — do NOT convert to \\footnote{}. JS injects after. '
+            : 'FOOTNOTES: none — do NOT add \\footnote{} commands. ') +
         'Title vspace MAX ' + Math.round(p.f.h * 0.15) + 'mm. ' +
         'Output \\begin{document}…\\end{document} only.'
 
@@ -2438,36 +2429,41 @@ export default function App() {
           }
         }
 
-        // ── 각주 후처리 보장 (Claude가 \footnote{} 누락 시 JS가 강제 주입) ──────
-        if (hasFootnoteText && !finalBodyContent.includes('\\footnote{')) {
-          const { fnMap, superMap } = parseFootnoteMap(fields.각주);
-          const fnNums = Object.keys(fnMap);
-          if (fnNums.length > 0) {
-            // 1단계: Claude 출력에 [1] ¹ ① 등 마커가 남아있으면 치환
-            const attempted = injectFnIntoEscaped(finalBodyContent, fnMap, superMap);
-            if (attempted.includes('\\footnote{')) {
-              finalBodyContent = attempted;
-            } else {
-              // 2단계: 마커 없음 → \par 위치에 순서대로 분배 삽입
-              const latexEsc = s => s.replace(/&/g,'\\&').replace(/%/g,'\\%')
+        // ── 각주 후처리 (무조건 실행 — Claude 의존 없이 JS가 100% 보장) ──────────
+        if (hasFootnoteText) {
+          // 1단계: Claude 출력에 남아있는 [1] ¹ ① (1) ^1 * † ※ 마커를 \footnote{}로 치환
+          // injectFootnotes는 run() 스코프 함수 — 가장 광범위한 마커 패턴 지원
+          const afterInject = injectFootnotes(finalBodyContent, fields.각주);
+          if (afterInject !== finalBodyContent) {
+            // 마커 치환 성공
+            finalBodyContent = afterInject;
+          }
+
+          // 2단계: 여전히 \footnote{} 없음 → \par 위치에 강제 분배 삽입
+          if (!finalBodyContent.includes('\\footnote{')) {
+            const { fnMap } = parseFootnoteMap(fields.각주);
+            const fnNums = Object.keys(fnMap);
+            if (fnNums.length > 0) {
+              const latexEsc = s => s
+                .replace(/&/g,'\\&').replace(/%/g,'\\%')
                 .replace(/#/g,'\\#').replace(/_/g,'\\_').replace(/\$/g,'\\$');
-              const sorted = fnNums.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
-              // \par 직전 위치 수집
+              const sorted = fnNums.sort((a,b) =>
+                (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
               const parRe = /\\par\b/g;
               const parPositions = [];
               let pm;
               while ((pm = parRe.exec(finalBodyContent)) !== null) parPositions.push(pm.index);
 
               if (parPositions.length === 0) {
-                // \par 없음 → 모두 끝에 추가
                 finalBodyContent += sorted.map(n => `\\footnote{${latexEsc(fnMap[n])}}`).join('');
               } else {
-                // N개 footnote를 parPositions에 균등 배분, 역순 삽입 (인덱스 불변 유지)
                 const insertions = sorted.map((n, i) => {
-                  const pi = Math.min(Math.floor((i + 0.5) * parPositions.length / sorted.length), parPositions.length - 1);
+                  const pi = Math.min(
+                    Math.floor((i + 0.5) * parPositions.length / sorted.length),
+                    parPositions.length - 1
+                  );
                   return { at: parPositions[pi], cmd: `\\footnote{${latexEsc(fnMap[n])}}` };
-                }).sort((a, b) => b.at - a.at); // 뒤에서부터
-
+                }).sort((a, b) => b.at - a.at);
                 let result = finalBodyContent;
                 for (const { at, cmd } of insertions) {
                   result = result.slice(0, at) + cmd + result.slice(at);

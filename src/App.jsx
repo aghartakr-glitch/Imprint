@@ -648,6 +648,24 @@ function parseFootnoteMap(footnoteText) {
   return { fnMap, superMap };
 }
 
+// 각주 마커 사전 치환: Claude 전송 전 [N] ¹ ① ^N → \ImpFN{N}
+// Claude는 미지의 LaTeX 명령을 그대로 유지하므로, 마커 손실 없이 post-processing이 \footnote{}로 치환
+function preReplaceFnMarkers(bodyText) {
+  if (!bodyText) return bodyText;
+  const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+  const circleMap = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+  let result = bodyText;
+  // 위첨자 유니코드 (¹²³...)
+  for (const [ch, n] of Object.entries(superMap)) result = result.split(ch).join(`\\ImpFN{${n}}`);
+  // 원문자 (①②③...)
+  for (const [ch, n] of Object.entries(circleMap)) result = result.split(ch).join(`\\ImpFN{${n}}`);
+  // [N] 대괄호
+  result = result.replace(/\[(\d+)\]/g, (_, n) => `\\ImpFN{${n}}`);
+  // ^N 캐럿 (숫자 뒤에 다른 숫자 없을 때만)
+  result = result.replace(/\^(\d+)(?!\d)/g, (_, n) => `\\ImpFN{${n}}`);
+  return result;
+}
+
 function injectFnIntoEscaped(text, fnMap, superMap) {
   if (!Object.keys(fnMap).length) return text;
   const numToSuper = Object.fromEntries(Object.entries(superMap).map(([k,v]) => [v, k]));
