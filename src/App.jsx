@@ -2449,11 +2449,25 @@ export default function App() {
 
         // ── 각주 후처리 (무조건 실행 — Claude 의존 없이 JS가 100% 보장) ──────────
         if (hasFootnoteText) {
-          // 1단계: Claude 출력에 남아있는 [1] ¹ ① (1) ^1 * † ※ 마커를 \footnote{}로 치환
-          // injectFootnotes는 run() 스코프 함수 — 가장 광범위한 마커 패턴 지원
+          // 0단계: \ImpFN{N} → \footnote{내용} 치환 (사전 치환 마커, 가장 우선)
+          // preReplaceFnMarkers()가 [1] → \ImpFN{1}로 변환 → Claude가 보존 → 여기서 최종 치환
+          if (finalBodyContent.includes('\\ImpFN{')) {
+            const { fnMap } = parseFootnoteMap(fields.각주);
+            const latexEscFn = s => s
+              .replace(/\\/g, '\\textbackslash{}')
+              .replace(/~/g, '\\textasciitilde{}')
+              .replace(/\^/g, '\\textasciicircum{}')
+              .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+              .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+            finalBodyContent = finalBodyContent.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
+              const content = fnMap[n];
+              return content ? `\\footnote{${latexEscFn(content)}}` : '';
+            });
+          }
+
+          // 1단계: 혹시 남아있는 원문 마커 ([1] ¹ ① 등) → \footnote{} 치환 (fallback)
           const afterInject = injectFootnotes(finalBodyContent, fields.각주);
           if (afterInject !== finalBodyContent) {
-            // 마커 치환 성공
             finalBodyContent = afterInject;
           }
 
