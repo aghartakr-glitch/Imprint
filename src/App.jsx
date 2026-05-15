@@ -1541,6 +1541,8 @@ export default function App() {
     const processedBody = hasFootnoteText ? preReplaceFnMarkers(bodyForProcess) : bodyForProcess;
     const footnotesInjected = false; // post-processing 담당
     const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
+    // anchor: Claude가 \ImpFN{N}을 완전히 삭제한 경우 원래 위치 복원에 사용
+    const fnAnchors = hasFootnoteText ? extractFootnoteAnchors(fields.본문 || '') : {};
     const contentStructureHints = detectContentStructure(fields.본문 || '');
     const bodyBlock = [
       fields.제목   && `TITLE: ${fields.제목}`,
