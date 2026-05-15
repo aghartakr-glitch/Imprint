@@ -1172,8 +1172,8 @@ export default function App() {
     let cur = null, buf = [];
     const flush = () => { if (cur !== null) { fnMap[cur] = buf.join(' ').trim(); cur = null; buf = []; } };
     for (const line of footnoteText.split('\n')) {
-      const m_num   = line.match(/^(\d+)[.)]\s+(.+)/);       // "1. 내용" / "1) 내용"
-      const m_paren = line.match(/^\((\d+)\)\s+(.+)/);        // "(1) 내용"
+      const m_num   = line.match(/^["''"「『\s]*(\d+)[.)]\s+(.+)/);  // "1. 내용" / "1) 내용" / ""1. 내용"
+      const m_paren = line.match(/^["''"「『\s]*\((\d+)\)\s+(.+)/); // "(1) 내용"
       const m_sup   = line.match(/^([¹²³⁴⁵⁶⁷⁸⁹])\s+(.+)/);  // "¹ 내용"
       const m_circ  = line.match(/^([①②③④⑤⑥⑦⑧⑨⑩])\s+(.+)/);// "① 내용"
       const m_note  = line.match(/^(※(\d+)|※)\s+(.+)/);       // "※1 내용" / "※ 내용"
