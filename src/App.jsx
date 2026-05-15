@@ -2540,8 +2540,39 @@ export default function App() {
         ].filter(x => x !== null && x !== undefined).join('\n');
 
         // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
-        const finalMainTex = sanitizeUnicodeForLatex(mainTex);
+        let finalMainTex = sanitizeUnicodeForLatex(mainTex);
         const finalStyContent = sanitizeUnicodeForLatex(styContent);
+
+        // ── 각주 최종 강제 치환 ────────────────────────────────────────
+        // 이 시점에서 finalMainTex의 [N] / \ImpFN{N}을 \footnote{내용}으로 직접 치환.
+        // 위의 모든 주입 로직이 실패해도 여기서 반드시 처리됨.
+        if (fields.각주?.trim()) {
+          const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
+          const _finalKeys = Object.keys(_finalFnMap);
+          if (_finalKeys.length > 0) {
+            const _fesc = s => s
+              .replace(/\\/g, '\\textbackslash{}')
+              .replace(/~/g, '\\textasciitilde{}')
+              .replace(/\^/g, '\\textasciicircum{}')
+              .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+              .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+            // 큰 번호 먼저 처리 (10 → 1 순서로 해야 [1]이 [10]의 일부를 잘못 치환하지 않음)
+            const _sorted = _finalKeys.sort((a, b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +b - +a);
+            for (const _n of _sorted) {
+              const _fn = `\\footnote{${_fesc(_finalFnMap[_n])}}`;
+              // \ImpFN{N} 형태 (preReplaceFnMarkers 삽입 후 Claude가 보존한 경우)
+              finalMainTex = finalMainTex.replace(new RegExp('\\\\ImpFN\\{' + _n + '\\}', 'g'), _fn);
+              // [N] 형태 (Claude가 원본 마커를 그대로 출력한 경우)
+              finalMainTex = finalMainTex.replace(new RegExp('\\[' + _n + '\\]', 'g'), _fn);
+              // ¹²³ 위첨자
+              const _supChars = {'1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+              if (_supChars[_n]) finalMainTex = finalMainTex.split(_supChars[_n]).join(_fn);
+              // ①②③ 원문자
+              const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
+              if (_circChars[_n]) finalMainTex = finalMainTex.split(_circChars[_n]).join(_fn);
+            }
+          }
+        }
 
         // LaTeX 구조 검증 (sanitize 후 검증)
         const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent });
