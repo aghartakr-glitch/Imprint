@@ -2525,10 +2525,14 @@ export default function App() {
                   .replace(/\{/g, '\\{').replace(/\}/g, '\\}').replace(/&/g, '\\&')
                   .replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
                 const sorted = fnNums.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
-                // 본문: [N] / \ImpFN{N} → \textsuperscript{N} (각주 번호만 표시)
+                // 본문: [N] / \ImpFN{N} / ¹²³ / ①②③ → \textsuperscript{N} (각주 번호만 표시)
+                const _supChars = {'1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+                const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
                 for (const n of sorted) {
                   bodyLatex = bodyLatex.replace(new RegExp('\\\\ImpFN\\{' + n + '\\}', 'g'), `\\textsuperscript{${n}}`);
                   bodyLatex = bodyLatex.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\textsuperscript{${n}}`);
+                  if (_supChars[n])  bodyLatex = bodyLatex.split(_supChars[n]).join(`\\textsuperscript{${n}}`);
+                  if (_circChars[n]) bodyLatex = bodyLatex.split(_circChars[n]).join(`\\textsuperscript{${n}}`);
                 }
                 // 주석 열: 번호 + 각주 내용
                 noteLatex = [
