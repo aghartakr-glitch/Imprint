@@ -2434,7 +2434,15 @@ export default function App() {
         }
 
         // ── 각주 후처리 — wrapVariableLayout 전에 실행 (paracol 내에서 \footnote 동작 보장) ──
-        if (hasFootnoteText) {
+        // 가변단 left/right일 때 각주를 side column으로 라우팅할지 결정
+        // 조건: variable 모드 + left/right 위치 + 각주 있음 + ===NOTE=== 구분자 없음
+        const notePos = styleConfig.notePosition || 'right';
+        const useSideNoteFootnote = hasFootnoteText
+          && colMode === 'variable'
+          && (notePos === 'left' || notePos === 'right')
+          && !finalBodyContent.includes(PARACOL_MARKER);
+
+        if (hasFootnoteText && !useSideNoteFootnote) {
           const latexEscFn = s => s
             .replace(/\\/g, '\\textbackslash{}')
             .replace(/~/g, '\\textasciitilde{}')
@@ -2458,7 +2466,6 @@ export default function App() {
           }
 
           // 2단계: 여전히 \footnote{} 없음 → \par 또는 본문 말미에 강제 삽입
-          // (Claude가 마커를 완전히 제거한 경우 최종 보장)
           if (!finalBodyContent.includes('\\footnote{')) {
             const { fnMap } = parseFootnoteMap(fields.각주);
             const fnNums = Object.keys(fnMap);
@@ -2468,17 +2475,13 @@ export default function App() {
                 .replace(/#/g,'\\#').replace(/_/g,'\\_').replace(/\$/g,'\\$');
               const sorted = fnNums.sort((a,b) =>
                 (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
-              // \par 위치 찾기
               const parRe = /\\par\b/g;
               const parPositions = [];
               let pm;
               while ((pm = parRe.exec(finalBodyContent)) !== null) parPositions.push(pm.index);
-
               if (parPositions.length === 0) {
-                // \par 없음: 본문 맨 끝에 삽입 (paracol 이므로 컴파일 가능)
                 finalBodyContent += '\n' + sorted.map(n => `\\footnote{${latexEscSimple(fnMap[n])}}`).join('');
               } else {
-                // \par 앞에 분산 삽입 (뒤에서부터 처리해 offset 유지)
                 const insertions = sorted.map((n, i) => {
                   const pi = Math.min(
                     Math.floor((i + 0.5) * parPositions.length / sorted.length),
