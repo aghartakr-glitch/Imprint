@@ -2546,9 +2546,11 @@ export default function App() {
         // ── 각주 최종 강제 치환 ────────────────────────────────────────
         // 이 시점에서 finalMainTex의 [N] / \ImpFN{N}을 \footnote{내용}으로 직접 치환.
         // 위의 모든 주입 로직이 실패해도 여기서 반드시 처리됨.
+        console.log('[각주DEBUG] fields.각주=', JSON.stringify(fields.각주?.slice?.(0,80)));
         if (fields.각주?.trim()) {
           const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
           const _finalKeys = Object.keys(_finalFnMap);
+          console.log('[각주DEBUG] fnMap keys=', _finalKeys, '| [1]inTex=', finalMainTex.includes('[1]'));
           if (_finalKeys.length > 0) {
             const _fesc = s => s
               .replace(/\\/g, '\\textbackslash{}')
