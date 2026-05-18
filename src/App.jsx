@@ -1234,7 +1234,7 @@ export default function App() {
   const [styleConfig, setStyleConfig] = useState({
     columnMode: 'auto',       // 'auto'|'fixed'|'variable'
     fixedColumns: 1,          // 1~10 (columnMode==='fixed' 일 때)
-    variableGrid: { total: 2, body: 1, note: 1 }, // columnMode==='variable' 일 때
+    variableGrid: { total: 5, body: 4, note: 1 }, // columnMode==='variable' 일 때
     bodyTextColumns: 1,       // 본문 영역 내부 단 수 (1=1단, 2=2단 multicols)
     noteTextColumns: 1,       // 주석 영역 내부 단 수 (1=1단, 2=2단 multicols)
     notePosition: 'right',    // 'right'|'left'|'top'|'bottom'
