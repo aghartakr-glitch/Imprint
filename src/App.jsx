@@ -936,6 +936,19 @@ function wrapBodyTextColumns(bodyLatex, bodyTextColumns) {
   return [`\\begin{multicols}{${n}}`, '', bodyLatex.trim(), '', `\\end{multicols}`].join('\n');
 }
 
+// wrapping quote 제거: 전체 원고가 큰따옴표 하나로 감싸진 경우만 제거
+// 문장 내부 대화 따옴표는 건드리지 않음
+function stripWrappingQuotes(s) {
+  let t = String(s || '').trim();
+  const pairs = [['"', '"'], ['“', '”'], ['‘', '’'], ["'", "'"]];
+  for (const [open, close] of pairs) {
+    if (t.startsWith(open) && t.endsWith(close) && t.length > open.length + close.length) {
+      return t.slice(open.length, t.length - close.length).trim();
+    }
+  }
+  return s;
+}
+
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
 // notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
 // hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
