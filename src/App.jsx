@@ -1170,7 +1170,7 @@ export default function App() {
   const [styleConfig, setStyleConfig] = useState({
     columnMode: 'auto',   // 'auto'|'fixed'|'variable'
     fixedColumns: 1,      // 1~10 (columnMode==='fixed' 일 때)
-    variableGrid: { total: 8, body: 5, note: 3 }, // columnMode==='variable' 일 때
+    variableGrid: { total: 2, body: 1, note: 1 }, // columnMode==='variable' 일 때
     bodyNoteSplit: null,  // null=auto, {body:N, note:M} (legacy)
     extraDirective: '',
   });
