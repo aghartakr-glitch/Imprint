@@ -2672,33 +2672,51 @@ export default function App() {
                 const missingMarkers = sorted.filter(n => !bodyLatex.includes(`\\ImpFN{${n}}`));
 
                 if (missingMarkers.length > 0) {
-                  // ── Fallback: 마커 없음 → \footnote{} 모드로 자동 전환 ──────────
-                  addLog(`⚠ 본문 위치 마커 없음 (${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 각주를 페이지 하단 \\footnote{} 으로 자동 배치합니다. 정확한 위치 지정은 본문에 [1] [2] 마커를 넣으세요.`);
-                  // 위치 마커가 없으면 side note 열 대신 \footnote{}으로 본문에 균등 삽입.
-                  // LaTeX이 각 페이지 하단에 자동 배치 → 페이지별 주석이 필요할 때 유효.
-                  const latexEscSimple = s => s
-                    .replace(/&/g,'\\&').replace(/%/g,'\\%')
-                    .replace(/#/g,'\\#').replace(/_/g,'\\_').replace(/\$/g,'\\$');
-                  // \par 위치 수집 후 균등 분산 삽입
-                  const parRe2 = /\\par\b/g;
-                  const parPos2 = [];
-                  let pm2;
-                  while ((pm2 = parRe2.exec(bodyLatex)) !== null) parPos2.push(pm2.index);
-                  const insertions2 = missingMarkers
+                  // ── Fallback: 마커 없음 → 그리드 유지 + note 열에 전체 주석 블록 배치 ──
+                  // 본문에 위치 마커([1] ¹ ①)가 없을 때:
+                  //   - paracol 구조는 유지 (그리드가 시각적으로 보임)
+                  //   - body col에는 본문 (마커 없이)
+                  //   - note col에는 전체 주석 블록 (위치 연결 없이 목록으로)
+                  // 정확한 위치 연결을 원하면 본문에 [1][2] 마커 삽입
+                  addLog(`⚠ 본문 위치 마커 없음 (${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 그리드 유지하며 주석을 note 열 상단에 배치합니다. 본문에 [1] [2] 마커를 넣으면 정확한 위치 연결이 됩니다.`);
+
+                  // note 열 조립: 위치 연결 없이 번호 순서로 나열
+                  const fbNoteLines = missingMarkers
                     .sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b)
-                    .map((n, i) => {
-                      const pi = parPos2.length === 0 ? -1 :
-                        Math.min(Math.floor((i + 0.5) * parPos2.length / missingMarkers.length), parPos2.length - 1);
-                      return { at: pi < 0 ? bodyLatex.length : parPos2[pi],
-                               cmd: `\\footnote{${latexEscSimple(fnMap[n])}}` };
-                    })
-                    .sort((a, b) => b.at - a.at);
-                  for (const { at, cmd } of insertions2) {
-                    bodyLatex = bodyLatex.slice(0, at) + cmd + bodyLatex.slice(at);
+                    .map(n => `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`)
+                    .join('\n');
+                  const fbNotesLatex = wrapNoteTextColumns(fbNoteLines, ntc);
+
+                  // paracol 구조 조립 (body col + note col, switchcolumn 1회)
+                  const fbIsLeft = notePosition === 'left';
+                  const { bodyW: fbBodyW, noteW: fbNoteW, gap: fbGap } = grid;
+                  const fbCol1W = fbIsLeft ? fbNoteW : fbBodyW;
+                  const fbCol2W = fbIsLeft ? fbBodyW : fbNoteW;
+                  const fbGapStr = `${fbGap.toFixed(1)}mm`;
+                  const fbWrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
+
+                  const fbLines = [];
+                  fbLines.push(gridComment);
+                  fbLines.push(`\\begin{paracol}{2}`);
+                  fbLines.push(`\\setlength{\\columnsep}{${fbGapStr}}`);
+                  fbLines.push(`\\setcolumnwidth{${fbCol1W}mm,${fbCol2W}mm}`);
+                  fbLines.push('');
+                  if (fbIsLeft) {
+                    fbLines.push(fbNotesLatex);
+                    fbLines.push('');
+                    fbLines.push(`\\switchcolumn`);
+                    fbLines.push('');
+                    fbLines.push(fbWrappedBody);
+                  } else {
+                    fbLines.push(fbWrappedBody);
+                    fbLines.push('');
+                    fbLines.push(`\\switchcolumn`);
+                    fbLines.push('');
+                    fbLines.push(fbNotesLatex);
                   }
-                  // side note 열 없이 본문만 wrapping 후 종료
-                  const wrappedBodyFb = wrapBodyTextColumns(bodyLatex.trim(), btc);
-                  finalBodyContent = gridComment + '\n' + wrappedBodyFb;
+                  fbLines.push('');
+                  fbLines.push(`\\end{paracol}`);
+                  finalBodyContent = fbLines.join('\n');
                 } else {
                   // ── 정상 경로: 모든 마커 확인됨 → side note 열 조립 ──────────────
 
