@@ -512,10 +512,18 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
   const allStr = JSON.stringify(allLogs, null, 2);
 
   function copyText(str, key) {
-    navigator.clipboard.writeText(str).then(() => {
-      setCopied(key);
-      setTimeout(() => setCopied(''), 1800);
-    }).catch(() => alert('복사 실패. 텍스트 박스에서 직접 선택 후 복사해주세요.'));
+    const done = () => { setCopied(key); setTimeout(() => setCopied(''), 1800); };
+    const fb = () => {
+      const ta = document.createElement('textarea');
+      ta.value = str;
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(str).then(done).catch(() => { fb(); done(); });
+    } else { fb(); done(); }
   }
 
   const btnStyle = (accent) => ({
