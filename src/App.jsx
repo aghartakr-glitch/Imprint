@@ -1998,13 +1998,15 @@ export default function App() {
         const vGrid = calcVariableGrid(vg, textW, colGap || 8);
         const hasNoteCol = vGrid.noteG > 0;
         const btc = Number(styleConfig.bodyTextColumns || 1);
+        const ntc = Number(styleConfig.noteTextColumns || 1);
         colPackages = '\\usepackage{paracol}\n';
-        if (btc >= 2) colPackages += '\\usepackage{multicol}\n';
+        if (btc >= 2 || ntc >= 2) colPackages += '\\usepackage{multicol}\n';
         // JS가 wrapping 보장 — Claude는 순수 텍스트 LaTeX만 생성
         colSetupBlock =
           '% VARIABLE GRID: body=' + vGrid.bodyW + 'mm / note=' + vGrid.noteW + 'mm / gap=' + vGrid.gap + 'mm\n' +
           '% (' + vGrid.bodyG + '/' + vGrid.totalG + ' body cols + ' + vGrid.noteG + '/' + vGrid.totalG + ' note cols, 1unit=' + vGrid.unitW + 'mm)\n' +
           (btc >= 2 ? '% body-text-columns=' + btc + ' (multicols inside body col)\n' : '') +
+          (ntc >= 2 ? '% note-text-columns=' + ntc + ' (multicols inside note col)\n' : '') +
           '% JS HANDLES LAYOUT WRAPPING — do NOT add \\begin{imprintlayout} or \\begin{paracol}\n' +
           (hasNoteCol && hasParacolSep
             ? '% NOTE SPLIT DETECTED: Write body content, then %%PARACOL_SWITCHCOLUMN%% on its own line, then note content\n' +
