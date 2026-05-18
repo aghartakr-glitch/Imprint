@@ -2664,43 +2664,56 @@ export default function App() {
                 // Claude가 \footnote{...}으로 직접 변환한 경우 bodyLatex에서 제거
                 bodyLatex = bodyLatex.replace(/\\footnote\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
 
-                // 주석 마커 검증: noteLatex의 \textsuperscript{N}이 body의 \ImpFN{N}과 대응하는지
+                // 주석 마커 검증: noteLatex의 각 번호가 body의 \ImpFN{N}과 대응하는지 (hard error)
                 const missingMarkers = sorted.filter(n => !bodyLatex.includes(`\\ImpFN{${n}}`));
                 if (missingMarkers.length > 0) {
-                  // 경고 (hard error 아님 — Claude가 마커를 삽입하지 않은 경우에도 주석은 표시)
-                  console.warn('[Imprint] 주석 마커 없음:', missingMarkers.map(n=>`\\ImpFN{${n}}`).join(', '));
+                  throw new Error(
+                    `Side notes exist, but body markers are missing: ${missingMarkers.map(n => `\\ImpFN{${n}}`).join(', ')}\n` +
+                    `본문에 각주 위치 마커(예: [1] ¹ ①)가 없으면 주석 열을 본문과 연결할 수 없습니다.\n` +
+                    `본문 안에 [1], [2] 형식 또는 ¹, ² 형식 마커를 삽입해 주세요.`
+                  );
                 }
 
-                // 주석 column 내용 조립
+                // 주석 column 내용 조립 (wrapNoteTextColumns로 ntc 단 래핑)
                 const noteLines = sorted.map(n =>
                   `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`
                 ).join('\n');
-                const allNotesLatex = wrapBodyTextColumns(noteLines, ntc);
+                const allNotesLatex = wrapNoteTextColumns(noteLines, ntc);
 
                 // paracol 구조 조립 (Method A: 단일 switchcolumn)
+                // \setlength{\columnsep} + 2-인수 \setcolumnwidth — gap은 절대 column width에 넣지 않음
                 const isLeft = notePosition === 'left';
                 const { bodyW, noteW, gap: actualGap } = grid;
                 const col1W = isLeft ? noteW : bodyW;
                 const col2W = isLeft ? bodyW : noteW;
+                const gapStr = `${actualGap.toFixed(1)}mm`;
                 const wrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
 
                 const plines = [];
+                plines.push(gridComment);
                 plines.push(`\\begin{paracol}{2}`);
-                plines.push(`\\setcolumnwidth{${col1W}mm,${actualGap}mm,${col2W}mm}`);
+                plines.push(`\\setlength{\\columnsep}{${gapStr}}`);
+                plines.push(`\\setcolumnwidth{${col1W}mm,${col2W}mm}`);
+                plines.push('');
                 if (isLeft) {
                   // 왼쪽 주석: col0=주석, col1=본문
                   plines.push(allNotesLatex);
+                  plines.push('');
                   plines.push(`\\switchcolumn`);
+                  plines.push('');
                   plines.push(wrappedBody);
                 } else {
                   // 오른쪽 주석(기본): col0=본문, col1=주석
                   plines.push(wrappedBody);
+                  plines.push('');
                   plines.push(`\\switchcolumn`);
+                  plines.push('');
                   plines.push(allNotesLatex);
                 }
+                plines.push('');
                 plines.push(`\\end{paracol}`);
 
-                finalBodyContent = gridComment + '\n' + plines.join('\n');
+                finalBodyContent = plines.join('\n');
               } else {
                 // 각주 없음 → 일반 가변 레이아웃 (bodyTextColumns 반영)
                 const wrappedBody = wrapBodyTextColumns(bodyLatex, btc);
