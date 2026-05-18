@@ -2621,13 +2621,15 @@ export default function App() {
                     }
                   }
                 }
-                // 미배정 주석 → 마지막 단락에 추가
-                for (const n of sorted) {
-                  if (!assigned.has(n)) {
-                    const lastI = Math.max(0, paraBlocks.length - 1);
-                    if (!notesByPara[lastI]) notesByPara[lastI] = [];
-                    notesByPara[lastI].push(n);
-                  }
+                // 미배정 주석 → 단락 전체에 균등 배분 (마커 없는 경우에도 여러 페이지에 분산)
+                const unassigned = sorted.filter(n => !assigned.has(n));
+                if (unassigned.length > 0) {
+                  const step = paraBlocks.length / (unassigned.length + 1);
+                  unassigned.forEach((n, idx) => {
+                    const pi = Math.min(Math.max(0, Math.round(step * (idx + 1)) - 1), paraBlocks.length - 1);
+                    if (!notesByPara[pi]) notesByPara[pi] = [];
+                    notesByPara[pi].push(n);
+                  });
                 }
 
                 // paracol 인터리브 구조 조립
