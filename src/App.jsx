@@ -1907,17 +1907,6 @@ export default function App() {
         ].filter(Boolean).join(',\n  ');
         return `\\${cmd}{${safeName}}[\n  ${opts}\n]`;
       }
-      // hangulfont 명령 생성 (setmainhangulfont / setsanshangulfont — kotex 연동)
-      function hangulFontCmd(cmd, name) {
-        const safeName = ALLOWED_FONTS.includes(name) ? name : 'NotoSerif';
-        const m = FONT_MANIFEST[safeName];
-        const opts = [
-          'Path=./fonts/', `Extension=${m.ext}`,
-          `UprightFont=${m.upright}`,
-          m.bold ? `BoldFont=${m.bold}` : null,
-        ].filter(Boolean).join(',\n  ');
-        return `\\${cmd}{${safeName}}[\n  ${opts}\n]`;
-      }
       const fontBlock =
         `% Fonts — 가용: NotoSerif / NanumMyeongjo / Pretendard / NotoSans_SemiCondensed\n` +
         `% 원본 서체: ${p.ty.이름} (${fontClass})\n` +
@@ -1925,11 +1914,6 @@ export default function App() {
         (mainFont !== sansFont
           ? fontspecCmd('setsansfont', sansFont) + '\n'
           : `% sans = main (단일 서체군)\n`) +
-        `% 한글 전용 폰트 (kotex hangul font binding)\n` +
-        hangulFontCmd('setmainhangulfont', mainFont) + '\n' +
-        (mainFont !== sansFont
-          ? hangulFontCmd('setsanshangulfont', sansFont) + '\n'
-          : `% sansHangul = mainHangul\n`) +
         (isMixedLayout
           ? `% 혼합 레이아웃: 본문=\\rmfamily, 제목/소제목=\\sffamily\n`
           : '') +
