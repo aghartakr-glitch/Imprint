@@ -3369,30 +3369,27 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         ))}
                       </div>
-                      {/* 본문 내부 단 수 (bodyTextColumns) */}
-                      <div style={{ marginTop:8 }}>
-                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                          textTransform:"uppercase", letterSpacing:"0.07em",
-                          marginBottom:4, display:"block" }}>본문 내부 단</span>
-                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                          {[['1','1단'],['2','2단'],['3','3단']].map(([val, label]) => {
-                            const active = String(styleConfig.bodyTextColumns || 1) === val;
-                            return (
-                              <button key={val}
-                                onClick={() => setStyleConfig(s => ({ ...s, bodyTextColumns: Number(val) }))}
-                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
-                                  border:`1px solid ${active ? T.ink : T.border}`,
-                                  borderRadius:4, background: active ? T.ink : "transparent",
-                                  color: active ? "#fff" : T.ink, cursor:"pointer",
-                                  transition:"all 150ms" }}>
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div style={{ fontSize:9, color:T.muted, marginTop:3, lineHeight:1.4 }}>
-                          본문 열 내부 단 수 (bodyGridUnits≠bodyTextColumns)
-                        </div>
+                      {/* 본문/주석 내부 단 수 — number input */}
+                      <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
+                        {[
+                          { key:'bodyTextColumns', label:'본문 내부 단', hint:'본문 열 안 단 수 (bodyGridUnits≠bodyTextColumns)' },
+                          { key:'noteTextColumns',  label:'주석 내부 단', hint:'주석 열 안 단 수' },
+                        ].map(({ key, label, hint }) => (
+                          <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                            <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                              textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                            <input type="number" min={1} max={10}
+                              value={styleConfig[key] || 1}
+                              onChange={e => {
+                                const v = Math.max(1, parseInt(e.target.value) || 1);
+                                setStyleConfig(s => ({ ...s, [key]: v }));
+                              }}
+                              style={{ width:52, padding:"5px 7px", fontSize:12,
+                                border:`1px solid ${T.border}`, borderRadius:4,
+                                background:T.bg, color:T.ink, textAlign:"center" }} />
+                            <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>{hint}</span>
+                          </div>
+                        ))}
                       </div>
                       {/* 주석 위치 선택 */}
                       <div style={{ marginTop:8 }}>
