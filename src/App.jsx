@@ -3763,14 +3763,23 @@ REQUIRED OUTPUT FORMAT:
                           imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
                         </div>
                       </div>
-                      <button onClick={copy}
-                        style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
-                          border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
-                          background:copied ? T.ink : T.surface,
-                          color:copied ? "#fff" : T.ink, cursor:"pointer", flexShrink:0,
-                          transition:"all 150ms" }}>
-                        {copied ? "복사됨 ✓" : "전체 복사"}
-                      </button>
+                      <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
+                        <button onClick={() => downloadFile(latex, 'main.tex')}
+                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            background:T.surface, color:T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          ⬇ 다운로드
+                        </button>
+                        <button onClick={copy}
+                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            background:copied ? T.ink : T.surface,
+                            color:copied ? "#fff" : T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          {copied ? "복사됨 ✓" : "전체 복사"}
+                        </button>
+                      </div>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
                       background:T.surface, padding:"16px 20px", borderRadius:7,
