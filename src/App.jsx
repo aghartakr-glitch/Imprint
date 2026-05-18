@@ -2588,7 +2588,7 @@ export default function App() {
               }
             }
 
-            const gridComment = `% [가변단 그리드] ${vg.body}/${vg.total} 본문=${grid.bodyW}mm / ${vg.note}/${vg.total} 주석=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
+            const gridComment = `% [가변단 그리드] 본문 ${vg.body}열/${vg.total}열=${grid.bodyW}mm : 주석 ${vg.note}열/${vg.total}열=${grid.noteW}mm / 간격=${grid.gap}mm / 판면너비=${textW}mm`;
             finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition });
           }
         }
