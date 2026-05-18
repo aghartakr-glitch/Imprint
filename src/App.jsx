@@ -936,6 +936,14 @@ function wrapBodyTextColumns(bodyLatex, bodyTextColumns) {
   return [`\\begin{multicols}{${n}}`, '', bodyLatex.trim(), '', `\\end{multicols}`].join('\n');
 }
 
+// 주석 영역 내부 단 구성: noteTextColumns≥2일 때 multicols 래핑
+function wrapNoteTextColumns(noteLatex, noteTextColumns) {
+  const n = Number(noteTextColumns || 1);
+  if (!noteLatex || !noteLatex.trim()) return '';
+  if (n <= 1) return noteLatex;
+  return [`\\begin{multicols}{${n}}`, '', noteLatex.trim(), '', `\\end{multicols}`].join('\n');
+}
+
 // wrapping quote 제거: 전체 원고가 큰따옴표 하나로 감싸진 경우만 제거
 // 문장 내부 대화 따옴표는 건드리지 않음
 function stripWrappingQuotes(s) {
