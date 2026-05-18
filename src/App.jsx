@@ -3219,17 +3219,6 @@ REQUIRED OUTPUT FORMAT:
                           })}
                         </div>
                       </div>
-                      {/* 사용법 안내 */}
-                      <div style={{ marginTop:8, padding:"9px 12px", background:T.bg,
-                        borderRadius:5, border:`1px solid ${T.border}`, fontSize:11.5,
-                        color:T.muted, lineHeight:1.7 }}>
-                        주석 없이 생성 시: 본문을 <strong style={{color:T.ink}}>본문 열 폭</strong>으로 자동 배치<br/>
-                        주석 컬럼 있을 때: 본문 중 주석 시작 위치에<br/>
-                        <code style={{ fontFamily:T.mono, color:T.ink, background:T.surface,
-                          padding:"1px 5px", borderRadius:3 }}>===NOTE===</code>
-                        를 단독 줄로 입력<br/>
-                        <span style={{ fontSize:10.5 }}>이 줄 위 = 본문 / 아래 = 주석 컬럼</span>
-                      </div>
                     </>
                   )}
                 </div>
