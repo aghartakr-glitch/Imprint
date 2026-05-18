@@ -932,13 +932,13 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
 
   if (!hasNote) {
     // 주석 없음: paracol로 본문 열 폭 보장 (\footnote이 memoir+adjustwidth에서 깨지는 문제 방지)
-    // \setcolumnwidth는 \begin{paracol} 직후(내부)에 선언해야 적용됨 — 외부 선언은 paracol이 무시함
+    // \setcolumnwidth 3-인수: {col1,gap,col2} — 양 열 폭 명시
     const isLeft = pos === 'left';
-    const firstColW = isLeft ? `${noteW}mm` : `${bodyW}mm`;
+    const col1 = isLeft ? noteW : bodyW;
+    const col2 = isLeft ? bodyW : noteW;
     return [
-      `\\setlength{\\columnsep}{${gap}mm}`,
       `\\begin{paracol}{2}`,
-      `\\setcolumnwidth{${firstColW}}`,
+      `\\setcolumnwidth{${col1}mm,${gap}mm,${col2}mm}`,
       isLeft ? `\\mbox{}` : bodyLatex.trim(),
       `\\switchcolumn`,
       isLeft ? bodyLatex.trim() : `\\mbox{}`,
@@ -967,13 +967,13 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   }
 
   // right(기본) 또는 left → paracol 직접 조립
-  // \setcolumnwidth는 \begin{paracol} 직후(내부)에 선언해야 적용됨
+  // \setcolumnwidth 3-인수: {col1,gap,col2} — 양 열 폭 명시, \setlength{\columnsep} 불필요
   const isLeft = pos === 'left';
-  const firstColW = isLeft ? `${noteW}mm` : `${bodyW}mm`;
+  const col1 = isLeft ? noteW : bodyW;
+  const col2 = isLeft ? bodyW : noteW;
   return [
-    `\\setlength{\\columnsep}{${gap}mm}`,
     `\\begin{paracol}{2}`,
-    `\\setcolumnwidth{${firstColW}}`,
+    `\\setcolumnwidth{${col1}mm,${gap}mm,${col2}mm}`,
     isLeft ? noteLatex.trim() : bodyLatex.trim(),
     `\\switchcolumn`,
     isLeft ? bodyLatex.trim() : noteLatex.trim(),
