@@ -3071,6 +3071,14 @@ REQUIRED OUTPUT FORMAT:
       navigator.clipboard.writeText(latex).then(done).catch(() => { _fallbackCopy(latex); done(); });
     } else { _fallbackCopy(latex); done(); }
   }
+  function downloadFile(content, filename) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
 
   const pkg = DB[selIdx];
   const matchText = (fields["본문"] || [fields["제목"], fields["소제목"]].filter(Boolean).join(" ")).trim();
