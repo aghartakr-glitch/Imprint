@@ -958,16 +958,18 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   const { bodyW, noteW, gap } = grid;
   const pos = notePosition || 'right';
   const hasNote = !!(noteLatex && noteLatex.trim());
+  const gapFmt = `${typeof gap === 'number' ? gap.toFixed(1) : gap}mm`;
 
   if (!hasNote) {
-    // 주석 없음: paracol로 본문 열 폭 보장 (\footnote이 memoir+adjustwidth에서 깨지는 문제 방지)
-    // \setcolumnwidth 3-인수: {col1,gap,col2} — 양 열 폭 명시
+    // 주석 없음: paracol로 본문 열 폭 보장
+    // \setlength{\columnsep} + 2-인수 \setcolumnwidth {col1,col2} — gap은 columnsep으로 분리
     const isLeft = pos === 'left';
     const col1 = isLeft ? noteW : bodyW;
     const col2 = isLeft ? bodyW : noteW;
     return [
       `\\begin{paracol}{2}`,
-      `\\setcolumnwidth{${col1}mm,${gap}mm,${col2}mm}`,
+      `\\setlength{\\columnsep}{${gapFmt}}`,
+      `\\setcolumnwidth{${col1}mm,${col2}mm}`,
       isLeft ? `\\mbox{}` : bodyLatex.trim(),
       `\\switchcolumn`,
       isLeft ? bodyLatex.trim() : `\\mbox{}`,
@@ -980,7 +982,7 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
       `\\begin{imprintnotearea}`,
       noteLatex.trim(),
       `\\end{imprintnotearea}`,
-      `\\vspace{${gap}mm}`,
+      `\\vspace{${gapFmt}}`,
       bodyLatex.trim(),
     ].join('\n');
   }
@@ -988,7 +990,7 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   if (pos === 'bottom') {
     return [
       bodyLatex.trim(),
-      `\\vspace{${gap}mm}`,
+      `\\vspace{${gapFmt}}`,
       `\\begin{imprintnotearea}`,
       noteLatex.trim(),
       `\\end{imprintnotearea}`,
@@ -996,13 +998,14 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
   }
 
   // right(기본) 또는 left → paracol 직접 조립
-  // \setcolumnwidth 3-인수: {col1,gap,col2} — 양 열 폭 명시, \setlength{\columnsep} 불필요
+  // \setlength{\columnsep} + 2-인수 \setcolumnwidth — gap을 column width에 섞지 않음
   const isLeft = pos === 'left';
   const col1 = isLeft ? noteW : bodyW;
   const col2 = isLeft ? bodyW : noteW;
   return [
     `\\begin{paracol}{2}`,
-    `\\setcolumnwidth{${col1}mm,${gap}mm,${col2}mm}`,
+    `\\setlength{\\columnsep}{${gapFmt}}`,
+    `\\setcolumnwidth{${col1}mm,${col2}mm}`,
     isLeft ? noteLatex.trim() : bodyLatex.trim(),
     `\\switchcolumn`,
     isLeft ? bodyLatex.trim() : noteLatex.trim(),
