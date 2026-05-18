@@ -3622,9 +3622,10 @@ REQUIRED OUTPUT FORMAT:
                         </div>
                       </div>
                       <button onClick={() => {
-                          navigator.clipboard.writeText(styCode)
-                            .then(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); })
-                            .catch(() => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); });
+                          const done = () => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); };
+                          if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(styCode).then(done).catch(() => { _fallbackCopy(styCode); done(); });
+                          } else { _fallbackCopy(styCode); done(); }
                         }}
                         style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
                           border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
