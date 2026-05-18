@@ -2239,6 +2239,12 @@ export default function App() {
         `\\makeatletter`,
         `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
         `\\makeatother`,
+        `\\newcommand{\\notef}{${(() => {
+          const noteFontIsSerif = p.pn_font === '명조';
+          return noteFontIsSerif
+            ? `\\rmfamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`
+            : `\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`;
+        })()}}`,
         ``,
         `% ── 면주 / 쪽번호 (memoir pagestyle) ─────────────────────────`,
         `% 위치: ${p.pn || '하단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'} / 서체: ${p.pn_font || '-'}`,
