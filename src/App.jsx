@@ -3177,7 +3177,7 @@ REQUIRED OUTPUT FORMAT:
                               onChange={e => {
                                 const v = Math.max(1, parseInt(e.target.value) || 1);
                                 setStyleConfig(s => {
-                                  const prev = s.variableGrid || { total:8, body:5, note:3 };
+                                  const prev = s.variableGrid || { total:2, body:1, note:1 };
                                   const next = { ...prev, [key]: v };
                                   // 본문+주석은 총 그리드를 넘을 수 없음
                                   if (key === 'total') {
