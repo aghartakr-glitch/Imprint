@@ -2613,9 +2613,11 @@ export default function App() {
               noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
             }
 
-            const gridComment = `% [가변단 그리드] 총 ${vg.total}열 / 본문 ${vg.body}열=${grid.bodyW}mm / 주석 ${vg.note}열=${grid.noteW}mm / 간격=${grid.gap}mm / 본문내부 ${btc}단 / 판면너비=${textW}mm`;
+            const ntc = Number(styleConfig.noteTextColumns || 1); // 주석 내부 단 수
+            const gridComment = `% [가변단 그리드] 총 ${vg.total}열 / 본문 ${vg.body}열=${grid.bodyW}mm / 주석 ${vg.note}열=${grid.noteW}mm / 간격=${grid.gap}mm / 본문내부 ${btc}단 / 주석내부 ${ntc}단 / 판면너비=${textW}mm`;
 
-            // 가변단 left/right + 각주 있음 → 번호가 등장하는 단락 바로 뒤에 주석 삽입 (페이지 동기화)
+            // ── Method A: 전체 본문 + 단일 switchcolumn + 전체 주석 ─────────────
+            // \switchcolumn을 한 번만 사용 (paragraph interleave 제거)
             if (useSideNoteFootnote) {
               const { fnMap } = parseFootnoteMap(fields.각주);
               const fnNums = Object.keys(fnMap);
@@ -2626,120 +2628,56 @@ export default function App() {
                   .replace(/\{/g, '\\{').replace(/\}/g, '\\}').replace(/&/g, '\\&')
                   .replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
                 const sorted = fnNums.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
-                // 본문: [N] / \ImpFN{N} / ¹²³ / ①②③ → \textsuperscript{N}
+
+                // 본문 마커 정규화: [N] / ¹²³ / ①②③ → \ImpFN{N} (sty 매크로가 compile-time에 처리)
+                // \ImpFN{N}은 그대로 보존 (변환하지 않음 — LaTeX compile-time에 \textsuperscript로 해석됨)
                 const _supChars = {'1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
                 const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
                 for (const n of sorted) {
-                  bodyLatex = bodyLatex.replace(new RegExp('\\\\ImpFN\\{' + n + '\\}', 'g'), `\\textsuperscript{${n}}`);
-                  bodyLatex = bodyLatex.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\textsuperscript{${n}}`);
-                  if (_supChars[n])  bodyLatex = bodyLatex.split(_supChars[n]).join(`\\textsuperscript{${n}}`);
-                  if (_circChars[n]) bodyLatex = bodyLatex.split(_circChars[n]).join(`\\textsuperscript{${n}}`);
+                  bodyLatex = bodyLatex.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\ImpFN{${n}}`);
+                  if (_supChars[n])  bodyLatex = bodyLatex.split(_supChars[n]).join(`\\ImpFN{${n}}`);
+                  if (_circChars[n]) bodyLatex = bodyLatex.split(_circChars[n]).join(`\\ImpFN{${n}}`);
                 }
                 // Claude가 \footnote{...}으로 직접 변환한 경우 bodyLatex에서 제거
                 bodyLatex = bodyLatex.replace(/\\footnote\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
 
+                // 주석 마커 검증: noteLatex의 \textsuperscript{N}이 body의 \ImpFN{N}과 대응하는지
+                const missingMarkers = sorted.filter(n => !bodyLatex.includes(`\\ImpFN{${n}}`));
+                if (missingMarkers.length > 0) {
+                  // 경고 (hard error 아님 — Claude가 마커를 삽입하지 않은 경우에도 주석은 표시)
+                  console.warn('[Imprint] 주석 마커 없음:', missingMarkers.map(n=>`\\ImpFN{${n}}`).join(', '));
+                }
+
+                // 주석 column 내용 조립
+                const noteLines = sorted.map(n =>
+                  `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`
+                ).join('\n');
+                const allNotesLatex = wrapBodyTextColumns(noteLines, ntc);
+
+                // paracol 구조 조립 (Method A: 단일 switchcolumn)
                 const isLeft = notePosition === 'left';
                 const { bodyW, noteW, gap: actualGap } = grid;
                 const col1W = isLeft ? noteW : bodyW;
                 const col2W = isLeft ? bodyW : noteW;
+                const wrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
 
-                // ── bodyTextColumns ≥ 2: 본문 전체를 multicols로 감싸고 주석 열에 한번에 전체 주석 배치 ──
-                if (btc >= 2) {
-                  const allNotesLatex = sorted.map(n =>
-                    `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`
-                  ).join('\n');
-                  const plines = [];
-                  plines.push(`\\begin{paracol}{2}`);
-                  plines.push(`\\setcolumnwidth{${col1W}mm,${actualGap}mm,${col2W}mm}`);
-                  if (isLeft) plines.push(`\\switchcolumn`);
-                  plines.push(wrapBodyTextColumns(bodyLatex.trim(), btc));
-                  if (!isLeft) {
-                    plines.push(`\\switchcolumn`);
-                    plines.push(allNotesLatex);
-                  } else {
-                    // isLeft: note col 먼저, switchcolumn, then body with multicols
-                    // 이미 switchcolumn으로 body col 진입 → note는 다시 switchcolumn 후
-                    plines.push(`\\switchcolumn`);
-                    plines.push(allNotesLatex);
-                  }
-                  plines.push(`\\end{paracol}`);
-                  finalBodyContent = gridComment + '\n' + plines.join('\n');
+                const plines = [];
+                plines.push(`\\begin{paracol}{2}`);
+                plines.push(`\\setcolumnwidth{${col1W}mm,${actualGap}mm,${col2W}mm}`);
+                if (isLeft) {
+                  // 왼쪽 주석: col0=주석, col1=본문
+                  plines.push(allNotesLatex);
+                  plines.push(`\\switchcolumn`);
+                  plines.push(wrappedBody);
                 } else {
-                  // ── bodyTextColumns=1: 단락별 주석 인터리브 ────────────────────────
-                  // {\bodyf...} 단락 블록 추출 (줄 단위 파싱)
-                  const bodyLineArr = bodyLatex.split('\n');
-                  const paraBlocks = [];
-                  const prefixLines = [];
-                  const suffixLines = [];
-                  let curBlock = null;
-                  let seenBlock = false;
-
-                  for (const line of bodyLineArr) {
-                    if (line.startsWith('{\\bodyf')) {
-                      seenBlock = true;
-                      curBlock = [line];
-                    } else if (curBlock !== null) {
-                      curBlock.push(line);
-                      if (line === '}') { paraBlocks.push(curBlock.join('\n')); curBlock = null; }
-                    } else if (!seenBlock) {
-                      prefixLines.push(line);
-                    } else {
-                      suffixLines.push(line);
-                    }
-                  }
-
-                  // 각 주석을 본문에서 처음 등장하는 \textsuperscript{N} 단락에 배정
-                  const notesByPara = {};
-                  const assigned = new Set();
-                  for (let i = 0; i < paraBlocks.length; i++) {
-                    for (const n of sorted) {
-                      if (!assigned.has(n) && paraBlocks[i].includes(`\\textsuperscript{${n}}`)) {
-                        if (!notesByPara[i]) notesByPara[i] = [];
-                        notesByPara[i].push(n);
-                        assigned.add(n);
-                      }
-                    }
-                  }
-                  // 미배정 주석 → 단락 전체에 균등 배분 (본문 마커 없는 경우에도 여러 페이지에 분산)
-                  const unassigned = sorted.filter(n => !assigned.has(n));
-                  if (unassigned.length > 0) {
-                    const step = paraBlocks.length / (unassigned.length + 1);
-                    unassigned.forEach((n, idx) => {
-                      const pi = Math.min(Math.max(0, Math.round(step * (idx + 1)) - 1), paraBlocks.length - 1);
-                      if (!notesByPara[pi]) notesByPara[pi] = [];
-                      notesByPara[pi].push(n);
-                    });
-                  }
-
-                  // paracol 인터리브 구조 조립
-                  const plines = [];
-                  const prefixStr = prefixLines.join('\n').trim();
-                  if (prefixStr) plines.push(prefixStr);
-                  plines.push(`\\begin{paracol}{2}`);
-                  plines.push(`\\setcolumnwidth{${col1W}mm,${actualGap}mm,${col2W}mm}`);
-                  // 왼쪽 주석: paracol 시작 → col0(주석열) → \switchcolumn → col1(본문열)
-                  if (isLeft) plines.push(`\\switchcolumn`);
-
-                  for (let i = 0; i < paraBlocks.length; i++) {
-                    plines.push(paraBlocks[i]);
-                    const paraNotes = notesByPara[i] || [];
-                    if (paraNotes.length > 0) {
-                      plines.push(`\\switchcolumn`);
-                      plines.push(`{\\notef`);
-                      for (const n of paraNotes) {
-                        plines.push(`\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip`);
-                      }
-                      plines.push(`}`);
-                      plines.push(`\\switchcolumn`);
-                    }
-                  }
-
-                  plines.push(`\\end{paracol}`);
-                  const suffixStr = suffixLines.join('\n').trim();
-                  if (suffixStr) plines.push(suffixStr);
-
-                  finalBodyContent = gridComment + '\n' + plines.join('\n');
+                  // 오른쪽 주석(기본): col0=본문, col1=주석
+                  plines.push(wrappedBody);
+                  plines.push(`\\switchcolumn`);
+                  plines.push(allNotesLatex);
                 }
+                plines.push(`\\end{paracol}`);
+
+                finalBodyContent = gridComment + '\n' + plines.join('\n');
               } else {
                 // 각주 없음 → 일반 가변 레이아웃 (bodyTextColumns 반영)
                 const wrappedBody = wrapBodyTextColumns(bodyLatex, btc);
