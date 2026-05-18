@@ -1912,7 +1912,7 @@ export default function App() {
 
       if (userOverride && userMode === 'variable') {
         // 사용자 지정 가변 단: variableGrid.total / body / note
-        const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+        const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
         const vGrid = calcVariableGrid(vg, textW, colGap || 8);
         const hasNoteCol = vGrid.noteG > 0;
         colPackages = '\\usepackage{paracol}\n';
@@ -2170,7 +2170,7 @@ export default function App() {
         // 가변단: imprintlayout / imprintbodyspan / imprintnotearea 환경 정의
         (() => {
           if (colMode !== 'variable') return null;
-          const vg = styleConfig.variableGrid || { total: 8, body: 5, note: 3 };
+          const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
           const vg2 = calcVariableGrid(vg, textW, p.c.간격 || 8);
           if (vg2.noteG <= 0) return null;
           const { bodyW: bMm, noteW: nMm, gap } = vg2;
