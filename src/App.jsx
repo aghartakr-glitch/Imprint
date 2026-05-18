@@ -906,15 +906,15 @@ function wrapFixedColumns(body, n, colGapMm) {
 // 가변단 그리드 계산: vg={total,body,note}, textW=판면너비(mm), colGap=단간격(mm)
 // 반환: { unitW, bodyW, noteW, gap, bodyG, noteG, totalG }
 function calcVariableGrid(vg, textW, colGap) {
-  const totalG = (vg && vg.total) || 8;
-  const bodyG  = (vg && vg.body)  || Math.round(totalG * 0.625);
-  const noteG  = (vg && vg.note)  || (totalG - bodyG);
+  const totalG = (vg && vg.total) || 2;
+  const bodyG  = (vg && vg.body)  || 1;
+  const noteG  = (vg && vg.note)  || 1;
   const gap    = typeof colGap === 'number' ? colGap : 8;
-  // 모듈 단위 폭: textW = totalG * unitW + (totalG-1) * gap
-  const unitW  = (textW - (totalG - 1) * gap) / totalG;
-  // 컬럼 폭: N개 모듈 * unitW + (N-1)개 gap
-  const bodyW  = Math.round(unitW * bodyG + (bodyG - 1) * gap);
-  const noteW  = textW - bodyW - gap;  // 반올림 오차 흡수
+  // 단순 비례 분할: (textW - gap) 를 totalG 등분해 bodyG:noteG 비율로 배분
+  // 예) total=4, body=3, note=1, textW=84, gap=8 → unit=19mm → body=57mm, note=19mm (3:1 ✓)
+  const unitW  = (textW - gap) / totalG;
+  const bodyW  = Math.round(unitW * bodyG);
+  const noteW  = textW - bodyW - gap;   // 반올림 오차 흡수
   return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap, bodyG, noteG, totalG };
 }
 
