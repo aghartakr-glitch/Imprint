@@ -1164,6 +1164,20 @@ function validateLatexExport({ mainTex, sty }) {
     errors.push('main.tex: \\pagestyle{imprint} 없음');
   if (!sty.includes('\\thepage'))
     errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
+  // ── 추가 구조 검증 ────────────────────────────────────────────
+  // \end{document} 뒤 stray character 검사
+  const afterEndDoc = mainTex.split('\\end{document}')[1] || '';
+  if (afterEndDoc.replace(/\s/g, '').length > 0)
+    errors.push('main.tex: \\end{document} 뒤에 불필요한 문자가 있습니다 — ' + JSON.stringify(afterEndDoc.trim().slice(0,20)));
+  // \ImpFN 매크로 정의 검사 (main.tex에서 사용하면 sty에 정의되어야 함)
+  if (/\\ImpFN\{/.test(mainTex) && !sty.includes('\\newcommand{\\ImpFN}'))
+    errors.push('imprint-style.sty: \\ImpFN 매크로 정의 없음 (main.tex에서 \\ImpFN{N} 사용 중)');
+  // paracol 패키지 검사
+  if (/\\begin\{paracol\}/.test(mainTex) && !sty.includes('paracol'))
+    errors.push('imprint-style.sty: \\RequirePackage{paracol} 없음 (main.tex에 \\begin{paracol} 사용 중)');
+  // multicol 패키지 검사
+  if (/\\begin\{multicols\}/.test(mainTex) && !sty.includes('multicol'))
+    errors.push('imprint-style.sty: \\RequirePackage{multicol} 없음 (main.tex에 \\begin{multicols} 사용 중)');
   // document body에 실제 내용 있는지 확인
   const bodyMatch = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
   const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
