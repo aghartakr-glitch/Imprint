@@ -2280,7 +2280,10 @@ export default function App() {
           return [
             `% ── 가변단 매크로 / 환경 ─────────────────────────────────────────`,
             `% 그리드: 총 ${vg2.totalG}열, 본문 ${vg2.bodyG}열(${bMm}mm), 주석 ${vg2.noteG}열(${nMm}mm), 본문내부 ${btc}단, 주석내부 ${ntc}단, 간격 ${gap}mm`,
-            `% main.tex에서 \\begin{paracol}{2}\\setcolumnwidth{${bMm}mm,${gap}mm,${nMm}mm} 직접 사용`,
+            `% main.tex에서:`,
+            `%   \\begin{paracol}{2}`,
+            `%   \\setlength{\\columnsep}{${gap}mm}`,
+            `%   \\setcolumnwidth{${bMm}mm,${nMm}mm}`,
             ``,
             `% 각주 참조 번호 매크로: \\ImpFN{N} → \\textsuperscript{N}`,
             `\\newcommand{\\ImpFN}[1]{\\textsuperscript{#1}}`,
