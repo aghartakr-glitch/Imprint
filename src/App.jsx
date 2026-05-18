@@ -910,12 +910,14 @@ function calcVariableGrid(vg, textW, colGap) {
   const bodyG  = (vg && vg.body)  || 1;
   const noteG  = (vg && vg.note)  || 1;
   const gap    = typeof colGap === 'number' ? colGap : 8;
-  // 단순 비례 분할: (textW - gap) 를 totalG 등분해 bodyG:noteG 비율로 배분
+  // 단순 비례 분할: (textW - gap) 를 totalG 등분 → bodyG / noteG 각각 독립 계산
   // 예) total=4, body=3, note=1, textW=84, gap=8 → unit=19mm → body=57mm, note=19mm (3:1 ✓)
-  const unitW  = (textW - gap) / totalG;
-  const bodyW  = Math.round(unitW * bodyG);
-  const noteW  = textW - bodyW - gap;   // 반올림 오차 흡수
-  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap, bodyG, noteG, totalG };
+  // noteW = 나머지(remainder)가 아닌 noteG 비율로 직접 계산 → body+note<total 시 미사용 열이 gap으로 흡수
+  const unitW     = (textW - gap) / totalG;
+  const bodyW     = Math.round(unitW * bodyG);
+  const noteW     = Math.round(unitW * noteG);  // noteG 사용 (나머지 아님)
+  const actualGap = textW - bodyW - noteW;       // 실제 간격: 반올림 오차 + 미사용 그리드 단 흡수
+  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap: actualGap, bodyG, noteG, totalG };
 }
 
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
