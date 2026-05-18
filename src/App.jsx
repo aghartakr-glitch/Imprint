@@ -2576,6 +2576,9 @@ export default function App() {
                   if (_supChars[n])  bodyLatex = bodyLatex.split(_supChars[n]).join(`\\textsuperscript{${n}}`);
                   if (_circChars[n]) bodyLatex = bodyLatex.split(_circChars[n]).join(`\\textsuperscript{${n}}`);
                 }
+                // Claude가 \ImpFN{N}을 \footnote{...}로 직접 변환했을 경우 bodyLatex에서 제거
+                // (side column에서 처리할 것이므로 본문 하단 중복 방지)
+                bodyLatex = bodyLatex.replace(/\\footnote\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
                 // 주석 열: 번호 + 각주 내용
                 noteLatex = [
                   `{\\notef`,
