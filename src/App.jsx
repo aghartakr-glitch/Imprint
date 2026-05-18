@@ -2673,6 +2673,7 @@ export default function App() {
 
                 if (missingMarkers.length > 0) {
                   // ── Fallback: 마커 없음 → \footnote{} 모드로 자동 전환 ──────────
+                  addLog(`⚠ 본문 위치 마커 없음 (${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 각주를 페이지 하단 \\footnote{} 으로 자동 배치합니다. 정확한 위치 지정은 본문에 [1] [2] 마커를 넣으세요.`);
                   // 위치 마커가 없으면 side note 열 대신 \footnote{}으로 본문에 균등 삽입.
                   // LaTeX이 각 페이지 하단에 자동 배치 → 페이지별 주석이 필요할 때 유효.
                   const latexEscSimple = s => s
