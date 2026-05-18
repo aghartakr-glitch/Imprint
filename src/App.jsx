@@ -1600,8 +1600,9 @@ export default function App() {
     const hasFootnoteMarkers = /[¹²³⁴⁵⁶⁷⁸⁹]|\[\d+\]|\^\d+(?!\d)|\*(?!\*)|\†|\‡|※|[①②③④⑤⑥⑦⑧⑨⑩]/.test(fields.본문 || '');
     const needsLLMFootnotes = hasFootnoteMarkers && !hasFootnoteText;
     // ===NOTE=== 구분자 → 마커 변환 (paracol 전처리)
-    const hasParacolSep = PARACOL_SEP_RE.test(fields.본문 || '');
-    const bodyForProcess = (fields.본문 || '').replace(PARACOL_SEP_RE, PARACOL_MARKER);
+    const cleanBody = stripWrappingQuotes(fields.본문 || '');
+    const hasParacolSep = PARACOL_SEP_RE.test(cleanBody);
+    const bodyForProcess = cleanBody.replace(PARACOL_SEP_RE, PARACOL_MARKER);
     // 각주 마커를 \ImpFN{N} LaTeX 명령으로 사전 치환: Claude가 LaTeX 명령을 그대로 보존하므로 손실 없음
     // post-processing에서 \ImpFN{N} → \footnote{내용}으로 치환 (100% JS 보장)
     const processedBody = hasFootnoteText ? preReplaceFnMarkers(bodyForProcess) : bodyForProcess;
