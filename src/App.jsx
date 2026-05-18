@@ -2572,7 +2572,7 @@ export default function App() {
                 }
                 // 주석 열: 번호 + 각주 내용
                 noteLatex = [
-                  `{\\bodyf`,
+                  `{\\notef`,
                   ...sorted.map(n => `\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip`),
                   `}`,
                 ].join('\n');
