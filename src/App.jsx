@@ -3838,18 +3838,27 @@ REQUIRED OUTPUT FORMAT:
                           <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
-                      <button onClick={() => {
-                          const done = () => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); };
-                          if (navigator.clipboard && window.isSecureContext) {
-                            navigator.clipboard.writeText(styCode).then(done).catch(() => { _fallbackCopy(styCode); done(); });
-                          } else { _fallbackCopy(styCode); done(); }
-                        }}
-                        style={{ marginLeft:"auto", padding:"7px 14px", fontSize:12, fontWeight:600,
-                          border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
-                          background:copiedSty ? T.ink : T.surface,
-                          color:copiedSty ? "#fff" : T.ink, cursor:"pointer", flexShrink:0, transition:"all 150ms" }}>
-                        {copiedSty ? "복사됨 ✓" : "복사"}
-                      </button>
+                      <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
+                        <button onClick={() => downloadFile(styCode, 'imprint-style.sty')}
+                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            background:T.surface, color:T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          ⬇ 다운로드
+                        </button>
+                        <button onClick={() => {
+                            const done = () => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); };
+                            if (navigator.clipboard && window.isSecureContext) {
+                              navigator.clipboard.writeText(styCode).then(done).catch(() => { _fallbackCopy(styCode); done(); });
+                            } else { _fallbackCopy(styCode); done(); }
+                          }}
+                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            background:copiedSty ? T.ink : T.surface,
+                            color:copiedSty ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
+                          {copiedSty ? "복사됨 ✓" : "복사"}
+                        </button>
+                      </div>
                     </div>
                     <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
                       background:T.surface, padding:"16px 20px", borderRadius:7,
