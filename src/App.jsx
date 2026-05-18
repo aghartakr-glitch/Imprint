@@ -2073,6 +2073,16 @@ export default function App() {
         '\\renewcommand{\\footnoterule}{}',
         '\\renewcommand{\\thefootnote}{\\arabic{footnote}}',
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
+        // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
+        `\\newcommand{\\notef}{${(() => {
+          const noteFontName = p.pn_font === '명조'
+            ? (FONT_MANIFEST['NotoSerif'] ? 'NotoSerif' : mainFont)
+            : (FONT_MANIFEST['Pretendard'] ? 'Pretendard' : mainFont);
+          const noteFontIsMain = noteFontName === mainFont;
+          return noteFontIsMain
+            ? `\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`
+            : `\\${noteFontName === 'NotoSerif' ? 'rmfamily' : 'sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`;
+        })()}}`,
         // 각주 들여쓰기 없이 시작, 번호 뒤 0.4em 간격 (item 4)
         '\\makeatletter',
         '\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}',
