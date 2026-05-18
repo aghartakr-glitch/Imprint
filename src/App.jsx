@@ -2236,15 +2236,23 @@ export default function App() {
         alignResult.alignment === 'ragged' ? `\\AtBeginDocument{\\RaggedRight}` : `% 기본 양쪽 정렬 (LaTeX 기본값)`,
         ``,
         (() => {
-          // 단 구성 설명: 가변단이면 사용자 설정 기준으로 표시
+          // 단 구성 설명: 가변단이면 사용자 설정 기준으로 표시 (DB 기본 설명과 섞지 않음)
           if (colMode === 'variable') {
             const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
             const btc = Number(styleConfig.bodyTextColumns || 1);
-            return `% ── 단 구성: 가변 그리드 ── 총 ${vg.total}열 / 본문 ${vg.body}열 / 주석 ${vg.note}열 / 본문 내부 ${btc}단 / 간격 ${p.c.간격 || 8}mm ──────────`;
+            const ntc = Number(styleConfig.noteTextColumns || 1);
+            return [
+              `% ── 단 구성: 가변 그리드 (사용자 지정) ─────────────────────────────`,
+              `% 총 ${vg.total}열 / 본문 ${vg.body}열 / 주석 ${vg.note}열 / 본문 내부 ${btc}단 / 주석 내부 ${ntc}단 / 간격 ${p.c.간격 || 8}mm`,
+              `% 이 설정은 사용자가 스타일 지시에서 직접 지정한 값입니다.`,
+              `% [원본 스타일 분석] 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
+            ].join('\n');
           }
-          return `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`;
+          return [
+            `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
+            `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
+          ].join('\n');
         })(),
-        `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
         // 가변단: \ImpFN 매크로 + imprintnotearea 환경 정의 (imprintlayout 환경은 제거 — main.tex이 paracol 직접 사용)
         (() => {
