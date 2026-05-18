@@ -3390,6 +3390,31 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         ))}
                       </div>
+                      {/* 본문 내부 단 수 (bodyTextColumns) */}
+                      <div style={{ marginTop:8 }}>
+                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                          textTransform:"uppercase", letterSpacing:"0.07em",
+                          marginBottom:4, display:"block" }}>본문 내부 단</span>
+                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {[['1','1단'],['2','2단'],['3','3단']].map(([val, label]) => {
+                            const active = String(styleConfig.bodyTextColumns || 1) === val;
+                            return (
+                              <button key={val}
+                                onClick={() => setStyleConfig(s => ({ ...s, bodyTextColumns: Number(val) }))}
+                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                                  border:`1px solid ${active ? T.ink : T.border}`,
+                                  borderRadius:4, background: active ? T.ink : "transparent",
+                                  color: active ? "#fff" : T.ink, cursor:"pointer",
+                                  transition:"all 150ms" }}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div style={{ fontSize:9, color:T.muted, marginTop:3, lineHeight:1.4 }}>
+                          본문 열 내부 단 수 (bodyGridUnits≠bodyTextColumns)
+                        </div>
+                      </div>
                       {/* 주석 위치 선택 */}
                       <div style={{ marginTop:8 }}>
                         <span style={{ fontSize:9, color:T.muted, fontWeight:600,
