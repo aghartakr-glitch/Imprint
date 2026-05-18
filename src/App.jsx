@@ -1581,7 +1581,9 @@ export default function App() {
 
   // ── Combined: analyze + auto-select + generate ─────────────────
   async function run() {
-    const matchText = (fields.본문 || [fields.제목, fields.소제목].filter(Boolean).join(' ')).trim();
+    // wrapping quote 제거: 전체 원고가 큰따옴표 하나로 감싸진 경우
+    const rawBodyText = (fields.본문 || [fields.제목, fields.소제목].filter(Boolean).join(' ')).trim();
+    const matchText = stripWrappingQuotes(rawBodyText);
     if (!matchText) return;
     setMatching(true);
     setErr("");
