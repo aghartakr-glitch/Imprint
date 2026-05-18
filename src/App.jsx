@@ -2205,35 +2205,40 @@ export default function App() {
         `% ── 본문 정렬: ${p.align_body || '양쪽 정렬'} ────────────────────────────────`,
         alignResult.alignment === 'ragged' ? `\\AtBeginDocument{\\RaggedRight}` : `% 기본 양쪽 정렬 (LaTeX 기본값)`,
         ``,
-        `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`,
+        (() => {
+          // 단 구성 설명: 가변단이면 사용자 설정 기준으로 표시
+          if (colMode === 'variable') {
+            const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
+            const btc = Number(styleConfig.bodyTextColumns || 1);
+            return `% ── 단 구성: 가변 그리드 ── 총 ${vg.total}열 / 본문 ${vg.body}열 / 주석 ${vg.note}열 / 본문 내부 ${btc}단 / 간격 ${p.c.간격 || 8}mm ──────────`;
+          }
+          return `% ── 단 구성: ${p.c.구성}${p.c.간격 ? ' / 간격 ' + p.c.간격 + 'mm' : ''} ──────────────────────────────────────`;
+        })(),
         `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
         colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
-        // 가변단: imprintlayout / imprintbodyspan / imprintnotearea 환경 정의
+        // 가변단: \ImpFN 매크로 + imprintnotearea 환경 정의 (imprintlayout 환경은 제거 — main.tex이 paracol 직접 사용)
         (() => {
           if (colMode !== 'variable') return null;
           const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
           const vg2 = calcVariableGrid(vg, textW, p.c.간격 || 8);
           if (vg2.noteG <= 0) return null;
           const { bodyW: bMm, noteW: nMm, gap } = vg2;
+          const btc = Number(styleConfig.bodyTextColumns || 1);
           return [
-            `% ── 가변단 환경 ────────────────────────────────────────────────`,
-            `% 그리드: ${vg2.bodyG}/${vg2.totalG} 본문(${bMm}mm) + ${vg2.noteG}/${vg2.totalG} 주석(${nMm}mm), 간격 ${gap}mm`,
+            `% ── 가변단 매크로 / 환경 ─────────────────────────────────────────`,
+            `% 그리드: 총 ${vg2.totalG}열, 본문 ${vg2.bodyG}열(${bMm}mm), 주석 ${vg2.noteG}열(${nMm}mm), 본문내부 ${btc}단, 간격 ${gap}mm`,
+            `% main.tex에서 \\begin{paracol}{2}\\setcolumnwidth{${bMm}mm,${gap}mm,${nMm}mm} 직접 사용`,
             ``,
-            `% 본문+주석 paracol (주석 오른쪽/왼쪽)`,
+            `% 각주 참조 번호 매크로: \\ImpFN{N} → \\textsuperscript{N}`,
+            `\\newcommand{\\ImpFN}[1]{\\textsuperscript{#1}}`,
+            ``,
+            `% 본문 폭 / 주석 폭 길이 변수 (치수 참조용)`,
             `\\newlength{\\imprintbodywidth}`,
             `\\setlength{\\imprintbodywidth}{${bMm}mm}`,
             `\\newlength{\\imprintnotewidth}`,
             `\\setlength{\\imprintnotewidth}{${nMm}mm}`,
-            `\\newenvironment{imprintlayout}{%`,
-            `  \\begin{paracol}{2}%`,
-            `  \\setcolumnwidth{${bMm}mm,${gap}mm,${nMm}mm}%`,
-            `}{%`,
-            `  \\end{paracol}%`,
-            `}`,
             ``,
-            `% 본문만 (주석 없음): JS가 직접 \\begin{paracol}{2}\\setcolumnwidth{bodyW,gap,noteW} 형식으로 출력`,
-            ``,
-            `% 주석 블록 (상단/하단 배치)`,
+            `% 주석 블록 (상단/하단 배치용)`,
             `% 사용법: \\begin{imprintnotearea} ... \\end{imprintnotearea}`,
             `\\newenvironment{imprintnotearea}{%`,
             `  \\par\\vspace{0.3\\baselineskip}%`,
