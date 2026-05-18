@@ -905,19 +905,35 @@ function wrapFixedColumns(body, n, colGapMm) {
 
 // 가변단 그리드 계산: vg={total,body,note}, textW=판면너비(mm), colGap=단간격(mm)
 // 반환: { unitW, bodyW, noteW, gap, bodyG, noteG, totalG }
+// ──────────────────────────────────────────────────────────────────────────
+// 진정한 그리드 공식 (타이포그래피 모듈 그리드):
+//   총 N개 단위, 각 단위 사이 (N-1)개 gap:  unitW × N + gap × (N-1) = textW
+//   → unitW = (textW − gap × (N−1)) / N
+// span 너비 (n개 단위 차지):  spanW(n) = unitW × n + gap × (n−1)
+// 본문열과 주석열 사이 간격 = gap (1칸, 항상 일정)
+// 예) total=5, body=4, note=1, textW=84, gap=8
+//   → unitW=(84−32)/5=10.4mm, bodyW=10.4×4+8×3=65.6mm, noteW=10.4mm, col-sep=8mm ✓
 function calcVariableGrid(vg, textW, colGap) {
-  const totalG = (vg && vg.total) || 2;
-  const bodyG  = (vg && vg.body)  || 1;
-  const noteG  = (vg && vg.note)  || 1;
+  const totalG = Math.max(1, (vg && Number(vg.total)) || 2);
+  const bodyG  = Math.max(1, (vg && Number(vg.body))  || 1);
+  const noteG  = Math.max(0, (vg && Number(vg.note))  || 1);
   const gap    = typeof colGap === 'number' ? colGap : 8;
-  // 단순 비례 분할: (textW - gap) 를 totalG 등분 → bodyG / noteG 각각 독립 계산
-  // 예) total=4, body=3, note=1, textW=84, gap=8 → unit=19mm → body=57mm, note=19mm (3:1 ✓)
-  // noteW = 나머지(remainder)가 아닌 noteG 비율로 직접 계산 → body+note<total 시 미사용 열이 gap으로 흡수
-  const unitW     = (textW - gap) / totalG;
-  const bodyW     = Math.round(unitW * bodyG);
-  const noteW     = Math.round(unitW * noteG);  // noteG 사용 (나머지 아님)
-  const actualGap = textW - bodyW - noteW;       // 실제 간격: 반올림 오차 + 미사용 그리드 단 흡수
-  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap: actualGap, bodyG, noteG, totalG };
+  // unitW: 단위 1개 너비
+  const unitW = (textW - gap * (totalG - 1)) / totalG;
+  // spanW: n개 단위가 차지하는 너비 (내부 gap 포함), 소수점 1자리 반올림
+  const spanW = n => n <= 0 ? 0 : Math.round((unitW * n + gap * (n - 1)) * 10) / 10;
+  const bodyW = spanW(bodyG);
+  const noteW = spanW(noteG);
+  // 본문+주석 사이 간격 = gap (고정, 항상 1 gap)
+  return { unitW: Math.round(unitW * 10) / 10, bodyW, noteW, gap, bodyG, noteG, totalG };
+}
+
+// 본문 내부 단 구성: bodyTextColumns=2일 때 multicols 래핑
+// bodyTextColumns=1 → 그대로 반환 / ≥2 → \begin{multicols}{N} 래핑
+function wrapBodyTextColumns(bodyLatex, bodyTextColumns) {
+  const n = Number(bodyTextColumns || 1);
+  if (n <= 1) return bodyLatex;
+  return [`\\begin{multicols}{${n}}`, '', bodyLatex.trim(), '', `\\end{multicols}`].join('\n');
 }
 
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
