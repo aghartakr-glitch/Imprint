@@ -2951,10 +2951,20 @@ REQUIRED OUTPUT FORMAT:
     }
   }
 
+  function _fallbackCopy(str) {
+    const ta = document.createElement('textarea');
+    ta.value = str;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+  }
   function copy() {
-    navigator.clipboard.writeText(latex)
-      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
-      .catch(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); // 실패해도 피드백은 표시
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 2000); };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(latex).then(done).catch(() => { _fallbackCopy(latex); done(); });
+    } else { _fallbackCopy(latex); done(); }
   }
 
   const pkg = DB[selIdx];
