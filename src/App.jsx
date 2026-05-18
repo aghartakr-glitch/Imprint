@@ -2755,6 +2755,10 @@ export default function App() {
         let finalMainTex = sanitizeUnicodeForLatex(mainTex);
         const finalStyContent = sanitizeUnicodeForLatex(styContent);
 
+        // ── \end{document} 뒤 stray character 제거 ────────────────────────
+        // Claude 또는 문자열 조합 버그로 \end{document} 뒤에 문자가 붙는 경우 방지
+        finalMainTex = finalMainTex.replace(/\\end\{document\}[\s\S]*$/, '\\end{document}\n');
+
         // ── 각주 최종 강제 치환 ────────────────────────────────────────
         // side-column 모드라도 \ImpFN{N} / [N]이 남아있으면 \footnote{}로 변환 (fallback 보장)
         if (fields.각주?.trim()) {
