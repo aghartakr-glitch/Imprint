@@ -3553,7 +3553,7 @@ REQUIRED OUTPUT FORMAT:
                               ))}
                             </div>
                             {overflow && (
-                              <div style={{ fontSize:10, color:'#c0392b', marginTop:3 }}>
+                              <div style={{ fontSize:10, color:'#777', marginTop:3 }}>
                                 본문({vg.body})+주석({vg.note}) = {vg.body+vg.note} &gt; 총({vg.total}) — 좌/우 배치 시 합이 총 그리드를 넘으면 안 됩니다
                               </div>
                             )}
