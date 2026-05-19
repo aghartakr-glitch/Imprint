@@ -2659,12 +2659,11 @@ export default function App() {
 
                 // 본문 마커 정규화: [N] / ¹²³ / ①②③ → \ImpFN{N} (sty 매크로가 compile-time에 처리)
                 // \ImpFN{N}은 그대로 보존 (변환하지 않음 — LaTeX compile-time에 \textsuperscript로 해석됨)
-                const _supChars = {'1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
-                const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
+                // NUM_TO_SUP / NUM_TO_CIRC: 모듈 상수 사용
                 for (const n of sorted) {
                   bodyLatex = bodyLatex.replace(new RegExp('\\[' + n + '\\]', 'g'), `\\ImpFN{${n}}`);
-                  if (_supChars[n])  bodyLatex = bodyLatex.split(_supChars[n]).join(`\\ImpFN{${n}}`);
-                  if (_circChars[n]) bodyLatex = bodyLatex.split(_circChars[n]).join(`\\ImpFN{${n}}`);
+                  if (NUM_TO_SUP[n])  bodyLatex = bodyLatex.split(NUM_TO_SUP[n]).join(`\\ImpFN{${n}}`);
+                  if (NUM_TO_CIRC[n]) bodyLatex = bodyLatex.split(NUM_TO_CIRC[n]).join(`\\ImpFN{${n}}`);
                 }
                 // Claude가 \footnote{...}으로 직접 변환한 경우 bodyLatex에서 제거
                 bodyLatex = bodyLatex.replace(/\\footnote\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
