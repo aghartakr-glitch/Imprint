@@ -3547,8 +3547,8 @@ REQUIRED OUTPUT FORMAT:
                                       });
                                     }}
                                     style={{ width:52, padding:"5px 7px", fontSize:12,
-                                      border:`1px solid ${(overflow && key !== 'total') ? '#c0392b' : T.border}`,
-                                      borderRadius:4, background:T.bg, color:T.ink, textAlign:"center" }} />
+                                      border:`1px solid ${(overflow && key !== 'total') ? '#888' : T.border}`,
+                                      borderRadius:3, background:T.bg, color:T.ink, textAlign:"center" }} />
                                 </div>
                               ))}
                             </div>
