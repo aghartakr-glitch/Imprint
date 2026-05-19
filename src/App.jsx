@@ -3799,8 +3799,11 @@ REQUIRED OUTPUT FORMAT:
                 {textProfile && (
                   <div style={{ marginTop:10, fontSize:11, color:T.muted,
                     fontFamily:T.mono, lineHeight:1.5 }}>
-                    분석: {["genre","topic","textForm","pubType","tone","density"].map(k =>
-                      textProfile[k] ? `${k}=${textProfile[k]}` : ""
+                    분석: {[
+                      ["genre","장르"], ["topic","주제"], ["textForm","형식"],
+                      ["pubType","출판형태"], ["tone","어조"], ["density","밀도"]
+                    ].map(([k, label]) =>
+                      textProfile[k] ? `${label}=${textProfile[k]}` : ""
                     ).filter(Boolean).join("  ·  ")}
                   </div>
                 )}
