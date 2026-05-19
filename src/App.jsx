@@ -3439,7 +3439,7 @@ REQUIRED OUTPUT FORMAT:
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
                     <label style={{ display:"block", fontSize:10, fontWeight:700,
-                      letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:5 }}>
+                      color:T.muted, marginBottom:5 }}>
                       {label}
                     </label>
                     <textarea value={fields[key]} rows={rows} placeholder={placeholder}
