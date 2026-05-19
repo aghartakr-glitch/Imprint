@@ -1181,7 +1181,8 @@ function buildMissingBodyPlaceholder() {
 }
 
 // LaTeX 출력 구조 검증 — .sty에 document body 코드가 없는지, main.tex 구조가 올바른지
-function validateLatexExport({ mainTex, sty }) {
+// layoutConfig: styleConfig (optional) — side-note/multicols 구조 검증에 사용
+function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   const errors = [];
   function count(s, re) { return (s.match(re) || []).length; }
   // 주석 줄(% 시작) 제외한 .sty 실행 코드만 검사
