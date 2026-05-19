@@ -3475,15 +3475,29 @@ REQUIRED OUTPUT FORMAT:
                                 const v = Math.max(1, parseInt(e.target.value) || 1);
                                 setStyleConfig(s => {
                                   const prev = s.variableGrid || { total:2, body:1, note:1 };
+                                  const pos = s.notePosition || 'right';
+                                  const isLeftRight = pos === 'left' || pos === 'right';
                                   const next = { ...prev, [key]: v };
-                                  // 본문+주석은 총 그리드를 넘을 수 없음
-                                  if (key === 'total') {
-                                    if (next.body + next.note > v) next.note = Math.max(1, v - next.body);
-                                    if (next.body + next.note > v) next.body = Math.max(1, v - 1);
-                                  } else if (key === 'body') {
-                                    if (v + next.note > next.total) next.note = Math.max(1, next.total - v);
-                                  } else if (key === 'note') {
-                                    if (next.body + v > next.total) next.body = Math.max(1, next.total - v);
+                                  if (isLeftRight) {
+                                    // left/right: body+note <= total
+                                    if (key === 'total') {
+                                      if (next.body + next.note > v) next.note = Math.max(1, v - next.body);
+                                      if (next.body + next.note > v) next.body = Math.max(1, v - 1);
+                                    } else if (key === 'body') {
+                                      if (v + next.note > next.total) next.note = Math.max(1, next.total - v);
+                                    } else if (key === 'note') {
+                                      if (next.body + v > next.total) next.body = Math.max(1, next.total - v);
+                                    }
+                                  } else {
+                                    // top/bottom: each independently <= total
+                                    if (key === 'total') {
+                                      next.body = Math.min(next.body, v);
+                                      next.note = Math.min(next.note, v);
+                                    } else {
+                                      // clamp body/note individually to total
+                                      next.body = Math.min(next.body, next.total);
+                                      next.note = Math.min(next.note, next.total);
+                                    }
                                   }
                                   return { ...s, variableGrid: next };
                                 });
