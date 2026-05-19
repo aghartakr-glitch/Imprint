@@ -3893,9 +3893,8 @@ REQUIRED OUTPUT FORMAT:
                         {/* 탈락 패키지 */}
                         {structuredReason?.rejected?.length > 0 && (
                           <div style={{ padding:"14px 16px", background:T.surface,
-                            borderRadius:7, border:`1px solid ${T.border}` }}>
-                            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em",
-                              textTransform:"uppercase", color:T.muted, marginBottom:8 }}>
+                            borderRadius:3, border:`1px solid ${T.border}` }}>
+                            <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
                               검토 후 제외된 패키지
                             </div>
                             {structuredReason.rejected.map((r, i) => (
