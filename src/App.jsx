@@ -3393,7 +3393,7 @@ REQUIRED OUTPUT FORMAT:
           ) : (
             <button onClick={() => setShowApiInput(true)}
               style={{ padding:"5px 12px", fontSize:11, fontWeight:500,
-                border:`1px solid ${T.border}`, borderRadius:5,
+                border:`1px solid ${T.border}`, borderRadius:3,
                 background:T.surface, color: apiKey ? T.ink : T.muted,
                 cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
               <span style={{ width:6, height:6, borderRadius:"50%",
