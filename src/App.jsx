@@ -3145,7 +3145,7 @@ REQUIRED OUTPUT FORMAT:
         };
         const updated = {
           ...prev,
-          output: { ...prev.output, latex_code: LOG_FULL_LATEX ? newLatex : '', latex_length: newLatex.length, latex_hash: simpleHash(newLatex) },
+          output: { ...prev.output, latex_code: newLatex, latex_length: newLatex.length, latex_hash: simpleHash(newLatex) }, // LOG_FULL_LATEX 상수 제거 후 직접 삽입
           style_features_used: { ...prev.style_features_used, refine_used: true },
           prompts: { ...prev.prompts, refine_prompt_hash: simpleHash(userMsg) },
           refine_history: [...(prev.refine_history||[]), refineEntry],
