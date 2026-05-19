@@ -2860,16 +2860,17 @@ export default function App() {
                   plines.push(`\\end{paracol}`);
 
                   finalBodyContent = plines.join('\n');
+                  } // end else (left/right paracol)
                 }
               } else {
                 // 각주 없음 → 일반 가변 레이아웃 (bodyTextColumns 반영)
                 const wrappedBody = wrapBodyTextColumns(bodyLatex, btc);
-                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex, grid, notePosition });
+                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex, grid, notePosition, textW });
               }
             } else {
               // 상단/하단 위치 또는 비side 모드 (bodyTextColumns 반영)
               const wrappedBody2 = wrapBodyTextColumns(bodyLatex, btc);
-              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex, grid, notePosition });
+              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex, grid, notePosition, textW });
             }
           }
         }
