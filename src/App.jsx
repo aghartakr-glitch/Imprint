@@ -3397,7 +3397,7 @@ REQUIRED OUTPUT FORMAT:
                 background:T.surface, color: apiKey ? T.ink : T.muted,
                 cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
               <span style={{ width:6, height:6, borderRadius:"50%",
-                background: apiKey ? "#3a3" : "#bbb", display:"inline-block" }} />
+                background: apiKey ? "#444" : "#BBBBBB", display:"inline-block" }} />
               {apiKey ? "API 연결됨" : "API 키 입력"}
             </button>
           )}
