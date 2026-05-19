@@ -1116,8 +1116,10 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
   ].join('\n');
 }
 
-function buildBodyContent({ title, subtitle, body, footnote, runningHead }) {
-  const { fnMap, superMap } = parseFootnoteMap(footnote);
+function buildBodyContent({ title, subtitle, body, footnote, runningHead, preserveImpFnMarkers = false }) {
+  // preserveImpFnMarkers=true: body에 이미 \ImpFN{N} 삽입된 경우 (side-note fallback)
+  // → \footnote 주입 없이 \ImpFN{N}만 보존하며 escape
+  const { fnMap, superMap } = preserveImpFnMarkers ? { fnMap: {}, superMap: {} } : parseFootnoteMap(footnote);
   const esc = t => escapeLatex(sanitizeUnicodeForLatex(t || ''));
   const lines = [];
   lines.push('% ============================================================');
