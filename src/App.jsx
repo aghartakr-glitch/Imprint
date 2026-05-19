@@ -2828,12 +2828,10 @@ export default function App() {
               finalMainTex = finalMainTex.replace(new RegExp('\\\\ImpFN\\{' + _n + '\\}', 'g'), _fn);
               // [N] 형태 (Claude가 원본 마커를 그대로 출력한 경우)
               finalMainTex = finalMainTex.replace(new RegExp('\\[' + _n + '\\]', 'g'), _fn);
-              // ¹²³ 위첨자
-              const _supChars = {'1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
-              if (_supChars[_n]) finalMainTex = finalMainTex.split(_supChars[_n]).join(_fn);
-              // ①②③ 원문자
-              const _circChars = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥','7':'⑦','8':'⑧','9':'⑨','10':'⑩'};
-              if (_circChars[_n]) finalMainTex = finalMainTex.split(_circChars[_n]).join(_fn);
+              // ¹²³ 위첨자 — NUM_TO_SUP 모듈 상수 사용
+              if (NUM_TO_SUP[_n]) finalMainTex = finalMainTex.split(NUM_TO_SUP[_n]).join(_fn);
+              // ①②③ 원문자 — NUM_TO_CIRC 모듈 상수 사용
+              if (NUM_TO_CIRC[_n]) finalMainTex = finalMainTex.split(NUM_TO_CIRC[_n]).join(_fn);
             }
 
             // ── anchor 복원: Claude가 \ImpFN{N}을 완전히 삭제한 경우 ──────
