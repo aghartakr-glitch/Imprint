@@ -3474,8 +3474,8 @@ REQUIRED OUTPUT FORMAT:
                   </p>
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:10, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
+                    color:T.muted, marginBottom:6 }}>
                     단 구성
                   </label>
                   {/* 1행: 모드 선택 */}
