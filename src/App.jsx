@@ -2362,7 +2362,7 @@ export default function App() {
             const ntc = Number(styleConfig.noteTextColumns || 1);
             return [
               `% ── 단 구성: 가변 그리드 (사용자 지정) ─────────────────────────────`,
-              `% 총 ${vg.total}열 / 본문 ${vg.body}열 / 주석 ${vg.note}열 / 본문 내부 ${btc}단 / 주석 내부 ${ntc}단 / 간격 ${p.c.간격 || 8}mm`,
+              `% 총 ${vg.total}열 / 본문 ${vg.body}열 / 주석 ${vg.note}열 / 본문 내부 ${btc}단 / 주석 내부 ${ntc}단 / 간격 ${columnGapMm}mm`,
               `% 이 설정은 사용자가 스타일 지시에서 직접 지정한 값입니다.`,
               `% [원본 스타일 분석] 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
             ].join('\n');
