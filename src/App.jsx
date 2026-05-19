@@ -2802,9 +2802,10 @@ export default function App() {
 
                   const plines = [];
                   plines.push(gridComment);
-                  plines.push(`\\begin{paracol}{2}`);
+                  // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞
                   plines.push(`\\setlength{\\columnsep}{${gapStr}}`);
                   plines.push(`\\setcolumnwidth{${col1W}mm,${col2W}mm}`);
+                  plines.push(`\\begin{paracol}{2}`);
                   plines.push('');
                   if (isLeft) {
                     // 왼쪽 주석: col0=주석, col1=본문
