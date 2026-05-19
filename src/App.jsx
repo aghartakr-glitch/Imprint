@@ -3743,8 +3743,7 @@ REQUIRED OUTPUT FORMAT:
               <div style={{ padding:"20px 24px", borderBottom:`1px solid ${T.border}`,
                 background:T.surface, flexShrink:0 }}>
 
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em",
-                  textTransform:"uppercase", color:T.muted, marginBottom:8 }}>
+                <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
                   선택된 스타일 패키지
                 </div>
 
