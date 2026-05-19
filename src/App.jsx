@@ -3675,8 +3675,8 @@ REQUIRED OUTPUT FORMAT:
               ) : "조판 스타일 생성하기"}
             </button>
             {err && (
-              <div style={{ marginTop:8, fontSize:11.5, color:"#c44", padding:"7px 10px",
-                background:"#fff8f8", borderRadius:5, border:`1px solid #ecc` }}>
+              <div style={{ marginTop:8, fontSize:11.5, color:"#555", padding:"7px 10px",
+                background:T.bg, borderRadius:3, border:`1px solid ${T.border}` }}>
                 {err}
               </div>
             )}
