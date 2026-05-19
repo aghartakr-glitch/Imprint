@@ -2791,8 +2791,9 @@ export default function App() {
                   // ── 정상 경로: 모든 마커 확인됨 → side note 열 조립 ──────────────
 
                   // 주석 column 내용 조립 (wrapNoteTextColumns로 ntc 단 래핑)
+                  // stripWrappingQuotes: 각주 텍스트가 "..." 로 감싸인 경우 제거
                   const noteLines = sorted.map(n =>
-                    `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`
+                    `{\\notef\\textsuperscript{${n}}~${latexEscFn(stripWrappingQuotes(fnMap[n]))}\\par\\smallskip}`
                   ).join('\n');
                   const allNotesLatex = wrapNoteTextColumns(noteLines, ntc);
 
