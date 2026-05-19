@@ -3653,7 +3653,7 @@ REQUIRED OUTPUT FORMAT:
           <div style={{ padding:"16px 20px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
             {!apiKey && (
               <div style={{ marginBottom:10, fontSize:11.5, color:T.muted, padding:"8px 12px",
-                background:T.bg, borderRadius:6, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
+                background:T.bg, borderRadius:3, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
                 우측 상단 <strong style={{ color:T.ink }}>API 키 입력</strong>을 먼저 완료하세요.<br/>
                 <span style={{ fontSize:10.5 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
               </div>
