@@ -2683,7 +2683,7 @@ export default function App() {
                   //   - body col에는 본문 (마커 없이)
                   //   - note col에는 전체 주석 블록 (위치 연결 없이 목록으로)
                   // 정확한 위치 연결을 원하면 본문에 [1][2] 마커 삽입
-                  addLog(`⚠ 본문 위치 마커 없음 (${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 그리드 유지하며 주석을 note 열 상단에 배치합니다. 본문에 [1] [2] 마커를 넣으면 정확한 위치 연결이 됩니다.`);
+                  pushLog('latex', 'LaTeX 생성', 'running', `⚠ 마커 없음(${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 그리드 유지, note 열에 주석 배치`);
 
                   // note 열 조립: 위치 연결 없이 번호 순서로 나열
                   const fbNoteLines = missingMarkers
