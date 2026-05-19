@@ -1291,6 +1291,14 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
       errors.push(`main.tex: \\switchcolumn 이 ${switchColCount}개 — 정확히 1개여야 합니다 (Method A)`);
     if (endParacolCount !== 1)
       errors.push(`main.tex: \\end{paracol} 이 ${endParacolCount}개 — 정확히 1개여야 합니다`);
+    // paracol 적용 순서 검증: \setlength{\columnsep}와 \setcolumnwidth가 \begin{paracol}보다 앞에 있어야 함
+    const beginParacolIdx = mainTex.indexOf('\\begin{paracol}');
+    const columnsepIdx    = mainTex.indexOf('\\setlength{\\columnsep}');
+    const setcolwidthIdx  = mainTex.indexOf('\\setcolumnwidth{');
+    if (columnsepIdx !== -1 && columnsepIdx > beginParacolIdx)
+      errors.push('main.tex: \\setlength{\\columnsep} 가 \\begin{paracol} 뒤에 있습니다 — 앞으로 이동해야 합니다');
+    if (setcolwidthIdx !== -1 && setcolwidthIdx > beginParacolIdx)
+      errors.push('main.tex: \\setcolumnwidth 가 \\begin{paracol} 뒤에 있습니다 — 앞으로 이동해야 합니다');
     if (paracolCount === 1 && endParacolCount === 1 && paracolCount !== endParacolCount)
       errors.push('main.tex: \\begin{paracol} / \\end{paracol} 짝이 맞지 않습니다');
 
