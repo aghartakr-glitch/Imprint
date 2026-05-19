@@ -3381,14 +3381,14 @@ REQUIRED OUTPUT FORMAT:
                   if (e.key === 'Escape') setShowApiInput(false);
                 }}
                 style={{ width:200, padding:"5px 10px", fontSize:12, fontFamily:"monospace",
-                  border:`1.5px solid ${T.ink}`, borderRadius:5, background:T.surface, color:T.ink }}
+                  border:`1.5px solid ${T.ink}`, borderRadius:3, background:T.surface, color:T.ink }}
               />
               <button onClick={e => saveApiKey(e.target.closest('div').querySelector('input').value.trim())}
-                style={{ padding:"5px 12px", fontSize:12, fontWeight:700, border:"none",
-                  borderRadius:5, background:T.ink, color:"#fff", cursor:"pointer" }}>저장</button>
+                style={{ padding:"5px 12px", fontSize:12, fontWeight:600, border:"none",
+                  borderRadius:3, background:T.ink, color:"#fff", cursor:"pointer" }}>저장</button>
               <button onClick={() => setShowApiInput(false)}
                 style={{ padding:"5px 8px", fontSize:12, border:`1px solid ${T.border}`,
-                  borderRadius:5, background:"transparent", cursor:"pointer", color:T.muted }}>✕</button>
+                  borderRadius:3, background:"transparent", cursor:"pointer", color:T.muted }}>✕</button>
             </div>
           ) : (
             <button onClick={() => setShowApiInput(true)}
