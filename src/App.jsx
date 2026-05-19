@@ -3616,9 +3616,9 @@ REQUIRED OUTPUT FORMAT:
                             return (
                               <button key={val}
                                 onClick={() => setStyleConfig(s => ({ ...s, notePosition: val }))}
-                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?700:400,
+                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?600:400,
                                   border:`1px solid ${active ? T.ink : T.border}`,
-                                  borderRadius:4, background: active ? T.ink : "transparent",
+                                  borderRadius:3, background: active ? T.ink : "transparent",
                                   color: active ? "#fff" : T.ink, cursor:"pointer",
                                   transition:"all 150ms" }}>
                                 {label}
