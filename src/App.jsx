@@ -3866,9 +3866,8 @@ REQUIRED OUTPUT FORMAT:
 
                         {/* 원본 레퍼런스 정보 */}
                         <div style={{ padding:"14px 16px", background:T.surface,
-                          borderRadius:7, border:`1px solid ${T.border}` }}>
-                          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em",
-                            textTransform:"uppercase", color:T.muted, marginBottom:8 }}>
+                          borderRadius:3, border:`1px solid ${T.border}` }}>
+                          <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
                             레퍼런스 원본 정보
                           </div>
                           <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8 }}>
