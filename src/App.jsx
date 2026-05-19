@@ -857,8 +857,11 @@ function parseBodyBlocks(raw) {
   return blocks;
 }
 
-function blockToLatex(block, fnMap, superMap) {
-  const esc = t => injectFnIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(t || '')), fnMap, superMap);
+function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false } = {}) {
+  // preserveImpFnMarkers=true: side-note 모드 fallback — \ImpFN{N}은 escape 제외, \footnote 주입 없음
+  const esc = preserveImpFnMarkers
+    ? t => escapeLatexPreservingImpFN(t || '')
+    : t => injectFnIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(t || '')), fnMap, superMap);
   switch (block.type) {
     case 'h1':
       return `\\Needspace{6\\baselineskip}\n{\\hone ${esc(block.text)}\\par}\n\\vspace{16pt}`;
