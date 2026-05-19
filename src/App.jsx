@@ -1150,7 +1150,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   if (body && body.trim()) {
     const blocks = parseBodyBlocks(body);
     for (const block of blocks) {
-      const latex = blockToLatex(block, fnMap, superMap);
+      const latex = blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers });
       if (latex.trim()) { lines.push(latex); lines.push(''); }
     }
   }
