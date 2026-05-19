@@ -3750,10 +3750,10 @@ REQUIRED OUTPUT FORMAT:
 
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
                   <div>
-                    <div style={{ fontSize:17, fontWeight:700, color:T.ink, lineHeight:1.3, marginBottom:4 }}>
+                    <div style={{ fontSize:15, fontWeight:600, color:T.ink, lineHeight:1.3, marginBottom:4 }}>
                       {pkg.t}
                     </div>
-                    <div style={{ fontSize:12.5, color:T.muted }}>
+                    <div style={{ fontSize:12, color:T.muted }}>
                       {pkg.g} · {pkg.pub_type}
                       {pkg.designer && pkg.designer !== '-' &&
                         <span style={{ color:T.ink }}> · {pkg.designer}</span>}
