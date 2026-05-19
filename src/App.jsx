@@ -3562,8 +3562,7 @@ REQUIRED OUTPUT FORMAT:
                       })()}
                       {/* 열 간격 */}
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6 }}>
-                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                          textTransform:"uppercase", letterSpacing:"0.07em", whiteSpace:"nowrap" }}>열 간격(mm)</span>
+                        <span style={{ fontSize:10, color:T.muted, fontWeight:500, whiteSpace:"nowrap" }}>열 간격 (mm)</span>
                         <input type="number" min={2} max={20} step={1}
                           value={styleConfig.columnGapMm ?? 8}
                           onChange={e => {
@@ -3571,15 +3570,13 @@ REQUIRED OUTPUT FORMAT:
                             setStyleConfig(s => ({ ...s, columnGapMm: v }));
                           }}
                           style={{ width:52, padding:"5px 7px", fontSize:12,
-                            border:`1px solid ${T.border}`, borderRadius:4,
+                            border:`1px solid ${T.border}`, borderRadius:3,
                             background:T.bg, color:T.ink, textAlign:"center" }} />
-                        <span style={{ fontSize:9, color:T.muted }}>manual</span>
                       </div>
                       {/* 본문/주석 내부 단 수 — number input */}
                       <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
                         <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                            textTransform:"uppercase", letterSpacing:"0.07em" }}>본문 내부 단</span>
+                          <span style={{ fontSize:10, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
                           <input type="number" min={1} max={styleConfig.variableGrid?.body || 1}
                             value={styleConfig.bodyTextColumns || 1}
                             onChange={e => {
@@ -3589,13 +3586,12 @@ REQUIRED OUTPUT FORMAT:
                               });
                             }}
                             style={{ width:52, padding:"5px 7px", fontSize:12,
-                              border:`1px solid ${T.border}`, borderRadius:4,
+                              border:`1px solid ${T.border}`, borderRadius:3,
                               background:T.bg, color:T.ink, textAlign:"center" }} />
-                          <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>본문 열 안 단 수 (bodyGridUnits≠bodyTextColumns)</span>
+                          <span style={{ fontSize:10, color:T.muted, lineHeight:1.3 }}>열 그리드 수와 독립적으로 지정</span>
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                            textTransform:"uppercase", letterSpacing:"0.07em" }}>주석 내부 단</span>
+                          <span style={{ fontSize:10, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
                           <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
                             value={styleConfig.noteTextColumns || 1}
                             onChange={e => {
@@ -3605,15 +3601,14 @@ REQUIRED OUTPUT FORMAT:
                               });
                             }}
                             style={{ width:52, padding:"5px 7px", fontSize:12,
-                              border:`1px solid ${T.border}`, borderRadius:4,
+                              border:`1px solid ${T.border}`, borderRadius:3,
                               background:T.bg, color:T.ink, textAlign:"center" }} />
-                          <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>주석 열 안 단 수</span>
+                          <span style={{ fontSize:10, color:T.muted, lineHeight:1.3 }}>주석 열 안 단 수</span>
                         </div>
                       </div>
                       {/* 주석 위치 선택 */}
                       <div style={{ marginTop:8 }}>
-                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                          textTransform:"uppercase", letterSpacing:"0.07em",
+                        <span style={{ fontSize:10, color:T.muted, fontWeight:500,
                           marginBottom:4, display:"block" }}>주석 위치</span>
                         <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                           {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => {
