@@ -3485,9 +3485,9 @@ REQUIRED OUTPUT FORMAT:
                       return (
                         <button key={val}
                           onClick={() => setStyleConfig(s => ({ ...s, columnMode: val }))}
-                          style={{ padding:"5px 12px", fontSize:12, fontWeight: active?700:400,
-                            border:`1.5px solid ${active ? T.ink : T.border}`,
-                            borderRadius:5, background: active ? T.ink : "transparent",
+                          style={{ padding:"5px 12px", fontSize:12, fontWeight: active?600:400,
+                            border:`1px solid ${active ? T.ink : T.border}`,
+                            borderRadius:3, background: active ? T.ink : "transparent",
                             color: active ? "#fff" : T.ink, cursor:"pointer" }}>
                           {label}
                         </button>
