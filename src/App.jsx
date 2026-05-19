@@ -1261,9 +1261,6 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     const args = inner.split(',');
     if (args.length > 2)
       errors.push(`main.tex: \\setcolumnwidth{${inner}} — 인수가 ${args.length}개입니다. gap은 \\setlength{\\columnsep}{Nmm}으로 분리하세요 (2값만 허용)`);
-    // gap 크기(8mm 등)가 column width 목록에 들어간 경우 감지
-    if (args.some(a => /^\s*[4-9](\.\d+)?mm\s*$/.test(a) || /^\s*[1-2]\d(\.\d+)?mm\s*$/.test(a) && +a.trim().replace('mm','') < 30))
-      warnings.push(`⚠ main.tex: \\setcolumnwidth 인수 중 gap 크기로 보이는 값이 있습니다 — ${inner}`);
   }
 
   // [G2] sty에 \setmainhangulfont / \setsanshangulfont → kotex 이중 바인딩 오류
