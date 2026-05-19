@@ -3659,8 +3659,8 @@ REQUIRED OUTPUT FORMAT:
               </div>
             )}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
-              style={{ width:"100%", padding:"13px", fontSize:14, fontWeight:700,
-                border:"none", borderRadius:7,
+              style={{ width:"100%", padding:"12px", fontSize:13, fontWeight:600,
+                border:"none", borderRadius:3,
                 background: (isRunning || !matchText || !apiKey) ? T.border : T.ink,
                 color: (isRunning || !matchText || !apiKey) ? T.muted : "#fff",
                 cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer",
