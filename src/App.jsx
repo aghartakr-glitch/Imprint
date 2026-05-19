@@ -3530,8 +3530,8 @@ REQUIRED OUTPUT FORMAT:
                                 { key:'note',  label:'주석 열' },
                               ].map(({ key, label }) => (
                                 <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:9, color: (overflow && key !== 'total') ? '#c0392b' : T.muted,
-                                    fontWeight:600, textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                                  <span style={{ fontSize:10, color: (overflow && key !== 'total') ? '#888' : T.muted,
+                                    fontWeight:500 }}>{label}</span>
                                   <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
                                     value={vg[key] || ''}
                                     onChange={e => {
