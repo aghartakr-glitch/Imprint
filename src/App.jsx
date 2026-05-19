@@ -2584,7 +2584,7 @@ export default function App() {
             const { fnMap } = parseFootnoteMap(fields.각주);
             finalBodyContent = finalBodyContent.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
               const content = fnMap[n];
-              return content ? `\\footnote{${latexEscFn(content)}}` : '';
+              return content ? `\\footnote{${latexEscNote(content)}}` : '';
             });
           }
 
