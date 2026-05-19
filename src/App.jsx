@@ -1272,11 +1272,15 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   if (/\\setsanshangulfont/.test(styCode))
     errors.push('imprint-style.sty: \\setsanshangulfont 사용 — kotex와 이중 바인딩으로 한글 깨짐 발생. 제거하세요');
 
-  // [G3] wrapping quote 잔존 — \noindent " 또는 "...\par
-  if (/\\noindent\s+"/.test(mainTex))
-    errors.push('main.tex: \\noindent 다음에 따옴표 — stripWrappingQuotes 미적용 또는 Claude가 따옴표를 재삽입했습니다');
-  if (/"\\par/.test(mainTex))
-    errors.push('main.tex: 따옴표+\\par 패턴 — wrapping quote가 본문 끝에 잔존합니다');
+  // [G3] wrapping quote 잔존 — {\\bodyf ... \noindent "전체내용"\par } 패턴만 감지
+  // 주의: imprintdialogue 환경 안에서는 "\par가 정상이므로 bodyf 블록 한정으로 검사
+  // "\par 단독 체크는 false positive(대화문 끝)가 많아 제거
+  // \noindent " 체크: bodyf 블록 안에서만 경고 (dialogue 환경 밖)
+  const bodyFBlocks = mainTex.match(/\{\\bodyf[\s\S]*?\}/g) || [];
+  const dialogueFreeBodyF = bodyFBlocks
+    .filter(b => !b.includes('\\begin{imprintdialogue}') && !b.includes('\\begin{imprintquote}'));
+  if (dialogueFreeBodyF.some(b => /\\noindent\s+"/.test(b)))
+    warnings.push('⚠ main.tex: \\bodyf 블록이 \\noindent "로 시작합니다 — wrapping quote 잔존 가능성 확인 필요');
 
   // [G4] side-note 구조 검증 (paracol 사용 시)
   const hasParacolInMain = /\\begin\{paracol\}/.test(mainTex);
