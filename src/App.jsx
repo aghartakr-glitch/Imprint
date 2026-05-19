@@ -3445,7 +3445,7 @@ REQUIRED OUTPUT FORMAT:
                     <textarea value={fields[key]} rows={rows} placeholder={placeholder}
                       onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
                       style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                        border:`1px solid ${T.border}`, borderRadius:6,
+                        border:`1px solid ${T.border}`, borderRadius:3,
                         background:T.bg, color:T.ink, lineHeight:1.6,
                         transition:"border 150ms" }}
                       onFocus={e => e.target.style.borderColor = T.ink}
