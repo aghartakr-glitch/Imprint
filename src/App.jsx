@@ -3760,8 +3760,8 @@ REQUIRED OUTPUT FORMAT:
                     </div>
                   </div>
                   <button onClick={copy}
-                    style={{ padding:"7px 14px", fontSize:12, fontWeight:600, whiteSpace:"nowrap",
-                      border:`1px solid ${T.border}`, borderRadius:5,
+                    style={{ padding:"7px 14px", fontSize:12, fontWeight:500, whiteSpace:"nowrap",
+                      border:`1px solid ${T.border}`, borderRadius:3,
                       background:copied ? T.ink : T.surface,
                       color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
                     {copied ? "복사됨 ✓" : "전체 복사"}
