@@ -1251,6 +1251,73 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     warnings.push('⚠ 원문에 여러 문단이 있었지만 main.tex에는 하나의 body block만 있습니다');
   if (dialogueMarkerCount >= 3 && !hasDialogueEnv)
     warnings.push('⚠ 본문 안에 대화문(「」)이 감지되었지만 imprintdialogue 환경이 생성되지 않았습니다');
+
+  // ── 추가 검증 (layoutConfig 기반 + 구조 규칙) ─────────────────────────────
+
+  // [G1] \setcolumnwidth 3값 이상 — gap이 포함된 것 (2값 초과 = 오류)
+  const scwMatches = mainTex.match(/\\setcolumnwidth\{([^}]+)\}/g) || [];
+  for (const m of scwMatches) {
+    const inner = m.replace(/\\setcolumnwidth\{/, '').replace(/\}$/, '');
+    const args = inner.split(',');
+    if (args.length > 2)
+      errors.push(`main.tex: \\setcolumnwidth{${inner}} — 인수가 ${args.length}개입니다. gap은 \\setlength{\\columnsep}{Nmm}으로 분리하세요 (2값만 허용)`);
+    // gap 크기(8mm 등)가 column width 목록에 들어간 경우 감지
+    if (args.some(a => /^\s*[4-9](\.\d+)?mm\s*$/.test(a) || /^\s*[1-2]\d(\.\d+)?mm\s*$/.test(a) && +a.trim().replace('mm','') < 30))
+      warnings.push(`⚠ main.tex: \\setcolumnwidth 인수 중 gap 크기로 보이는 값이 있습니다 — ${inner}`);
+  }
+
+  // [G2] sty에 \setmainhangulfont / \setsanshangulfont → kotex 이중 바인딩 오류
+  if (/\\setmainhangulfont/.test(styCode))
+    errors.push('imprint-style.sty: \\setmainhangulfont 사용 — kotex와 이중 바인딩으로 한글 깨짐 발생. 제거하세요');
+  if (/\\setsanshangulfont/.test(styCode))
+    errors.push('imprint-style.sty: \\setsanshangulfont 사용 — kotex와 이중 바인딩으로 한글 깨짐 발생. 제거하세요');
+
+  // [G3] wrapping quote 잔존 — \noindent " 또는 "...\par
+  if (/\\noindent\s+"/.test(mainTex))
+    errors.push('main.tex: \\noindent 다음에 따옴표 — stripWrappingQuotes 미적용 또는 Claude가 따옴표를 재삽입했습니다');
+  if (/"\\par/.test(mainTex))
+    errors.push('main.tex: 따옴표+\\par 패턴 — wrapping quote가 본문 끝에 잔존합니다');
+
+  // [G4] side-note 구조 검증 (paracol 사용 시)
+  const hasParacolInMain = /\\begin\{paracol\}/.test(mainTex);
+  if (hasParacolInMain) {
+    const paracolCount    = count(mainTex, /\\begin\{paracol\}/g);
+    const switchColCount  = count(mainTex, /\\switchcolumn(?!\*)/g);
+    const endParacolCount = count(mainTex, /\\end\{paracol\}/g);
+    if (paracolCount !== 1)
+      errors.push(`main.tex: \\begin{paracol} 가 ${paracolCount}개 — 정확히 1개여야 합니다 (Method A)`);
+    if (switchColCount !== 1)
+      errors.push(`main.tex: \\switchcolumn 이 ${switchColCount}개 — 정확히 1개여야 합니다 (Method A)`);
+    if (endParacolCount !== 1)
+      errors.push(`main.tex: \\end{paracol} 이 ${endParacolCount}개 — 정확히 1개여야 합니다`);
+    if (paracolCount === 1 && endParacolCount === 1 && paracolCount !== endParacolCount)
+      errors.push('main.tex: \\begin{paracol} / \\end{paracol} 짝이 맞지 않습니다');
+
+    // bodyTextColumns 검증 (layoutConfig 있을 때만)
+    if (layoutConfig) {
+      const btc = Number(layoutConfig.bodyTextColumns || 1);
+      // switchcolumn 앞부분 = body column 내용
+      const beforeSwitch = mainTex.split('\\switchcolumn')[0] || '';
+      const multicolsInBody = count(beforeSwitch, /\\begin\{multicols\}/g);
+      if (btc >= 2 && multicolsInBody === 0)
+        errors.push(`main.tex: bodyTextColumns=${btc}인데 body column 안에 \\begin{multicols}가 없습니다`);
+      if (btc === 1 && multicolsInBody > 0)
+        errors.push(`main.tex: bodyTextColumns=1인데 body column 안에 \\begin{multicols}가 ${multicolsInBody}개 있습니다`);
+    }
+
+    // [G5] note column의 \textsuperscript{N} ↔ body column의 \ImpFN{N} 대응 검증
+    const switchIdx = mainTex.indexOf('\\switchcolumn');
+    if (switchIdx !== -1) {
+      const bodyColTex = mainTex.slice(0, switchIdx);
+      const noteColTex = mainTex.slice(switchIdx);
+      const noteSupNums = [...noteColTex.matchAll(/\\textsuperscript\{(\d+)\}/g)].map(m => m[1]);
+      for (const n of noteSupNums) {
+        if (!bodyColTex.includes(`\\ImpFN{${n}}`))
+          errors.push(`main.tex: note column에 \\textsuperscript{${n}}이 있지만 body column에 \\ImpFN{${n}}이 없습니다`);
+      }
+    }
+  }
+
   return { errors, warnings };
 }
 
