@@ -3639,7 +3639,7 @@ REQUIRED OUTPUT FORMAT:
                     onChange={e => setStyleConfig(s => ({ ...s, extraDirective: e.target.value }))}
                     placeholder="예: 여백을 넓게, 각주 없이, 제목 중앙 정렬"
                     style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                      border:`1px solid ${T.border}`, borderRadius:6,
+                      border:`1px solid ${T.border}`, borderRadius:3,
                       background:T.bg, color:T.ink, lineHeight:1.6 }}
                     onFocus={e => e.target.style.borderColor = T.ink}
                     onBlur={e => e.target.style.borderColor = T.border}
