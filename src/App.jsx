@@ -2822,6 +2822,18 @@ export default function App() {
                   const gapStr = `${actualGap.toFixed(1)}mm`;
                   const wrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
 
+                  // top/bottom → adjustwidth (paracol 사용 불가)
+                  if (notePosition === 'top' || notePosition === 'bottom') {
+                    finalBodyContent = gridComment + '\n' + wrapVariableLayout({
+                      bodyLatex: wrappedBody,
+                      noteLatex: allNotesLatex,
+                      grid,
+                      notePosition,
+                      textW,
+                    });
+                    // top/bottom 처리 완료 — plines 조립 생략
+                  } else {
+
                   const plines = [];
                   plines.push(gridComment);
                   // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞
