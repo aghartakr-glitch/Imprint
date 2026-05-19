@@ -2817,7 +2817,7 @@ export default function App() {
         // ── 각주 최종 강제 치환 ────────────────────────────────────────
         // side-column 모드라도 \ImpFN{N} / [N]이 남아있으면 \footnote{}로 변환 (fallback 보장)
         if (fields.각주?.trim()) {
-          const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
+          const _finalFnMap = _cachedFnMap; // parseFootnoteMap 캐시 사용
           const _finalKeys = Object.keys(_finalFnMap);
           if (_finalKeys.length > 0) {
             const _fesc = latexEscNote; // 모듈 상수 사용
