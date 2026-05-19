@@ -2649,7 +2649,7 @@ export default function App() {
           // side-note 여부를 미리 계산 (useSideNoteFootnote는 아래에서 정의되므로 inline 계산)
           const _willSideNote = hasFootnoteText
             && colMode === 'variable'
-            && ['left', 'right'].includes(styleConfig.notePosition || 'right');
+            && ['left', 'right', 'top', 'bottom'].includes(styleConfig.notePosition || 'right');
           // side-note 모드: processedBody(\ImpFN{N} 포함) + \footnote 주입 없음 + ImpFN escape 보존
           // 일반 모드: cleanBody(wrapping quote 제거) + 정상 각주 주입
           finalBodyContent = buildBodyContent({
