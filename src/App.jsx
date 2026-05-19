@@ -3727,7 +3727,7 @@ REQUIRED OUTPUT FORMAT:
                   XeLaTeX 조판 파일을 자동으로 만들어 드립니다.
                 </div>
               </div>
-              <div style={{ padding:"16px 24px", background:T.surface, borderRadius:8,
+              <div style={{ padding:"16px 24px", background:T.surface, borderRadius:3,
                 border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:2, maxWidth:380 }}>
                 <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>작동 방식</strong>
                 ① 입력한 텍스트의 장르·형태 분석<br/>
