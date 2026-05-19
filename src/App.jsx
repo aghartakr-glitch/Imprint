@@ -1339,6 +1339,32 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     }
   }
 
+  // columnGapMm consistency + grid ratio validation
+  if (layoutConfig && layoutConfig.columnMode === 'variable') {
+    const expectedGap = (layoutConfig.columnGapMm ?? 8).toFixed(1);
+    const gapMatch = mainTex.match(/\\setlength\{\\columnsep\}\{([^}]+)\}/);
+    if (gapMatch) {
+      const actualGap = gapMatch[1].replace('mm','').trim();
+      if (Math.abs(parseFloat(actualGap) - parseFloat(expectedGap)) > 0.05)
+        errors.push(`main.tex: \\setlength{\\columnsep}{${gapMatch[1]}} — styleConfig.columnGapMm=${expectedGap}mm와 불일치`);
+    }
+    if (layoutConfig.variableGrid) {
+      const vg = layoutConfig.variableGrid;
+      const pos = layoutConfig.notePosition || 'right';
+      const isLR = pos === 'left' || pos === 'right';
+      if (isLR && (vg.body + vg.note) > vg.total)
+        errors.push(`layout: left/right 모드에서 body(${vg.body})+note(${vg.note}) > total(${vg.total})`);
+      if (!isLR && (vg.body > vg.total || vg.note > vg.total))
+        errors.push(`layout: top/bottom 모드에서 body(${vg.body}) 또는 note(${vg.note}) > total(${vg.total})`);
+      const btc = Number(layoutConfig.bodyTextColumns || 1);
+      const ntc = Number(layoutConfig.noteTextColumns || 1);
+      if (btc > vg.body)
+        errors.push(`layout: bodyTextColumns(${btc}) > bodyGridUnits(${vg.body})`);
+      if (ntc > vg.note)
+        errors.push(`layout: noteTextColumns(${ntc}) > noteGridUnits(${vg.note})`);
+    }
+  }
+
   return { errors, warnings };
 }
 
