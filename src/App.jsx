@@ -2657,7 +2657,9 @@ export default function App() {
         // 가변단 레이아웃 조립 — 각주 주입 후 실행 (JS 보장, Claude 의존 없음)
         if (colMode === 'variable') {
           const vg   = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
-          const grid = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          // columnGapMm 우선순위: styleConfig > p.c.간격(DB 기본값) > 8mm 하드코딩
+          const columnGapMm = Number(styleConfig.columnGapMm ?? p.c?.간격 ?? 8);
+          const grid = calcVariableGrid(vg, textW, columnGapMm);
           const notePosition = styleConfig.notePosition || 'right';
           const btc = Number(styleConfig.bodyTextColumns || 1); // 본문 내부 단 수
 
