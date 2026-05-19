@@ -2698,51 +2698,15 @@ export default function App() {
                 const missingMarkers = sorted.filter(n => !bodyLatex.includes(`\\ImpFN{${n}}`));
 
                 if (missingMarkers.length > 0) {
-                  // ── Fallback: 마커 없음 → 그리드 유지 + note 열에 전체 주석 블록 배치 ──
-                  // 본문에 위치 마커([1] ¹ ①)가 없을 때:
-                  //   - paracol 구조는 유지 (그리드가 시각적으로 보임)
-                  //   - body col에는 본문 (마커 없이)
-                  //   - note col에는 전체 주석 블록 (위치 연결 없이 목록으로)
-                  // 정확한 위치 연결을 원하면 본문에 [1][2] 마커 삽입
-                  pushLog('latex', 'LaTeX 생성', 'running', `⚠ 마커 없음(${missingMarkers.map(n=>`[${n}]`).join(' ')}) → 그리드 유지, note 열에 주석 배치`);
-
-                  // note 열 조립: 위치 연결 없이 번호 순서로 나열
-                  const fbNoteLines = missingMarkers
-                    .sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b)
-                    .map(n => `{\\notef\\textsuperscript{${n}}~${latexEscFn(fnMap[n])}\\par\\smallskip}`)
-                    .join('\n');
-                  const fbNotesLatex = wrapNoteTextColumns(fbNoteLines, ntc);
-
-                  // paracol 구조 조립 (body col + note col, switchcolumn 1회)
-                  const fbIsLeft = notePosition === 'left';
-                  const { bodyW: fbBodyW, noteW: fbNoteW, gap: fbGap } = grid;
-                  const fbCol1W = fbIsLeft ? fbNoteW : fbBodyW;
-                  const fbCol2W = fbIsLeft ? fbBodyW : fbNoteW;
-                  const fbGapStr = `${fbGap.toFixed(1)}mm`;
-                  const fbWrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
-
-                  const fbLines = [];
-                  fbLines.push(gridComment);
-                  fbLines.push(`\\begin{paracol}{2}`);
-                  fbLines.push(`\\setlength{\\columnsep}{${fbGapStr}}`);
-                  fbLines.push(`\\setcolumnwidth{${fbCol1W}mm,${fbCol2W}mm}`);
-                  fbLines.push('');
-                  if (fbIsLeft) {
-                    fbLines.push(fbNotesLatex);
-                    fbLines.push('');
-                    fbLines.push(`\\switchcolumn`);
-                    fbLines.push('');
-                    fbLines.push(fbWrappedBody);
-                  } else {
-                    fbLines.push(fbWrappedBody);
-                    fbLines.push('');
-                    fbLines.push(`\\switchcolumn`);
-                    fbLines.push('');
-                    fbLines.push(fbNotesLatex);
-                  }
-                  fbLines.push('');
-                  fbLines.push(`\\end{paracol}`);
-                  finalBodyContent = fbLines.join('\n');
+                  // ── Hard Error: body에 \ImpFN{N} 없음 → 출력 불가 ──────────────────
+                  // note column에 \textsuperscript{N}이 있으면 body column에 \ImpFN{N}이 반드시 있어야 함
+                  // 위치 마커 없이 성공 처리하면 주석이 잘못된 위치에 배치되어 조판 오류
+                  const missingList = missingMarkers.map(n => `[${n}]`).join(' ');
+                  const errMsg = `side note 마커 누락: ${missingList} — 본문 안에 위치 마커를 삽입하세요 (예: 단어[1] 또는 단어¹)`;
+                  setErr(errMsg);
+                  pushLog('latex', 'LaTeX 생성', 'error', errMsg);
+                  setLoading(false);
+                  return;
                 } else {
                   // ── 정상 경로: 모든 마커 확인됨 → side note 열 조립 ──────────────
 
