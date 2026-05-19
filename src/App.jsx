@@ -3943,11 +3943,11 @@ REQUIRED OUTPUT FORMAT:
                     })()}
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>
+                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
                           main.tex
                         </div>
                         <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.7 }}>
-                          <strong style={{ color:"#c44" }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
+                          <strong style={{ color:T.ink }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
                           imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
                         </div>
                       </div>
