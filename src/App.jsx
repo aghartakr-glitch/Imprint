@@ -1431,7 +1431,7 @@ export default function App() {
   const [refineHistory, setRefineHistory] = useState([]); // [{role, content, changes}]
   const [currentLog, setCurrentLog] = useState(null);     // 현재 generationLog
   const [allLogs, setAllLogs] = useState([]);              // 세션 내 전체 로그 (인메모리)
-  const [includeFullPrompts, setIncludeFullPrompts] = useState(false); // export 시 prompt 전문 포함
+  // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
 
   // ── 1차 후보 스코어링 v29: 분리 점수 계산 ──────────────────────────
   // contentScore / genreScore / pubTypeScore / layoutScore 분리
