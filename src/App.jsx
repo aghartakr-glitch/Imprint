@@ -2919,7 +2919,7 @@ export default function App() {
         }
 
         // LaTeX 구조 검증 (sanitize 후 검증)
-        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent });
+        const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent, layoutConfig: styleConfig });
         console.log('[각주DEBUG] validation errors=', _valErrors, '| \\footnote inTex=', finalMainTex.includes('\\footnote{'));
         if (_valErrors.length > 0) {
           setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
