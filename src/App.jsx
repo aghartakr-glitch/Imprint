@@ -3363,9 +3363,9 @@ REQUIRED OUTPUT FORMAT:
       {/* ══ 헤더 ══════════════════════════════════════════════════════ */}
       <header style={{ height:48, display:"flex", alignItems:"center", gap:12, padding:"0 24px",
         borderBottom:`1px solid ${T.border}`, background:T.surface, flexShrink:0, zIndex:100 }}>
-        <span style={{ fontSize:16, fontWeight:800, letterSpacing:"-0.04em" }}>Imprint</span>
+        <span style={{ fontSize:14, fontWeight:700, letterSpacing:"-0.02em" }}>Imprint</span>
         <span style={{ fontSize:10, fontFamily:T.mono, color:T.muted,
-          background:T.tagBg, padding:"2px 6px", borderRadius:8 }}>v{IMPRINT_VERSION}</span>
+          background:T.tagBg, padding:"2px 6px", borderRadius:3 }}>v{IMPRINT_VERSION}</span>
         <span style={{ fontSize:11, color:T.muted }}>편집 디자인 조판 시스템</span>
         <div style={{ flex:1 }} />
         <span style={{ fontSize:11, color:T.muted }}>{DB.length}개 스타일 패키지</span>
