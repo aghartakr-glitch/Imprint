@@ -3516,54 +3516,50 @@ REQUIRED OUTPUT FORMAT:
                   {styleConfig.columnMode === 'variable' && (
                     <>
                       {/* 그리드 수치 입력 */}
-                      <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
-                        {[
-                          { key:'total', label:'총 그리드' },
-                          { key:'body',  label:'본문 열' },
-                          { key:'note',  label:'주석 열' },
-                        ].map(({ key, label }) => (
-                          <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                            <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                              textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-                            <input type="number" min={1} max={20}
-                              value={(styleConfig.variableGrid || {})[key] || ''}
-                              onChange={e => {
-                                const v = Math.max(1, parseInt(e.target.value) || 1);
-                                setStyleConfig(s => {
-                                  const prev = s.variableGrid || { total:2, body:1, note:1 };
-                                  const pos = s.notePosition || 'right';
-                                  const isLeftRight = pos === 'left' || pos === 'right';
-                                  const next = { ...prev, [key]: v };
-                                  if (isLeftRight) {
-                                    // left/right: body+note <= total
-                                    if (key === 'total') {
-                                      if (next.body + next.note > v) next.note = Math.max(1, v - next.body);
-                                      if (next.body + next.note > v) next.body = Math.max(1, v - 1);
-                                    } else if (key === 'body') {
-                                      if (v + next.note > next.total) next.note = Math.max(1, next.total - v);
-                                    } else if (key === 'note') {
-                                      if (next.body + v > next.total) next.body = Math.max(1, next.total - v);
-                                    }
-                                  } else {
-                                    // top/bottom: each independently <= total
-                                    if (key === 'total') {
-                                      next.body = Math.min(next.body, v);
-                                      next.note = Math.min(next.note, v);
-                                    } else {
-                                      // clamp body/note individually to total
-                                      next.body = Math.min(next.body, next.total);
-                                      next.note = Math.min(next.note, next.total);
-                                    }
-                                  }
-                                  return { ...s, variableGrid: next };
-                                });
-                              }}
-                              style={{ width:52, padding:"5px 7px", fontSize:12,
-                                border:`1px solid ${T.border}`, borderRadius:4,
-                                background:T.bg, color:T.ink, textAlign:"center" }} />
-                          </div>
-                        ))}
-                      </div>
+                      {(() => {
+                        const vg = styleConfig.variableGrid || { total:5, body:4, note:1 };
+                        const pos = styleConfig.notePosition || 'right';
+                        const isLR = pos === 'left' || pos === 'right';
+                        const overflow = isLR && (vg.body + vg.note) > vg.total;
+                        return (
+                          <>
+                            <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                              {[
+                                { key:'total', label:'총 그리드' },
+                                { key:'body',  label:'본문 열' },
+                                { key:'note',  label:'주석 열' },
+                              ].map(({ key, label }) => (
+                                <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                                  <span style={{ fontSize:9, color: (overflow && key !== 'total') ? '#c0392b' : T.muted,
+                                    fontWeight:600, textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+                                  <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
+                                    value={vg[key] || ''}
+                                    onChange={e => {
+                                      const v = Math.max(1, parseInt(e.target.value) || 1);
+                                      setStyleConfig(s => {
+                                        const prev = s.variableGrid || { total:5, body:4, note:1 };
+                                        // 각 값은 total을 넘지 않도록 clamp만 — 다른 필드 자동 수정 없음
+                                        const next = { ...prev, [key]: v };
+                                        if (key !== 'total') {
+                                          next[key] = Math.min(v, next.total);
+                                        }
+                                        return { ...s, variableGrid: next };
+                                      });
+                                    }}
+                                    style={{ width:52, padding:"5px 7px", fontSize:12,
+                                      border:`1px solid ${(overflow && key !== 'total') ? '#c0392b' : T.border}`,
+                                      borderRadius:4, background:T.bg, color:T.ink, textAlign:"center" }} />
+                                </div>
+                              ))}
+                            </div>
+                            {overflow && (
+                              <div style={{ fontSize:10, color:'#c0392b', marginTop:3 }}>
+                                본문({vg.body})+주석({vg.note}) = {vg.body+vg.note} &gt; 총({vg.total}) — 좌/우 배치 시 합이 총 그리드를 넘으면 안 됩니다
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       {/* 열 간격 */}
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6 }}>
                         <span style={{ fontSize:9, color:T.muted, fontWeight:600,
