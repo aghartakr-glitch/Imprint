@@ -2577,12 +2577,7 @@ export default function App() {
           && !finalBodyContent.includes(PARACOL_MARKER);
 
         if (hasFootnoteText && !useSideNoteFootnote) {
-          const latexEscFn = s => s
-            .replace(/\\/g, '\\textbackslash{}')
-            .replace(/~/g, '\\textasciitilde{}')
-            .replace(/\^/g, '\\textasciicircum{}')
-            .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
-            .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+          // latexEscNote: 모듈 상수 사용
 
           // 0단계: \ImpFN{N} → \footnote{내용} (preReplaceFnMarkers가 삽입한 마커)
           if (finalBodyContent.includes('\\ImpFN{')) {
