@@ -2377,7 +2377,7 @@ export default function App() {
         (() => {
           if (colMode !== 'variable') return null;
           const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
-          const vg2 = calcVariableGrid(vg, textW, p.c.간격 || 8);
+          const vg2 = calcVariableGrid(vg, textW, columnGapMm);
           if (vg2.noteG <= 0) return null;
           const { bodyW: bMm, noteW: nMm, gap } = vg2;
           const btc = Number(styleConfig.bodyTextColumns || 1);
