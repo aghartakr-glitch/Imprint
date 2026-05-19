@@ -2114,6 +2114,9 @@ export default function App() {
         const ntc = Number(styleConfig.noteTextColumns || 1);
         colPackages = '\\usepackage{paracol}\n';
         if (btc >= 2 || ntc >= 2) colPackages += '\\usepackage{multicol}\n';
+        if (['top','bottom'].includes(styleConfig.notePosition) && colMode === 'variable') {
+          colPackages += '\\usepackage{changepage}\n'; // adjustwidth
+        }
         // JS가 wrapping 보장 — Claude는 순수 텍스트 LaTeX만 생성
         colSetupBlock =
           '% VARIABLE GRID: body=' + vGrid.bodyW + 'mm / note=' + vGrid.noteW + 'mm / gap=' + vGrid.gap + 'mm\n' +
