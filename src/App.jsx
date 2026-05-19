@@ -2653,11 +2653,8 @@ export default function App() {
               const { fnMap } = parseFootnoteMap(fields.각주);
               const fnNums = Object.keys(fnMap);
               if (fnNums.length > 0) {
-                const latexEscFn = s => s
-                  .replace(/\\/g, '\\textbackslash{}').replace(/~/g, '\\textasciitilde{}')
-                  .replace(/\^/g, '\\textasciicircum{}').replace(/\$/g, '\\$')
-                  .replace(/\{/g, '\\{').replace(/\}/g, '\\}').replace(/&/g, '\\&')
-                  .replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+                // latexEscNote: 모듈 상수 사용
+                const latexEscFn = latexEscNote;
                 const sorted = fnNums.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
 
                 // 본문 마커 정규화: [N] / ¹²³ / ①②③ → \ImpFN{N} (sty 매크로가 compile-time에 처리)
