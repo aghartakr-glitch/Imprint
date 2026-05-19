@@ -37,7 +37,8 @@ function simpleHash(str = "") {
 const _LOG_STORE = { logs: [] };
 function saveGenerationLog(log) { _LOG_STORE.logs = [log, ..._LOG_STORE.logs].slice(0, 100); }
 function loadGenerationLogs() { return _LOG_STORE.logs; }
-async function sendLogToGoogleSheet(_log) { /* TODO */ }
+// sendLogToGoogleSheet: ENABLE_GOOGLE_SHEET_LOGGING=false 상태에서 미사용
+// async function sendLogToGoogleSheet(_log) { /* TODO */ }
 
 // ─── Design Tokens ───────────────────────────────────────────────
 const T = {
