@@ -1354,9 +1354,6 @@ export default function App() {
 
   const [hint, setHint] = useState("");
 
-  // ── v29: testMode + styleLock (item 3) ──────────────────────────
-  // normal / lengthCompare / genreCompare / lockedStyle
-  const [testMode, setTestMode] = useState('normal');
   const [lockedStyleId, setLockedStyleId] = useState(null); // lockedStyle 모드에서 고정
   const [runMeta, setRunMeta] = useState(null); // 마지막 실행 메타 로그
 
