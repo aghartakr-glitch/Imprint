@@ -2675,7 +2675,7 @@ export default function App() {
         const notePos = styleConfig.notePosition || 'right';
         const useSideNoteFootnote = hasFootnoteText
           && colMode === 'variable'
-          && (notePos === 'left' || notePos === 'right')
+          && ['left', 'right', 'top', 'bottom'].includes(notePos)
           && !finalBodyContent.includes(PARACOL_MARKER);
 
         // parseFootnoteMap 캐싱 — run() 내 여러 경로에서 동일 fields.각주 반복 파싱 방지
