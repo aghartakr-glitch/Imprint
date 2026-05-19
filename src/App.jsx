@@ -2372,7 +2372,7 @@ export default function App() {
             `% 레이아웃 유형: ${p.layout_type || ''} — ${p.특 || ''}`,
           ].join('\n');
         })(),
-        colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null,
+        colMode === 'variable' ? `\\setlength{\\columnsep}{${columnGapMm}mm}` : (colGap > 0 ? `\\setlength{\\columnsep}{${colGap}mm}` : null),
         // 가변단: \ImpFN 매크로 + imprintnotearea 환경 정의 (imprintlayout 환경은 제거 — main.tex이 paracol 직접 사용)
         (() => {
           if (colMode !== 'variable') return null;
