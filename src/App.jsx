@@ -3494,6 +3494,21 @@ REQUIRED OUTPUT FORMAT:
                           </div>
                         ))}
                       </div>
+                      {/* 열 간격 */}
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6 }}>
+                        <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                          textTransform:"uppercase", letterSpacing:"0.07em", whiteSpace:"nowrap" }}>열 간격(mm)</span>
+                        <input type="number" min={2} max={20} step={1}
+                          value={styleConfig.columnGapMm ?? 8}
+                          onChange={e => {
+                            const v = Math.min(20, Math.max(2, parseFloat(e.target.value) || 8));
+                            setStyleConfig(s => ({ ...s, columnGapMm: v }));
+                          }}
+                          style={{ width:52, padding:"5px 7px", fontSize:12,
+                            border:`1px solid ${T.border}`, borderRadius:4,
+                            background:T.bg, color:T.ink, textAlign:"center" }} />
+                        <span style={{ fontSize:9, color:T.muted }}>manual</span>
+                      </div>
                       {/* 본문/주석 내부 단 수 — number input */}
                       <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
                         {[
