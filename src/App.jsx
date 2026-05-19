@@ -1262,11 +1262,10 @@ export default function App() {
   // LaTeX \footnote{} 명령으로 인라인 삽입
   function injectFootnotes(bodyText, footnoteText) {
     if (!footnoteText || !footnoteText.trim()) return bodyText;
-    // 번호 마커 정규화 테이블
-    const superMap = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
-    const circleMap = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+    // 번호 마커 정규화 테이블 (모듈 상수 SUP_TO_NUM, CIRC_TO_NUM 사용)
+    const superMap = SUP_TO_NUM;
+    const circleMap = CIRC_TO_NUM;
     const symOrder = ['*','**','†','‡','※']; // 순서 기반 기호 마커
-    const allNumMarkers = {...superMap, ...circleMap};
     // 각주 텍스트 파싱
     // 지원 패턴: "1. 내용" / "1) 내용" / "¹ 내용" / "① 내용" / "(1) 내용"
     //            "* 내용" / "** 내용" / "† 내용" / "※ 내용" / "※1 내용"
