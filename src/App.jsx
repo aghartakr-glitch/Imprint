@@ -997,14 +997,14 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
 
   if (!hasNote) {
     // 주석 없음: paracol로 본문 열 폭 보장
-    // \setlength{\columnsep} + 2-인수 \setcolumnwidth {col1,col2} — gap은 columnsep으로 분리
+    // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞 (paracol이 begin 시점에 계산)
     const isLeft = pos === 'left';
     const col1 = isLeft ? noteW : bodyW;
     const col2 = isLeft ? bodyW : noteW;
     return [
-      `\\begin{paracol}{2}`,
       `\\setlength{\\columnsep}{${gapFmt}}`,
       `\\setcolumnwidth{${col1}mm,${col2}mm}`,
+      `\\begin{paracol}{2}`,
       isLeft ? `\\mbox{}` : bodyLatex.trim(),
       `\\switchcolumn`,
       isLeft ? bodyLatex.trim() : `\\mbox{}`,
