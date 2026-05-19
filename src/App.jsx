@@ -1710,7 +1710,8 @@ export default function App() {
       setMatching(false);
       setLoading(true);
 
-      // testMode: lockedStyle → selIdx 고정
+      // testMode: 기능 비활성화 (useState 제거됨 → 'normal' 고정)
+      const testMode = 'normal';
       const isLocked = testMode === 'lockedStyle' && lockedStyleId !== null;
       const isLengthCompare = testMode === 'lengthCompare' && lockedStyleId !== null;
       const forceIdx = (isLocked || isLengthCompare) ? lockedStyleId : null;
