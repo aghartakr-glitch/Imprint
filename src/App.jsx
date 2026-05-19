@@ -3438,7 +3438,7 @@ REQUIRED OUTPUT FORMAT:
                   { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
-                    <label style={{ display:"block", fontSize:10, fontWeight:700,
+                    <label style={{ display:"block", fontSize:11, fontWeight:500,
                       color:T.muted, marginBottom:5 }}>
                       {label}
                     </label>
