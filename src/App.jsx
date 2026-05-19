@@ -2576,12 +2576,15 @@ export default function App() {
           && (notePos === 'left' || notePos === 'right')
           && !finalBodyContent.includes(PARACOL_MARKER);
 
+        // parseFootnoteMap 캐싱 — run() 내 여러 경로에서 동일 fields.각주 반복 파싱 방지
+        const _cachedFnMap = hasFootnoteText ? parseFootnoteMap(fields.각주).fnMap : {};
+
         if (hasFootnoteText && !useSideNoteFootnote) {
           // latexEscNote: 모듈 상수 사용
 
           // 0단계: \ImpFN{N} → \footnote{내용} (preReplaceFnMarkers가 삽입한 마커)
           if (finalBodyContent.includes('\\ImpFN{')) {
-            const { fnMap } = parseFootnoteMap(fields.각주);
+            const fnMap = _cachedFnMap;
             finalBodyContent = finalBodyContent.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
               const content = fnMap[n];
               return content ? `\\footnote{${latexEscNote(content)}}` : '';
