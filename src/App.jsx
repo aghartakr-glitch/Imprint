@@ -2653,7 +2653,7 @@ export default function App() {
             // ── Method A: 전체 본문 + 단일 switchcolumn + 전체 주석 ─────────────
             // \switchcolumn을 한 번만 사용 (paragraph interleave 제거)
             if (useSideNoteFootnote) {
-              const { fnMap } = parseFootnoteMap(fields.각주);
+              const fnMap = _cachedFnMap;
               const fnNums = Object.keys(fnMap);
               if (fnNums.length > 0) {
                 // latexEscNote: 모듈 상수 사용
