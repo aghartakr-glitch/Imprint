@@ -42,14 +42,14 @@ function loadGenerationLogs() { return _LOG_STORE.logs; }
 
 // ─── Design Tokens ───────────────────────────────────────────────
 const T = {
-  bg:      "#F8F7F3",
+  bg:      "#F4F4F4",
   surface: "#FFFFFF",
-  border:  "#E2DDD8",
-  muted:   "#9B9590",
-  ink:     "#1C1B18",
-  accent:  "#2B5BFF",
-  code:    "#F2EFE9",
-  tagBg:   "#ECEAE4",
+  border:  "#E0E0E0",
+  muted:   "#8C8C8C",
+  ink:     "#1A1A1A",
+  accent:  "#1A1A1A",
+  code:    "#EFEFEF",
+  tagBg:   "#E8E8E8",
   mono:    "'JetBrains Mono','Fira Code',monospace",
   sans:    "system-ui,-apple-system,sans-serif",
 };
