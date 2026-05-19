@@ -2096,7 +2096,7 @@ export default function App() {
       if (userOverride && userMode === 'variable') {
         // 사용자 지정 가변 단: variableGrid.total / body / note
         const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
-        const vGrid = calcVariableGrid(vg, textW, colGap || 8);
+        const vGrid = calcVariableGrid(vg, textW, columnGapMm);
         const hasNoteCol = vGrid.noteG > 0;
         const btc = Number(styleConfig.bodyTextColumns || 1);
         const ntc = Number(styleConfig.noteTextColumns || 1);
