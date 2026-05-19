@@ -3636,8 +3636,8 @@ REQUIRED OUTPUT FORMAT:
                   )}
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:10, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:5 }}>
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
+                    color:T.muted, marginBottom:5 }}>
                     추가 지시
                   </label>
                   <textarea rows={3} value={styleConfig.extraDirective || ''}
