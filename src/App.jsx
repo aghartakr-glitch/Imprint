@@ -2818,12 +2818,7 @@ export default function App() {
           const { fnMap: _finalFnMap } = parseFootnoteMap(fields.각주);
           const _finalKeys = Object.keys(_finalFnMap);
           if (_finalKeys.length > 0) {
-            const _fesc = s => s
-              .replace(/\\/g, '\\textbackslash{}')
-              .replace(/~/g, '\\textasciitilde{}')
-              .replace(/\^/g, '\\textasciicircum{}')
-              .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
-              .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+            const _fesc = latexEscNote; // 모듈 상수 사용
             // 큰 번호 먼저 처리 (10 → 1 순서로 해야 [1]이 [10]의 일부를 잘못 치환하지 않음)
             const _sorted = _finalKeys.sort((a, b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +b - +a);
             for (const _n of _sorted) {
