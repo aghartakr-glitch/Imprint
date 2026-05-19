@@ -989,7 +989,7 @@ function stripWrappingQuotes(s) {
 // hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
 // hasNote=true, right/left → paracol (imprintlayout)
 // hasNote=true, top/bottom → imprintnotearea 블록
-function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition }) {
+function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 84 }) {
   const { bodyW, noteW, gap } = grid;
   const pos = notePosition || 'right';
   const hasNote = !!(noteLatex && noteLatex.trim());
