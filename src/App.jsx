@@ -2969,7 +2969,7 @@ export default function App() {
           },
 
           output: {
-            latex_code: LOG_FULL_LATEX ? finalMainTex : '',
+            latex_code: finalMainTex, // LOG_FULL_LATEX 상수 제거 후 직접 삽입
             latex_length: finalMainTex.length,
             latex_hash: _latexHash,
             compile_status: 'not_tested',
