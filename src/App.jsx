@@ -2566,12 +2566,19 @@ export default function App() {
         if (claudeHasContent) {
           finalBodyContent = bodyContentOnly;
         } else if (hasUserInput) {
+          // side-note 여부를 미리 계산 (useSideNoteFootnote는 아래에서 정의되므로 inline 계산)
+          const _willSideNote = hasFootnoteText
+            && colMode === 'variable'
+            && ['left', 'right'].includes(styleConfig.notePosition || 'right');
+          // side-note 모드: processedBody(\ImpFN{N} 포함) + \footnote 주입 없음 + ImpFN escape 보존
+          // 일반 모드: cleanBody(wrapping quote 제거) + 정상 각주 주입
           finalBodyContent = buildBodyContent({
             title: fields.제목,
             subtitle: fields.소제목,
-            body: fields.본문 || '',
-            footnote: fields.각주 || '',
+            body: _willSideNote ? processedBody : cleanBody,
+            footnote: _willSideNote ? '' : (fields.각주 || ''),
             runningHead: fields.면주,
+            preserveImpFnMarkers: _willSideNote,
           });
         } else {
           finalBodyContent = buildMissingBodyPlaceholder();
