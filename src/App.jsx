@@ -632,6 +632,15 @@ function escapeLatex(s) {
     .replace(/\^/g, '\\textasciicircum{}');
 }
 
+// escapeLatex + sanitize를 적용하되 \ImpFN{N} 마커는 손대지 않음
+// side-note fallback 경로: processedBody에 이미 \ImpFN{N}이 있으므로 escape 제외
+function escapeLatexPreservingImpFN(s) {
+  const IMPFN_RE = /(\\ImpFN\{\d+\})/g;
+  return String(s || '').split(IMPFN_RE).map((part, i) =>
+    i % 2 === 0 ? escapeLatex(sanitizeUnicodeForLatex(part)) : part
+  ).join('');
+}
+
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
 // 반각 CJK 문자(U+FF61-FF9F) → 전각 등가로 치환. 한국어 폰트 대부분이 전각만 지원.
 function sanitizeUnicodeForLatex(s) {
