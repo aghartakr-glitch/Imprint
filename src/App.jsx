@@ -3434,7 +3434,7 @@ REQUIRED OUTPUT FORMAT:
                   { key:"제목", label:"제목", rows:2, placeholder:"출판물 제목" },
                   { key:"소제목", label:"소제목", rows:1, placeholder:"부제 · 챕터 제목 (선택)" },
                   { key:"본문", label:"본문", rows:10, placeholder:`본문 텍스트를 입력하세요\n\n각주 마커: ¹²³ 또는 [1] 또는 ^1` },
-                  { key:"면주", label:"면주 (Running Head)", rows:1, placeholder:"페이지 상단에 반복될 텍스트 (선택)" },
+                  { key:"면주", label:"면주", rows:1, placeholder:"페이지 상단에 반복될 텍스트 (선택)" },
                   { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
