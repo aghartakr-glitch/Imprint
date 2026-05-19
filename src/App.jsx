@@ -1628,7 +1628,6 @@ export default function App() {
     // 각주 마커를 \ImpFN{N} LaTeX 명령으로 사전 치환: Claude가 LaTeX 명령을 그대로 보존하므로 손실 없음
     // post-processing에서 \ImpFN{N} → \footnote{내용}으로 치환 (100% JS 보장)
     const processedBody = hasFootnoteText ? preReplaceFnMarkers(bodyForProcess) : bodyForProcess;
-    const footnotesInjected = false; // post-processing 담당
     const footnoteTextForClaude = hasFootnoteText ? fields.각주.trim() : null;
     // anchor: Claude가 \ImpFN{N}을 완전히 삭제한 경우 원래 위치 복원에 사용
     const fnAnchors = hasFootnoteText ? extractFootnoteAnchors(fields.본문 || '') : {};
