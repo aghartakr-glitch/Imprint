@@ -3933,7 +3933,7 @@ REQUIRED OUTPUT FORMAT:
                           <div style={{ fontWeight:700, color:T.ink, marginBottom:6 }}>LaTeX 검증</div>
                           <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px" }}>
                             {checks.map((c,i) => (
-                              <span key={i} style={{ color: c.warn ? '#c44' : c.ok ? '#3a3' : '#c44' }}>
+                              <span key={i} style={{ color: c.warn ? '#888' : c.ok ? '#444' : '#888' }}>
                                 {c.warn ? '⚠' : c.ok ? '✓' : '✗'} {c.label}
                               </span>
                             ))}
