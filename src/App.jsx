@@ -1013,23 +1013,35 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 
   }
 
   if (pos === 'top') {
-    return [
-      `\\begin{imprintnotearea}`,
+    const rightIndentBody = (textW - bodyW).toFixed(1);
+    const rightIndentNote = (textW - noteW).toFixed(1);
+    const noteBlock = [
+      `\\begin{adjustwidth}{0mm}{${rightIndentNote}mm}`,
       noteLatex.trim(),
-      `\\end{imprintnotearea}`,
-      `\\vspace{${gapFmt}}`,
-      bodyLatex.trim(),
+      `\\end{adjustwidth}`,
     ].join('\n');
+    const bodyBlock = [
+      `\\begin{adjustwidth}{0mm}{${rightIndentBody}mm}`,
+      bodyLatex.trim(),
+      `\\end{adjustwidth}`,
+    ].join('\n');
+    return [noteBlock, `\\vspace{${gapFmt}}`, bodyBlock].join('\n');
   }
 
   if (pos === 'bottom') {
-    return [
+    const rightIndentBody = (textW - bodyW).toFixed(1);
+    const rightIndentNote = (textW - noteW).toFixed(1);
+    const bodyBlock = [
+      `\\begin{adjustwidth}{0mm}{${rightIndentBody}mm}`,
       bodyLatex.trim(),
-      `\\vspace{${gapFmt}}`,
-      `\\begin{imprintnotearea}`,
-      noteLatex.trim(),
-      `\\end{imprintnotearea}`,
+      `\\end{adjustwidth}`,
     ].join('\n');
+    const noteBlock = [
+      `\\begin{adjustwidth}{0mm}{${rightIndentNote}mm}`,
+      noteLatex.trim(),
+      `\\end{adjustwidth}`,
+    ].join('\n');
+    return [bodyBlock, `\\vspace{${gapFmt}}`, noteBlock].join('\n');
   }
 
   // right(기본) 또는 left → paracol 직접 조립
