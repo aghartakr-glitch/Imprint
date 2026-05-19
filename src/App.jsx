@@ -2599,7 +2599,7 @@ export default function App() {
 
           // 2단계: 여전히 \footnote{} 없음 → \par 또는 본문 말미에 강제 삽입
           if (!finalBodyContent.includes('\\footnote{')) {
-            const { fnMap } = parseFootnoteMap(fields.각주);
+            const fnMap = _cachedFnMap;
             const fnNums = Object.keys(fnMap);
             if (fnNums.length > 0) {
               const latexEscSimple = s => s
