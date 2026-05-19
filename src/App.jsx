@@ -3457,8 +3457,8 @@ REQUIRED OUTPUT FORMAT:
             ) : (
               <>
                 <div>
-                  <label style={{ display:"block", fontSize:10, fontWeight:700,
-                    letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
+                    color:T.muted, marginBottom:6 }}>
                     장르 / 출판 형태 직접 지정
                   </label>
                   <select value={hint} onChange={e => setHint(e.target.value)}
