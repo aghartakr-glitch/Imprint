@@ -3511,25 +3511,38 @@ REQUIRED OUTPUT FORMAT:
                       </div>
                       {/* 본문/주석 내부 단 수 — number input */}
                       <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
-                        {[
-                          { key:'bodyTextColumns', label:'본문 내부 단', hint:'본문 열 안 단 수 (bodyGridUnits≠bodyTextColumns)' },
-                          { key:'noteTextColumns',  label:'주석 내부 단', hint:'주석 열 안 단 수' },
-                        ].map(({ key, label, hint }) => (
-                          <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                            <span style={{ fontSize:9, color:T.muted, fontWeight:600,
-                              textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-                            <input type="number" min={1} max={10}
-                              value={styleConfig[key] || 1}
-                              onChange={e => {
-                                const v = Math.max(1, parseInt(e.target.value) || 1);
-                                setStyleConfig(s => ({ ...s, [key]: v }));
-                              }}
-                              style={{ width:52, padding:"5px 7px", fontSize:12,
-                                border:`1px solid ${T.border}`, borderRadius:4,
-                                background:T.bg, color:T.ink, textAlign:"center" }} />
-                            <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>{hint}</span>
-                          </div>
-                        ))}
+                        <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                            textTransform:"uppercase", letterSpacing:"0.07em" }}>본문 내부 단</span>
+                          <input type="number" min={1} max={styleConfig.variableGrid?.body || 1}
+                            value={styleConfig.bodyTextColumns || 1}
+                            onChange={e => {
+                              setStyleConfig(s => {
+                                const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.body || 1);
+                                return { ...s, bodyTextColumns: v };
+                              });
+                            }}
+                            style={{ width:52, padding:"5px 7px", fontSize:12,
+                              border:`1px solid ${T.border}`, borderRadius:4,
+                              background:T.bg, color:T.ink, textAlign:"center" }} />
+                          <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>본문 열 안 단 수 (bodyGridUnits≠bodyTextColumns)</span>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                          <span style={{ fontSize:9, color:T.muted, fontWeight:600,
+                            textTransform:"uppercase", letterSpacing:"0.07em" }}>주석 내부 단</span>
+                          <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
+                            value={styleConfig.noteTextColumns || 1}
+                            onChange={e => {
+                              setStyleConfig(s => {
+                                const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.note || 1);
+                                return { ...s, noteTextColumns: v };
+                              });
+                            }}
+                            style={{ width:52, padding:"5px 7px", fontSize:12,
+                              border:`1px solid ${T.border}`, borderRadius:4,
+                              background:T.bg, color:T.ink, textAlign:"center" }} />
+                          <span style={{ fontSize:9, color:T.muted, lineHeight:1.3 }}>주석 열 안 단 수</span>
+                        </div>
                       </div>
                       {/* 주석 위치 선택 */}
                       <div style={{ marginTop:8 }}>
