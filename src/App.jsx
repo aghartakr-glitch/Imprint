@@ -6,8 +6,22 @@
 // Pipeline: 텍스트 → analyzeText → scoreKw → semanticRerank → inferAlignment → LaTeX → Refine
 
 const IMPRINT_VERSION = "1.3.0";
-const LOG_FULL_LATEX = true;
 const ENABLE_GOOGLE_SHEET_LOGGING = false;
+
+// ── LaTeX escape (note content용 — 특수문자 안전 처리) ─────────────
+const latexEscNote = s => String(s || '')
+  .replace(/\\/g, '\\textbackslash{}')
+  .replace(/~/g, '\\textasciitilde{}')
+  .replace(/\^/g, '\\textasciicircum{}')
+  .replace(/\$/g, '\\$').replace(/\{/g, '\\{').replace(/\}/g, '\\}')
+  .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/#/g, '\\#').replace(/_/g, '\\_');
+
+// ── 유니코드 위첨자 / 원문자 → 숫자 매핑 (상수) ─────────────────────
+const SUP_TO_NUM = {'¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+const CIRC_TO_NUM = {'①':'1','②':'2','③':'3','④':'4','⑤':'5','⑥':'6','⑦':'7','⑧':'8','⑨':'9','⑩':'10'};
+// 역방향: 숫자 → 위첨자/원문자 (마커 정규화용)
+const NUM_TO_SUP  = Object.fromEntries(Object.entries(SUP_TO_NUM).map(([k,v])=>[v,k]));
+const NUM_TO_CIRC = Object.fromEntries(Object.entries(CIRC_TO_NUM).map(([k,v])=>[v,k]));
 
 function makeGenerationId() {
   const now = new Date();
