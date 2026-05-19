@@ -3856,9 +3856,8 @@ REQUIRED OUTPUT FORMAT:
                           ["자간 설정", pkg?.why_tracking],
                         ].filter(([,v]) => v).map(([label, value]) => (
                           <div key={label} style={{ padding:"14px 16px", background:T.surface,
-                            borderRadius:7, border:`1px solid ${T.border}` }}>
-                            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em",
-                              textTransform:"uppercase", color:T.muted, marginBottom:5 }}>
+                            borderRadius:3, border:`1px solid ${T.border}` }}>
+                            <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:5 }}>
                               {label}
                             </div>
                             <div style={{ fontSize:13, color:T.ink, lineHeight:1.7 }}>{value}</div>
