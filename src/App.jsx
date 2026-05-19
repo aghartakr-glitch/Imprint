@@ -3785,12 +3785,11 @@ REQUIRED OUTPUT FORMAT:
                   ].filter(([,v]) => v).map(([label, value]) => (
                     <div key={label} style={{
                       display:"inline-flex", alignItems:"center", gap:5,
-                      padding:"5px 10px", borderRadius:20,
+                      padding:"4px 9px", borderRadius:3,
                       border:`1px solid ${T.border}`, background:T.bg,
                     }}>
-                      <span style={{ fontSize:9, fontWeight:700, color:T.muted,
-                        textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-                      <span style={{ fontSize:11.5, fontWeight:600, color:T.ink,
+                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
+                      <span style={{ fontSize:11, fontWeight:600, color:T.ink,
                         fontFamily:T.mono }}>{value}</span>
                     </div>
                   ))}
