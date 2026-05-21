@@ -83,7 +83,7 @@ const DB = [
   {g:"그래픽디자인",pub_type:"잡지·저널",t:"거울들 4권—독립 스튜디오",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/mirrors-4-independent-practice-kr/",img:"025_거울들 4권—독립 스튜디오",kw:["그래픽디자인","잡지·저널","거울들","4권","독립","스튜디오","대각선","규칙선과","세로","회전","텍스트(MIRRORS)를","반복적으로","노토","산스"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:225,h:297},m:{상:5,하:9,안:20,밖:10},c:{구성:"4단",간격:4},b:{크기:8,행간:9,자간:-10},ty:{이름:"노토 산스 / 본고딕 / 윈딩스 / 유니버스 넥스트",분류:"고딕"},pn:"하단-내측-가로",pn_x_left:"216.7mm",pn_y_left:"245.4mm",pn_x_right:"8.3mm",pn_y_right:"245.4mm",pn_size:"7.5pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"8pt",subheading:"-",footnote:"7.5pt",특:"대각선 규칙선과 세로 회전 텍스트(MIRRORS)를 반복적으로 배치해 시리즈 정체성을 유지하고, 도판과 텍스트를 모듈 단위로 배열한다. 이미지 페이지와 텍스트 페이지가 교차하며 리듬을 형성한다.",summary:"일본인의 시점에서 한국 그래픽 디자인을 조명하는 연재 ‘거울들’의 4번째 권. 독립 스튜디오 신신과 오디너리 피플의 작업을 중심으로 2000년대 이후 독립 디자인 실천을 분석한다.",why_dim:"잡지 아이디어 본지 내 삽입되는 ‘책 속의 책’ 구조로 시각적 분리와 독립된 읽기 단위를 확보하기 위한 대형 판형",why_margin:"이미지와 텍스트 혼합 지면에서 정보 밀도와 시각적 여백의 균형을 유지",why_font:"잡지 기사 특성상 명확한 정보 전달과 다양한 언어 혼용 환경에서의 가독성을 확보하기 위해 고딕 계열을 중심으로 구성",why_tracking:"2단 구성에서 판독성을 유지하고 이미지 캡션 및 보조 정보와의 위계를 조정",layout_type:"본문 4단 + 이미지 가변 배치"},
   {g:"아트이론·비평",pub_type:"실험출판",t:"포스트텍스처",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/post-texture-kr/",img:"026_포스트텍스처",kw:["아트이론·비평","실험출판","포스트텍스처","1단","텍스트","중심","일반","소설형","SM","신명조"],align_title:"중앙 정렬",align_body:"양끝 정렬",align_note:"좌측 정렬",f:{w:105,h:150},m:{상:10,하:16,안:12,밖:12},c:{구성:"1단",간격:0},b:{크기:10,행간:17,자간:-20},ty:{이름:"SM 신명조 / 푸르니에",분류:"명조"},pn:"하단-외측-가로",pn_x_left:"7.5mm",pn_y_left:"137mm",pn_x_right:"93.5mm",pn_y_right:"137mm",pn_size:"7pt",pn_font:"명조",pn_style:"흑색 / 가로 / 숫자",running:"-",subheading:"12.5pt",footnote:"6.5pt",특:"1단 텍스트 중심 일반 소설형",summary:"음악·무용·미술의 교차점에서 시간과 신체 감각을 ‘텍스처’ 개념으로 재해석하고, 이를 넘어서기 위한 동시적·다성적 읽기 구조를 제안하는 이론서. 다중 텍스트 흐름을 통해 비선형 독서 경험을 설계한다.",why_dim:"소형 판형으로 독자의 손에 밀착된 상태에서 다중 텍스트 흐름을 능동적으로 탐색하도록 유도",why_margin:"다중 텍스트 흐름과 시선 이동을 유도하기 위한 여백 확보 및 기준선 역할",why_font:"이론 텍스트의 밀도 높은 독해를 위해 명조 계열을 사용하고, 전통적 독서 경험과 실험적 레이아웃 간 긴장 형성",why_tracking:"다중 텍스트 흐름에서도 기본 가독성을 유지하기 위한 중립 자간",layout_type:"본문 1단"},
   {g:"타이포그래피",pub_type:"단행본",t:"트랜스포머—아이소타이프 도표를 만드는 원리",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/the-transformer-rev-edn-kr/",img:"027_트랜스포머—아이소타이프 도표를 만드는 원리",kw:["타이포그래피","단행본","트랜스포머","아이소타이프","도표를","만드는","원리","도표","이미지와","본문","텍스트가","병렬로","배치되며","산돌","그레타산스"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:150,h:210},m:{상:24,하:15,안:14,밖:12},c:{구성:"11단",간격:5},b:{크기:9,행간:17,자간:0},ty:{이름:"산돌 그레타산스 / 산돌 정체",분류:"명조"},pn:"상단-우측-가로",pn_x_left:"128.6mm",pn_y_left:"8.9mm",pn_x_right:"133.1mm",pn_y_right:"137mm",pn_size:"8pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"9pt",subheading:"-",footnote:"7pt",특:"도표 이미지와 본문 텍스트가 병렬로 배치되며, 캡션과 주석이 하단 및 측면에 정리되는 학술서 구조. 페이지 상단에 러닝헤드와 구획선 사용",summary:"아이소타이프의 핵심 원리인 ‘변형’을 중심으로 정보 디자인의 시각화 방법을 설명하는 이론서. 도표와 이미지, 텍스트를 통해 정보의 구조적 변환 방식을 분석한다.",why_dim:"도표와 텍스트를 병렬적으로 안정적으로 배치하기 위한 표준적인 중형 판형",why_margin:"도판과 텍스트의 균형 배치 및 주석 영역 확보",why_font:"정보 전달 중심의 도표 설명과 본문 독해를 병행하기 위해 명조를 혼합 사용",why_tracking:"도표와 텍스트 간 위계 구분과 안정적 가독성 유지",layout_type:"본문 8단 + 주석 3단"},
-  {g:"아트이론·비평",pub_type:"잡지·저널",t:"계간 시청각 5호",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/avp-quarterly-5-kr/",img:"028_계간 시청각 5호",kw:["아트이론·비평","잡지·저널","계간","시청각","5호","기본은","1단","구성이나","특정","글에서","3단","SM","태고딕"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:126,h:204},m:{상:9,하:24,안:15,밖:10},c:{구성:"6단",간격:3},b:{크기:6811,행간:91117,자간:0},ty:{이름:"SM 태고딕 / 메종 노이에",분류:"고딕"},pn:"하단-내측-가로",pn_x_left:"104mm",pn_y_left:"191.2mm",pn_x_right:"111mm",pn_y_right:"191.2mm",pn_size:"11pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"11pt",subheading:"17pt",footnote:"8pt",특:"기본은 1단 구성이나 특정 글에서 3단 변형. 아이콘(삼각형)으로 텍스트 일부 대체, 구획선과 리스트 구조 강조",summary:"텍스트 일부를 삼각형 아이콘으로 치환하고 규칙 기반 타이포그래피에 예외를 허용하는 미술 평론지. 일부 글은 3단 구성으로 변주됨",why_dim:"저널 형식의 가독성과 실험적 타이포그래피를 병행하기 위한 판형",why_margin:"규칙 기반 레이아웃 안에서 아이콘과 변형 수용",why_font:"비평지의 중립성과 실험적 아이콘 시스템을 동시에 반영",why_tracking:"기본 가독성 유지하면서 변형 구조 대응",layout_type:"본문 1-2-3단 가변"},
+  {g:"아트이론·비평",pub_type:"잡지·저널",t:"계간 시청각 5호",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/avp-quarterly-5-kr/",img:"028_계간 시청각 5호",kw:["아트이론·비평","잡지·저널","계간","시청각","5호","기본은","1단","구성이나","특정","글에서","3단","SM","태고딕"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:126,h:204},m:{상:9,하:24,안:15,밖:10},c:{구성:"6단",간격:3},b:{크기:9,행간:13,자간:0},ty:{이름:"SM 태고딕 / 메종 노이에",분류:"고딕"},pn:"하단-내측-가로",pn_x_left:"104mm",pn_y_left:"191.2mm",pn_x_right:"111mm",pn_y_right:"191.2mm",pn_size:"11pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"11pt",subheading:"17pt",footnote:"8pt",특:"기본은 1단 구성이나 특정 글에서 3단 변형. 아이콘(삼각형)으로 텍스트 일부 대체, 구획선과 리스트 구조 강조",summary:"텍스트 일부를 삼각형 아이콘으로 치환하고 규칙 기반 타이포그래피에 예외를 허용하는 미술 평론지. 일부 글은 3단 구성으로 변주됨",why_dim:"저널 형식의 가독성과 실험적 타이포그래피를 병행하기 위한 판형",why_margin:"규칙 기반 레이아웃 안에서 아이콘과 변형 수용",why_font:"비평지의 중립성과 실험적 아이콘 시스템을 동시에 반영",why_tracking:"기본 가독성 유지하면서 변형 구조 대응",layout_type:"본문 1-2-3단 가변"},
   {g:"건축·공간",pub_type:"단행본",t:"누가 화이트 큐브를 두려워하랴—그래픽 디자인을 전시하는 전략들",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/whos-afraid-of-the-white-cube-kr/",img:"029_누가 화이트 큐브를 두려워하랴—그래픽 디자인을 전시하는 전략들",kw:["건축·공간","단행본","누가","화이트","큐브를","두려워하랴","그래픽","디자인을","전시하는","전략들","텍스트","중심","단일","컬럼","구조에","이미지","AG","최정호"],align_title:"좌측 정렬, 우측 정렬",align_body:"양끝 정렬",align_note:"양끝 정렬",f:{w:120,h:180},m:{상:27,하:30,안:20,밖:20},c:{구성:"1단",간격:0},b:{크기:9.5,행간:16,자간:0},ty:{이름:"AG 최정호 민부리 / 유니버스",분류:"고딕"},pn:"하단-외측-가로",pn_x_left:"21.4mm",pn_y_left:"14.6mm",pn_x_right:"21.4mm",pn_y_right:"14.6mm",pn_size:"10pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"6pt",subheading:"9.5pt",footnote:"9pt",특:"텍스트 중심 단일 컬럼 구조에 이미지 도판과 캡션을 하단에 배치. 박스 처리된 제목과 인용문으로 위계 형성",summary:"그래픽 디자인을 화이트 큐브 공간에서 어떻게 전시할 것인가를 다루는 비평서. 전시 사례 분석과 이론 텍스트를 병치하며 디자인과 전시 환경의 관계를 탐구",why_dim:"이론 텍스트 중심 독서를 위한 소형 판형",why_margin:"텍스트 중심 독서를 안정화하고 이미지 캡션 영역 확보",why_font:"본문은 고딕으로 장문 가독성을 확보하고 제목과 정보 요소는 고딕으로 대비 형성",why_tracking:"장문 독서에 적합한 안정적 자간",layout_type:"본문 1단"},
   {g:"아트이론·비평",pub_type:"전시도록",t:"국립현대미술관 연구 13집",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/mmca-studies-13-kr/",img:"030_국립현대미술관 연구 13집",kw:["아트이론·비평","전시도록","국립현대미술관","연구","13집","기본","1단","장문","구성에","이미지","페이지","A2","인디펜던트"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:185,h:260},m:{상:9,하:36,안:17,밖:12},c:{구성:"4단",간격:2},b:{크기:9,행간:17,자간:10},ty:{이름:"A2 인디펜던트 텍스트 / 노토 산스 / 바른바탕체 / 아틀라스 그로테스크",분류:"혼합 (고딕 / 명조)"},pn:"하단-중앙-가로",pn_x_left:"84.1mm",pn_y_left:"235.2mm",pn_x_right:"86.3mm",pn_y_right:"235.2mm",pn_size:"6.5pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"6.5pt",subheading:"16pt",footnote:"6.5pt",특:"기본 1단 장문 구성에 이미지 페이지 및 2단 혼합. 캡션과 본문을 분리하여 정보 위계 명확화",summary:"MMCA 연구 총서로 전시 역사와 미술 담론을 다루는 학술 출판물. 이미지 도판과 장문 텍스트를 병치하며 전시 맥락을 분석",why_dim:"도판과 장문 텍스트를 병행하는 학술서에 적합한 중대형 판형",why_margin:"이미지와 텍스트를 안정적으로 분리하고 하단 정보 영역 확보",why_font:"학술 텍스트 가독성을 위한 명조와 정보 계층 구분을 위한 고딕 혼합",why_tracking:"장문 독서에 적합한 중립적 자간",layout_type:"본문 3단 + 소제목 2단 + 주석 1단"},
   {g:"현대미술",pub_type:"전시도록",t:"빛—영국 테이트미술관 특별전",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/light-works-from-the-tate-collection-catalog-kr/",img:"031_빛—영국 테이트미술관 특별전",kw:["현대미술","전시도록","빛","영국","테이트미술관","특별전","좌측","텍스트","우측","이미지","구성","반복.","FF","바우"],align_title:"중앙 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:180,h:240},m:{상:9,하:28,안:15,밖:9},c:{구성:"4단",간격:6},b:{크기:9,행간:14,자간:0},ty:{이름:"FF 바우 / SM 중고딕 / 도멘 디스플레이 / 블랑",분류:"혼합 (고딕 / 명조 / 디스플레이)"},pn:"하단-외측-가로",pn_x_left:"43.4mm",pn_y_left:"228.4mm",pn_x_right:"133.2mm",pn_y_right:"228.4mm",pn_size:"7pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"-",subheading:"12pt",footnote:"8pt",특:"좌측 텍스트, 우측 이미지 구성 반복. 도판 중심 레이아웃과 설명 텍스트 병치",summary:"‘빛’을 주제로 한 테이트 컬렉션 전시 도록으로 역사적 작품과 현대 작품을 병치하며 빛과 시각 경험을 탐구",why_dim:"작품 이미지 재현과 텍스트 병행에 적합한 중형 판형",why_margin:"이미지와 텍스트 균형 배치 및 하단 캡션 공간 확보",why_font:"전시 타이틀 강조를 위한 디스플레이와 본문 가독성을 위한 혼합 사용",why_tracking:"작품 설명 가독성을 위한 중립 자간",layout_type:"본문 2단 + 주석 2단(1열 한글, 1열 영어 총 2열)"},
@@ -171,7 +171,7 @@ const DB = [
   {g:"시각문화·매체",pub_type:"잡지·저널",t:"옵.신 6호",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/ob-scene-6-kr/",img:"113_옵.신 6호",kw:["시각문화·매체","잡지·저널","옵.신","6호","면에는","일정","두께의","검은","프레임이","반복되고","별도","명시"],align_title:"중앙 정렬",align_body:"양끝 정렬",align_note:"-",f:{w:297,h:420},m:{상:35,하:308,안:36,밖:36},c:{구성:"2단",간격:8},b:{크기:11.5,행간:17,자간:0},ty:{이름:"별도 명시 없음",분류:"고딕"},pn:"하단-중앙-가로",pn_x_left:"135.1mm",pn_y_left:"340.8mm",pn_x_right:"135.1mm",pn_y_right:"340.8mm",pn_size:"122pt",pn_font:"명조",pn_style:"흑색 / 가로 / 숫자",running:"11.5pt",subheading:"11.5pt",footnote:"11.5pt",특:"각 면에는 일정 두께의 검은 선 프레임이 반복되고, 그 안쪽에서 본문은 좌상단에 몰리거나 세로·사선으로 배치되며, 이미지도 하단이나 측면에 고립되어 나타난다. 큰 쪽번호와 소수의 색상(적·청·흑)이 강한 방향성을 만들고, 일반적인 기사형 조판 대신 인용 파편들을 공간적으로 배열하는 방식이 핵심이다.",summary:"다원 예술 저널 『옵.신』 6호. A3 대형 판형과 중철 제본을 사용해 포스터와 잡지의 중간 같은 물성을 만들고, 다양한 인용 텍스트와 이미지로 ‘허공’의 의미와 불가능한 형태를 더듬는다. 5호가 설치 겸 퍼포먼스 형태였다면 6호는 그것에 대한 인쇄물 형식의 응답으로서, 국립현대미술관 서울관 전시 『보이드』와 연계해 출간되었다.",why_dim:"일반 잡지보다 훨씬 큰 A3 판형을 택해 읽는 매체이면서 동시에 벽면 포스터처럼 작동하게 하려는 선택. 텍스트와 이미지가 페이지 안에서 흩어지거나 부유하는 감각을 극대화하고, 허공·보이드·설치라는 전시 맥락을 물리적 크기로 직접 번역한다.",why_margin:"네 변을 따라 검은 선 프레임을 두고 내부를 거의 비워 둔 레이아웃이 기본이다. 여백은 단순한 빈 공간이 아니라 텍스트와 이미지가 떠다니는 장(field)으로 작동하며, A3 크기 안에서 작은 활자와 큰 쪽번호, 기울어진 문장, 고립된 이미지가 서로 멀리 떨어진 채 긴장 관계를 만든다.",why_font:"이 호의 핵심은 특정 서체의 브랜드감보다 배치와 방향성에 있다. 작은 본문은 담담하게 정보를 전달하지만, 회전·사선·세로 조판과 숫자 확대, 적청색 대비를 통해 활자가 공간적 오브제로 바뀐다. 전유와 몽타주, 파편적 인용이라는 편집 전략이 서체 선택보다 조판 행위에서 더 강하게 드러난다.",why_tracking:"넓은 판형 안에서 활자가 고립되어 보여야 하므로 자간은 중립 또는 약간 확장 쪽이 어울리고, 사선·세로 배치에서는 문자 간격이 형태를 더 분명하게 드러내는 역할을 한다. 본문은 압축되지 않지만, 공간 전체는 비어 있음으로 인해 오히려 더 큰 긴장감을 갖는다.",layout_type:"본문 1-2단 가변"},
   {g:"시각문화·매체",pub_type:"잡지·저널",t:"1990년대",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/heren-kr/",img:"114_1990년대",kw:["시각문화·매체","잡지·저널","1990년대","페이지마다","패션","사진이","크게","놓이고","위에","별도","명시"],align_title:"-",align_body:"-",align_note:"-",f:{w:240,h:335},m:{상:0,하:0,안:0,밖:0},c:{구성:"-",간격:0},b:{크기:0,행간:0,자간:0},ty:{이름:"별도 명시 없음",분류:"혼합 / 비명시"},pn:"-",pn_x_left:null,pn_y_left:null,pn_x_right:null,pn_y_right:null,pn_size:"-",pn_font:"-",pn_style:"-",running:"-",subheading:"-",footnote:"-",특:"페이지마다 패션 사진이 크게 놓이고, 그 위에 과거 패션 매거진 디자인에서 유도한 흐릿한 검은 실루엣, 얼룩, 타이포 잔상 같은 요소가 덧씌워진다. 일반적인 캡션 중심 화보 편집이 아니라 이미지와 그림자 레퍼런스가 한 화면 안에서 충돌하도록 구성되어, ‘직접적이면서도 은밀한’ 차용 방식을 시각적으로 드러낸다.",summary:"헤렌 2016년 11월 호를 위해 만든 패션 에디토리얼. 1990년대 초중반 파비앵 바롱이 이탈리아 보그, 인터뷰, 하퍼스 바자 등에서 만든 이미지를 직접 복제하지 않고, 그 형식 언어만 불러내 흐릿한 그림자 같은 형상으로 변환해 사진 위에 겹쳤다. 결과적으로 페이지는 패션 화보이면서도 유령처럼 과거 디자인의 잔상을 끌어안은 이미지 장이 된다.",why_dim:"패션지 화보의 시원한 이미지 전개와 전면 도판 중심 구성을 수용하기 위한 대형 잡지 판형. 사진의 힘을 충분히 살리면서도, 참조된 1990년대 패션 매거진 디자인의 과장된 여백과 오버레이 효과를 재현하기에 적합하다.",why_margin:"전면 이미지 중심 구성 위에, 흐릿한 검은 형상과 일부 색 번짐이 별도의 레이어처럼 덮인다. 여백은 거의 배경으로 소거되고, 사진 프레임과 오버레이된 그림자 형태가 판면의 긴장을 만든다. 작은 텍스트보다 이미지 간 충돌과 위치 관계가 우선하는 편집이다.",why_font:"이 작업의 핵심은 서체보다 이미지 위에 얹힌 흐릿한 형상이다. 파비앵 바롱식 1990년대 패션 에디토리얼의 인상적인 타이포그래피와 도형 언어를 직접 재현하지 않고, 디테일을 증발시킨 유령 같은 흔적으로 치환함으로써 과거의 스타일을 기억처럼 호출한다. 활자 역시 읽기보다 분위기와 잔상의 일부로 작동했을 가능성이 크다.",why_tracking:"텍스트 비중은 낮고 이미지가 주도하므로 자간·행간은 기능적 수준에서만 조정되었을 가능성이 높다. 대신 중요한 것은 오버레이된 검은 형상이 사진과 맺는 간격, 가장자리의 흐림 정도, 화면 내부의 밀도 차이이며, 이것이 1990년대 패션 이미지의 직접적이면서도 몽환적인 긴장을 만든다.",layout_type:"-"},
   {g:"문학",pub_type:"단행본",t:"사람들이 가득한 트렁크",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/un-baule-pieno-di-gente-kr/",img:"115_사람들이 가득한 트렁크",kw:["문학","단행본","사람들이","가득한","트렁크","전체적으로는","매우","절제된","문학서","레이아웃이지만","본문과","SM","신신명조"],align_title:"중앙 정렬",align_body:"양끝 정렬, 좌측 정렬(일부)",align_note:"양끝 정렬",f:{w:120,h:192},m:{상:15,하:48,안:18,밖:18},c:{구성:"1단",간격:0},b:{크기:10,행간:17,자간:-60},ty:{이름:"SM 신신명조, 시몬치니 개러몬드, 아리따 돋움, 애퍼수",분류:"명조"},pn:"하단-외측-대각선",pn_x_left:"7.2mm",pn_y_left:"176.4mm",pn_x_right:"109.2mm",pn_y_right:"176.4mm",pn_size:"7pt",pn_font:"명조",pn_style:"흑색 / 가로 / 대각선",running:"9pt",subheading:"12pt",footnote:"7pt",특:"전체적으로는 매우 절제된 문학서 레이아웃이지만, 본문과 각주의 관계, 문장 길이와 줄 길이, 서체의 대비를 통해 판면 자체에 은근한 조형성이 생긴다. 표지에서는 녹색 타이포그래피와 흑백 일러스트가 비교적 강한 인상을 주지만, 내지에서는 모든 요소가 무리 없이 정돈되어 자연스러운 읽기 흐름을 만든다.",summary:"안토니오 타부키 선집의 한 권으로, 슬기와 민이 본문 조판 영역에서 자신의 조형적 입장을 가장 선명하게 드러낸 사례 중 하나다. 본문과 각주, 글줄의 리듬과 타이포그래피가 기능적으로 매우 안정적이면서도 현대적인 북 디자인 감각을 자연스럽게 보여 준다. 김광철이 말했듯 우리 시대의 가장 아름답고 급진적인 북 디자인 가운데 하나로 평가될 만한 책이다.",why_dim:"장편 산문과 각주, 문학 텍스트의 호흡을 안정적으로 수용하면서도 손에 잡히는 소설 판형의 친밀함을 유지하기 위한 크기. 문학동네 양장본 계열의 읽기 경험에 맞추어 조형 실험이 과하지 않게 스며들 수 있는 비율이다.",why_margin:"본문과 각주가 한 판면 안에서 자연스럽게 공존하도록 설계된 균형 여백. 장문의 문학 텍스트가 안정적으로 흐르도록 상하 여백을 충분히 두고, 하단에서는 쪽수와 각주, 본문 블록의 위계를 정리한다. 기능적으로 보이지만 실제로는 글줄의 조형감을 세심하게 통제하는 판면이다.",why_font:"본문은 문학 텍스트에 어울리는 명조와 세리프 계열을 중심으로 안정적인 독서감을 확보하고, 보조 정보와 표지 타이포그래피에는 보다 현대적인 산세리프를 병용해 고전성과 동시대성을 함께 드러낸다. 겉으로는 무리 없는 전통적 북 디자인처럼 보이지만, 실제로는 글줄과 자간, 본문-각주 관계에서 조형적 긴장이 매우 정교하게 다듬어져 있다.",why_tracking:"문학 텍스트의 자연스러운 호흡을 위해 과장되지 않은 자간과 넉넉한 행간을 유지하되, 지나치게 느슨하지 않게 글줄의 밀도를 정제하는 방향이다. 이 책의 미덕은 실험성이 전면으로 드러나는 것이 아니라, 읽다 보면 본문 판면 자체가 얼마나 섬세하게 조율되어 있는지 천천히 감지된다는 데 있다.",layout_type:"본문 1단"},
-  {g:"타이포그래피",pub_type:"단행본",t:"소문에 맞서는 진실",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/truth-against-rumour-kr/",img:"116_소문에 맞서는 진실",kw:["타이포그래피","단행본","소문에","맞서는","진실","처음에는","조용한","본문처럼","시작하지만","같은","문장이","SM","견출명조"],align_title:"우측 정렬",align_body:"우측 정렬",align_note:"우측 정렬",f:{w:218,h:266},m:{상:15,하:22,안:15,밖:52},c:{구성:"1단",간격:0},b:{크기:91114192740,행간:111317243249,자간:0},ty:{이름:"SM 견출명조",분류:"명조"},pn:"하단-외측-가로",pn_x_left:"15mm",pn_y_left:"251.6mm",pn_x_right:"198.7mm",pn_y_right:"251.6mm",pn_size:"7pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자(000)",running:"7pt",subheading:"8.5pt",footnote:"-",특:"처음에는 조용한 본문처럼 시작하지만, 같은 문장이 페이지를 거듭하며 점점 커지고, 결국 활자 획이 미세한 기사 텍스트 덩어리로 드러나며 판면 전체를 덮는다. 활자 크기 스펙을 상단에 표기하고, 하단에는 종이 정보와 쪽번호를 두어, 읽기와 서체 해부가 동시에 일어나게 하는 구성이다.",summary:"페드리고니의 시리즈 간행물 16/3의 세 번째 책. 디자이너에게 주어진 16면과 종이 조건 안에서 활자체 하나를 만드는 일로 시작했고, 길 산스를 연상시키지만 모든 획이 실제로는 증권 시장 관련 신문 기사 텍스트로 이루어진 서체를 제작했다. 그 서체로 비어트리스 워드의 「This Is a Printing Office」를 조판하며, 탈진실 시대의 인쇄와 진실의 물리적 토대라는 문제를 다시 묻는다.",why_dim:"16면짜리 짧은 시리즈 간행물 안에서 활자 크기 변화 자체를 내용으로 삼고, 한 서체가 점진적으로 확대·해체되는 과정을 충분히 보여 주기 위한 판형. 포스터처럼 넓지는 않지만 실험적 타이포그래피 전개를 단계적으로 체험하기에 적절한 크기다.",why_margin:"매 페이지마다 동일한 문장이 다른 크기와 밀도로 반복되며, 작은 본문에서 시작해 활자 전체가 판면을 점유할 정도로 확대된다. 하단과 상단의 작은 정보 요소는 고정되어 있고, 중앙의 텍스트 덩어리가 점차 구조를 바꾸며 커진다. 여백은 활자의 성장과 해체를 관찰하는 실험실 같은 역할을 한다.",why_font:"겉보기에는 고전적인 명조의 골격을 가진 서체처럼 보이지만, 실제로는 모든 획이 신문 기사 문장으로 이루어진 구조다. 즉 읽히는 텍스트가 다시 큰 글자의 재료가 되면서, 인쇄가 진실을 고정하고 전달하는 매체라는 믿음 자체를 형식적으로 되묻는다. 명조의 전통성과 정보의 소음이 한 몸에 포개진 셈이다.",why_tracking:"활자 자체가 기사 텍스트로 이루어져 있으므로 자간과 행간은 일반 본문보다 구조 인식에 더 중요하다. 초기 페이지는 비교적 읽기 가능한 밀도를 유지하지만, 크기가 커질수록 문자 간격보다 획 내부의 미세 텍스트와 전체 형상이 우선되며, 자간은 형태를 무너뜨리지 않는 선에서 중립적으로 유지된다.",layout_type:"본문 1단"},
+  {g:"타이포그래피",pub_type:"단행본",t:"소문에 맞서는 진실",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/truth-against-rumour-kr/",img:"116_소문에 맞서는 진실",kw:["타이포그래피","단행본","소문에","맞서는","진실","처음에는","조용한","본문처럼","시작하지만","같은","문장이","SM","견출명조"],align_title:"우측 정렬",align_body:"우측 정렬",align_note:"우측 정렬",f:{w:218,h:266},m:{상:15,하:22,안:15,밖:52},c:{구성:"1단",간격:0},b:{크기:9.5,행간:15,자간:0},ty:{이름:"SM 견출명조",분류:"명조"},pn:"하단-외측-가로",pn_x_left:"15mm",pn_y_left:"251.6mm",pn_x_right:"198.7mm",pn_y_right:"251.6mm",pn_size:"7pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자(000)",running:"7pt",subheading:"8.5pt",footnote:"-",특:"처음에는 조용한 본문처럼 시작하지만, 같은 문장이 페이지를 거듭하며 점점 커지고, 결국 활자 획이 미세한 기사 텍스트 덩어리로 드러나며 판면 전체를 덮는다. 활자 크기 스펙을 상단에 표기하고, 하단에는 종이 정보와 쪽번호를 두어, 읽기와 서체 해부가 동시에 일어나게 하는 구성이다.",summary:"페드리고니의 시리즈 간행물 16/3의 세 번째 책. 디자이너에게 주어진 16면과 종이 조건 안에서 활자체 하나를 만드는 일로 시작했고, 길 산스를 연상시키지만 모든 획이 실제로는 증권 시장 관련 신문 기사 텍스트로 이루어진 서체를 제작했다. 그 서체로 비어트리스 워드의 「This Is a Printing Office」를 조판하며, 탈진실 시대의 인쇄와 진실의 물리적 토대라는 문제를 다시 묻는다.",why_dim:"16면짜리 짧은 시리즈 간행물 안에서 활자 크기 변화 자체를 내용으로 삼고, 한 서체가 점진적으로 확대·해체되는 과정을 충분히 보여 주기 위한 판형. 포스터처럼 넓지는 않지만 실험적 타이포그래피 전개를 단계적으로 체험하기에 적절한 크기다.",why_margin:"매 페이지마다 동일한 문장이 다른 크기와 밀도로 반복되며, 작은 본문에서 시작해 활자 전체가 판면을 점유할 정도로 확대된다. 하단과 상단의 작은 정보 요소는 고정되어 있고, 중앙의 텍스트 덩어리가 점차 구조를 바꾸며 커진다. 여백은 활자의 성장과 해체를 관찰하는 실험실 같은 역할을 한다.",why_font:"겉보기에는 고전적인 명조의 골격을 가진 서체처럼 보이지만, 실제로는 모든 획이 신문 기사 문장으로 이루어진 구조다. 즉 읽히는 텍스트가 다시 큰 글자의 재료가 되면서, 인쇄가 진실을 고정하고 전달하는 매체라는 믿음 자체를 형식적으로 되묻는다. 명조의 전통성과 정보의 소음이 한 몸에 포개진 셈이다.",why_tracking:"활자 자체가 기사 텍스트로 이루어져 있으므로 자간과 행간은 일반 본문보다 구조 인식에 더 중요하다. 초기 페이지는 비교적 읽기 가능한 밀도를 유지하지만, 크기가 커질수록 문자 간격보다 획 내부의 미세 텍스트와 전체 형상이 우선되며, 자간은 형태를 무너뜨리지 않는 선에서 중립적으로 유지된다.",layout_type:"본문 1단"},
   {g:"시각문화·매체",pub_type:"잡지·저널",t:"국립아시아문화전당 예술극장—2015~2016 리뷰",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/asia-culture-center-theater-2015-2016-review-kr/",img:"117_국립아시아문화전당 예술극장—2015~2016 리뷰",kw:["시각문화·매체","잡지·저널","국립아시아문화전당","예술극장","2015~2016","리뷰","권은","세로형으로","조직된","기관","리뷰와","사업","노이에","하스"],align_title:"좌측 정렬",align_body:"양끝 정렬, 좌측 정렬(일부)",align_note:"좌측 정렬",f:{w:210,h:300},m:{상:12,하:12,안:18,밖:12},c:{구성:"2단",간격:7},b:{크기:10,행간:16,자간:0},ty:{이름:"노이에 하스 그로테스크",분류:"고딕"},pn:"하단-우측-가로",pn_x_left:"146mm",pn_y_left:"292.3mm",pn_x_right:"152mm",pn_y_right:"292.3mm",pn_size:"8pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자(000)",running:"-",subheading:"10pt",footnote:"6pt",특:"한 권은 세로형으로 조직된 기관 리뷰와 사업 보고의 흐름을 따르고, 다른 한 권은 가로형으로 브로슈어와 행사 자료를 묶어 아카이브 열람에 가깝게 작동한다. 두 책의 방향 차이가 곧 내용 차이를 설명하며, 케이스와 새 표지가 전체를 하나의 시스템으로 정리한다.",summary:"국립아시아문화전당 예술극장에서 김성희가 첫 예술감독으로 재직하던 시기의 사업을 정리한 두 권짜리 간행물. 1권은 내부 보고서 성격의 세로형 문서, 2권은 행사별 브로슈어를 모은 가로형 책으로 구성되며, 같은 판형 안에서 방향만 달리해 복잡한 기관 활동을 병렬적으로 묶었다. 이를 통합하기 위해 새 표지와 단순한 판지 케이스를 더해 전체를 하나의 세트로 정리했다.",why_dim:"기관의 방대한 사업 기록과 브로슈어 아카이브를 충분히 수용하기 위한 대형 판형. 같은 크기에서 세로형과 가로형을 병치해 성격이 다른 두 권을 한 세트 안에 통합하면서도, 보고서와 자료집이라는 이중 구조를 물리적으로 분명히 드러내기 위한 선택이다.",why_margin:"큰 판형 안에 장문 본문, 사진, 연보, 브로슈어 이미지, 목록을 안정적으로 수용하는 기관 간행물형 판면이다. 1권은 리뷰와 해설, 사업 정리를 위한 문서적 구조가 중심이고, 2권은 가로 방향의 아카이브 열람성을 살린 이미지 중심 구조로 짜였다. 동일한 크기와 여백 체계가 두 권의 차이를 과도하게 벌리지 않고 묶어 준다.",why_font:"노이에 하스 그로테스크의 중립적이고 제도적인 성격이 기관 간행물의 공공성과 잘 맞는다. 과장 없는 고딕 계열을 사용해 공연예술의 다층적 내용을 감정적으로 포장하기보다, 리뷰·기록·자료라는 서로 다른 정보 층위를 차분하게 정리하는 쪽에 무게를 둔다.",why_tracking:"기관 간행물답게 본문은 안정적인 판독성을 우선해 중립 자간과 넉넉한 행간을 유지하고, 큰 제목이나 세로 면주에서는 방향성과 위계를 위해 다소 응축된 밀도를 취했을 가능성이 높다. 두 권의 방향 전환에도 동일한 리듬을 유지하는 것이 핵심이다.",layout_type:"본문 2단"},
   {g:"그래픽디자인",pub_type:"전시도록",t:"그래픽 디자인, 2005~2015, 서울—299개 어휘",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/299-terms-kr/",img:"118_그래픽 디자인, 2005~2015, 서울—299개 어휘",kw:["그래픽디자인","전시도록","그래픽","디자인","2005~2015","서울","299개","어휘","펼침은","좌우에","서로","다른","표제어","항목이","바른바탕체","프레스코"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"좌측 정렬",f:{w:128,h:188},m:{상:26,하:27,안:15,밖:19},c:{구성:"1단",간격:0},b:{크기:10,행간:17,자간:0},ty:{이름:"바른바탕체, 프레스코",분류:"명조"},pn:"하단-외측-가로",pn_x_left:"25.7mm",pn_y_left:"169.8mm",pn_x_right:"96.3mm",pn_y_right:"169.8mm",pn_size:"9pt",pn_font:"명조",pn_style:"흑색 / 가로 / 숫자",running:"10pt",subheading:"10pt",footnote:"8.5pt",특:"각 펼침은 좌우에 서로 다른 표제어 항목이 배치되는 사전형 구조를 기본으로 한다. 표제어와 영문 번역, 설명문이 정갈하게 정렬되고, 상호 참조 항목은 하이라이트 처리되어 항목 간 네트워크를 시각적으로 드러낸다. 표지는 최소한의 정보만 두고, 내용부의 반복 구조가 책 전체의 정체성을 만든다.",summary:"일민미술관에서 열린 전시 『그래픽 디자인, 2005~2015, 서울』과 연계된 사전 형식의 간행물. 2005~2015년 서울 그래픽 디자인 장면을 299개의 어휘로 정리하며, 단순한 타이포그래피와 편리한 판형, 실용적인 합성 수지 표지를 통해 참고서이자 동시대 디자인 담론서의 성격을 함께 갖춘다. 상호 참조 항목은 하이라이트 효과로 표시되어 사전적 탐색 구조를 강화한다.",why_dim:"사전처럼 손에 잡히고 반복 열람하기 쉬운 휴대성 있는 판형. 장문의 이론서보다 가볍고, 전시 연계 참고서로서 빠르게 넘겨보거나 특정 항목을 찾아보기에 적합한 비율이다.",why_margin:"사전형 읽기 구조에 맞춰 본문과 표제어, 영문 병기, 쪽번호가 안정적으로 들어가는 균형 여백을 유지한다. 과장 없는 판면 안에서 표제어와 설명문이 규칙적으로 반복되며, 하단 여백은 페이지 탐색과 참조 리듬을 정돈한다.",why_font:"본문과 표제어에는 차분하고 읽기 쉬운 바른바탕체가 중심을 이루고, 보조적인 영문이나 대비 요소에는 프레스코가 사용되어 사전 특유의 정돈된 지식 체계와 약간의 개성을 함께 만든다. 전반적으로는 과시적이지 않고, 참고서처럼 오래 읽혀도 피로하지 않는 활자 선택이다.",why_tracking:"사전식 짧은 항목 설명과 반복되는 표제어 구조를 안정적으로 읽히게 하기 위해 자간은 중립적으로 유지하고, 행간은 약간 넉넉하게 두어 항목 간 구분과 탐색성을 높인다. 하이라이트된 상호 참조 항목이 본문 안에서 자연스럽게 떠오르도록 전체 간격은 과도하게 조이지 않는다.",layout_type:"본문 1단"},
   {g:"현대미술",pub_type:"단행본",t:"갱생 150116~160115",designer:"슬기와 민 (Sulki and Min)",src:"https://www.sulki-min.com/wp/rehab-kr/",img:"119_갱생 150116~160115",kw:["현대미술","단행본","갱생","150116~160115","날짜별","식단","기록을","중심으로","한국어와","영어가","노토","산스"],align_title:"좌측 정렬",align_body:"좌측 정렬",align_note:"-",f:{w:105,h:150},m:{상:5,하:71,안:10,밖:10},c:{구성:"1단",간격:0},b:{크기:10,행간:13,자간:20},ty:{이름:"노토 산스 / 본고딕, 아틀라스 그로테스크",분류:"혼합 (고딕 / 그로테스크)"},pn:"상단-우측-가로",pn_x_left:"89mm",pn_y_left:"4.5mm",pn_x_right:"89mm",pn_y_right:"4.5mm",pn_size:"9pt",pn_font:"고딕",pn_style:"흑색 / 가로 / 숫자",running:"-",subheading:"-",footnote:"-",특:"날짜별 식단 기록을 중심으로 한국어와 영어가 병기되고, 시간표처럼 정리된 텍스트와 작은 사진이 반복되는 편집이다. 한 해 동안의 기록을 달력, 일기, 데이터 로그의 중간 형식처럼 구성하며, 파스텔 별색 인쇄가 전반적인 톤을 부드럽게 묶는다.",summary:"Sasa[44]가 술을 끊고 스스로 갱생한 12개월 동안 매일 섭취한 식단을 기록한 책. 작가가 요청한 러블리즈 「안녕」 뮤직비디오의 색감을 반영하기 위해 일반 원색 잉크 대신 파스텔 계열 별색 잉크를 사용했고, 한국어와 영어가 함께 배치된 일기적 데이터가 차분한 리듬으로 누적된다.",why_dim:"하루하루의 식단 기록을 손에 쥐고 읽는 일기나 수첩처럼 경험하게 하는 소형 판형. 긴 기간의 축적을 부담 없이 넘겨 볼 수 있고, 데이터성 기록물을 친밀하고 사적인 독서 경험으로 전환하기에 적합하다.",why_margin:"작은 판형 안에 날짜, 시간, 음식명, 인명, 사진이 규칙적으로 반복되는 구조다. 상단과 하단의 정보는 작고 담담하게 정리되고, 중간에는 하루를 대표하는 사진이나 목록이 놓인다. 넓은 여백 덕분에 기록의 누적이 과잉 데이터가 아니라 차분한 생활 리듬처럼 읽힌다.",why_font:"노토 산스 계열의 중립적이고 안정적인 본문 서체와 아틀라스 그로테스크의 세련된 현대성이 결합해, 사적인 기록과 동시대적 디자인 감각을 함께 만든다. 음식명과 시간표, 사람 이름이 반복적으로 등장하는 데이터형 텍스트를 과장 없이 정돈하면서도, 별색 인쇄와 어울리는 부드러운 인상을 유지한다.",why_tracking:"작은 판형에서 빽빽한 일정표처럼 보이지 않게 하려면 본문은 중립 자간에 약간 여유 있는 행간이 적절하다. 기록물의 반복성을 살리면서도 파스텔 색면과 부드럽게 어울리도록 문자 간격은 과도하게 조이지 않는 편이 맞다.",layout_type:"본문 1단"},
@@ -458,7 +458,7 @@ function PagePreview({ p, bodyText }) {
       ))}
       {/* 쪽번호 */}
       {pos && pos !== "없음" && (
-        <div style={{ position:"absolute", left:pnX, top:pnY, fontSize:7, color:"#aaa", transform:"translateX(-50%)", fontFamily:"monospace", zIndex:3 }}>1</div>
+        <div style={{ position:"absolute", left:pnX, top:pnY, fontSize:7, color:"#aaa", transform:"translateX(-50%)", fontFamily:T.mono, zIndex:3 }}>1</div>
       )}
     </div>
   );
@@ -542,7 +542,7 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
   }
 
   const btnStyle = (accent) => ({
-    padding:"5px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer", borderRadius:5,
+    padding:"5px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer", borderRadius:3,
     border: accent ? "1.5px solid #c8b898" : "1.5px solid #d0d0d0",
     background: accent ? "#fff8f0" : "#fafafa",
     color: accent ? "#7a5a2a" : "#555",
@@ -574,7 +574,7 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
             }
           }}
           style={{ padding:"5px 12px", fontSize:11.5, fontWeight:400, cursor:"pointer",
-            border:"1px solid #e8e8e8", borderRadius:5, background:"transparent", color:"#bbb" }}>
+            border:"1px solid #e8e8e8", borderRadius:3, background:"transparent", color:"#bbb" }}>
           Clear all
         </button>
 
@@ -2230,6 +2230,17 @@ export default function App() {
         } // end else (hasActualNoteContent)
       }
 
+      // ── Auto mode: styContent 빌드 전 multicol 패키지 사전 확보 ──────────────
+      // wrapFixedColumns가 auto 경로에서 실행될 때 \begin{multicols}가 생성되므로
+      // styColPkgs에 multicol이 없으면 검증 오류 발생 → 여기서 미리 추가
+      // 조건: 열 표기 아님(단 레이아웃) + noteUnits 없음(paracol 미사용) + 유효한 단 수
+      if (colMode === 'auto' && !isYeol && !noteUnits) {
+        const _autoEffCols = bodyUnits || baseN;
+        if (_autoEffCols >= 2 && _autoEffCols <= 8 && !colPackages.includes('multicol')) {
+          colPackages += '\\usepackage{multicol}\n';
+        }
+      }
+
       const numCols = userOverride && userMode !== 'auto' && userMode !== 'variable'
         ? parseInt(userMode)
         : (isModuleGrid ? (bodyUnits || 2) : baseN);
@@ -2339,7 +2350,7 @@ export default function App() {
         `% Generated: Imprint v${IMPRINT_VERSION} — ${new Date().toISOString().slice(0,10)}`,
         `% ============================================================`,
         `%`,
-        `% ★ 필요한 폰트 파일 (main.tex과 같은 폴더의 fonts/ 하위에 저장):`,
+        `% 필요한 폰트 파일 (main.tex과 같은 폴더의 fonts/ 하위에 저장):`,
         ...[...new Set([mainFont, sansFont, fnFont].filter(Boolean))].flatMap(name => {
           const m = FONT_MANIFEST[name];
           if (!m) return [];
@@ -2705,9 +2716,12 @@ export default function App() {
           finalBodyContent = buildMissingBodyPlaceholder();
         }
 
-        // 고정 단 구성 보장: 사용자가 fixedColumns > 1 지정 시 multicols 래핑
+        // 단 구성 보장: 고정단(사용자 지정) 또는 자동(DB c.구성 2~5단) — JS가 직접 래핑
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
+        } else if (colMode === 'auto' && baseN >= 2 && baseN <= 5 && !isModuleGrid) {
+          // 자동 모드: DB c.구성 수치 그대로 적용 (AI 힌트 의존 제거)
+          finalBodyContent = wrapFixedColumns(finalBodyContent, baseN, p.c.간격 || 10);
         }
 
         // ── 각주 후처리 — wrapVariableLayout 전에 실행 (paracol 내에서 \footnote 동작 보장) ──
@@ -3326,11 +3340,11 @@ REQUIRED OUTPUT FORMAT:
 
   // ── 장르 힌트 선택지 ────────────────────────────────────────────
   const GENRE_OPTIONS = [
-    // 장르 (11개)
-    "","타이포그래피","그래픽디자인","아트이론·비평","현대미술","전시·큐레이션",
-    "인문·사회","문학","건축·공간","시각문화·매체","사진","기타",
-    // 출판형태 (6개)
-    "전시도록","단행본","잡지·저널","실험출판","아카이브","기관출판",
+    // 장르 (11개) — 가나다순
+    "","건축·공간","그래픽디자인","문학","사진","시각문화·매체",
+    "아트이론·비평","인문·사회","전시·큐레이션","타이포그래피","현대미술","기타",
+    // 출판형태 (6개) — 가나다순
+    "단행본","아카이브","실험출판","잡지·저널","전시도록","기관출판",
   ];
 
   // ── Refine quick hints ──────────────────────────────────────────
@@ -3350,12 +3364,12 @@ REQUIRED OUTPUT FORMAT:
   const [focusedField, setFocusedField] = useState(null);
 
   return (
-    <div style={{ height:"100vh", background:"#F4F3EF", fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+    <div style={{ height:"100vh", background:T.bg, fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:#d0cdc8; border-radius:3px; }
+        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#CCCCCC; border-radius:2px; }
         textarea, input { outline:none; resize:none; font-family:inherit; }
         button { font-family:inherit; }
       `}</style>
@@ -3363,8 +3377,8 @@ REQUIRED OUTPUT FORMAT:
       {/* ══ 헤더 ══════════════════════════════════════════════════════ */}
       <header style={{ height:48, display:"flex", alignItems:"center", gap:12, padding:"0 24px",
         borderBottom:`1px solid ${T.border}`, background:T.surface, flexShrink:0, zIndex:100 }}>
-        <span style={{ fontSize:14, fontWeight:700, letterSpacing:"-0.02em" }}>Imprint</span>
-        <span style={{ fontSize:10, fontFamily:T.mono, color:T.muted,
+        <span style={{ fontSize:14, fontWeight:600, letterSpacing:"-0.02em" }}>Imprint</span>
+        <span style={{ fontSize:11, fontFamily:T.mono, color:T.muted,
           background:T.tagBg, padding:"2px 6px", borderRadius:3 }}>v{IMPRINT_VERSION}</span>
         <span style={{ fontSize:11, color:T.muted }}>편집 디자인 조판 시스템</span>
         <div style={{ flex:1 }} />
@@ -3380,7 +3394,7 @@ REQUIRED OUTPUT FORMAT:
                   if (e.key === 'Enter') saveApiKey(e.target.value.trim());
                   if (e.key === 'Escape') setShowApiInput(false);
                 }}
-                style={{ width:200, padding:"5px 10px", fontSize:12, fontFamily:"monospace",
+                style={{ width:200, padding:"5px 10px", fontSize:12, fontFamily:T.mono,
                   border:`1.5px solid ${T.ink}`, borderRadius:3, background:T.surface, color:T.ink }}
               />
               <button onClick={e => saveApiKey(e.target.closest('div').querySelector('input').value.trim())}
@@ -3469,9 +3483,6 @@ REQUIRED OUTPUT FORMAT:
                       <option key={g} value={g}>{g || "— AI가 자동 판단 —"}</option>
                     ))}
                   </select>
-                  <p style={{ fontSize:11, color:T.muted, marginTop:5, lineHeight:1.5 }}>
-                    비워두면 본문 내용을 분석해서 자동으로 가장 잘 맞는 장르를 찾습니다.
-                  </p>
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:500,
@@ -3523,14 +3534,14 @@ REQUIRED OUTPUT FORMAT:
                         const overflow = isLR && (vg.body + vg.note) > vg.total;
                         return (
                           <>
-                            <div style={{ display:"flex", gap:8, marginTop:4, flexWrap:"wrap" }}>
+                            <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
                               {[
                                 { key:'total', label:'총 그리드' },
                                 { key:'body',  label:'본문 열' },
                                 { key:'note',  label:'주석 열' },
                               ].map(({ key, label }) => (
                                 <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:10, color: (overflow && key !== 'total') ? '#888' : T.muted,
+                                  <span style={{ fontSize:11, color: (overflow && key !== 'total') ? '#888' : T.muted,
                                     fontWeight:500 }}>{label}</span>
                                   <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
                                     value={vg[key] || ''}
@@ -3553,7 +3564,7 @@ REQUIRED OUTPUT FORMAT:
                               ))}
                             </div>
                             {overflow && (
-                              <div style={{ fontSize:10, color:'#777', marginTop:3 }}>
+                              <div style={{ fontSize:11, color:'#777', marginTop:3 }}>
                                 본문({vg.body})+주석({vg.note}) = {vg.body+vg.note} &gt; 총({vg.total}) — 좌/우 배치 시 합이 총 그리드를 넘으면 안 됩니다
                               </div>
                             )}
@@ -3561,8 +3572,8 @@ REQUIRED OUTPUT FORMAT:
                         );
                       })()}
                       {/* 열 간격 */}
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6 }}>
-                        <span style={{ fontSize:10, color:T.muted, fontWeight:500, whiteSpace:"nowrap" }}>열 간격 (mm)</span>
+                      <div style={{ display:"flex", flexDirection:"column", gap:2, marginTop:16 }}>
+                        <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>열 간격 (mm)</span>
                         <input type="number" min={2} max={20} step={1}
                           value={styleConfig.columnGapMm ?? 8}
                           onChange={e => {
@@ -3574,9 +3585,9 @@ REQUIRED OUTPUT FORMAT:
                             background:T.bg, color:T.ink, textAlign:"center" }} />
                       </div>
                       {/* 본문/주석 내부 단 수 — number input */}
-                      <div style={{ display:"flex", gap:12, marginTop:8, flexWrap:"wrap" }}>
+                      <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
                         <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:10, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
+                          <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
                           <input type="number" min={1} max={styleConfig.variableGrid?.body || 1}
                             value={styleConfig.bodyTextColumns || 1}
                             onChange={e => {
@@ -3588,10 +3599,9 @@ REQUIRED OUTPUT FORMAT:
                             style={{ width:52, padding:"5px 7px", fontSize:12,
                               border:`1px solid ${T.border}`, borderRadius:3,
                               background:T.bg, color:T.ink, textAlign:"center" }} />
-                          <span style={{ fontSize:10, color:T.muted, lineHeight:1.3 }}>열 그리드 수와 독립적으로 지정</span>
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                          <span style={{ fontSize:10, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
+                          <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
                           <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
                             value={styleConfig.noteTextColumns || 1}
                             onChange={e => {
@@ -3603,12 +3613,11 @@ REQUIRED OUTPUT FORMAT:
                             style={{ width:52, padding:"5px 7px", fontSize:12,
                               border:`1px solid ${T.border}`, borderRadius:3,
                               background:T.bg, color:T.ink, textAlign:"center" }} />
-                          <span style={{ fontSize:10, color:T.muted, lineHeight:1.3 }}>주석 열 안 단 수</span>
                         </div>
                       </div>
                       {/* 주석 위치 선택 */}
-                      <div style={{ marginTop:8 }}>
-                        <span style={{ fontSize:10, color:T.muted, fontWeight:500,
+                      <div style={{ marginTop:16 }}>
+                        <span style={{ fontSize:11, color:T.muted, fontWeight:500,
                           marginBottom:4, display:"block" }}>주석 위치</span>
                         <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                           {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => {
@@ -3652,10 +3661,10 @@ REQUIRED OUTPUT FORMAT:
           {/* 실행 버튼 */}
           <div style={{ padding:"16px 20px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
             {!apiKey && (
-              <div style={{ marginBottom:10, fontSize:11.5, color:T.muted, padding:"8px 12px",
+              <div style={{ marginBottom:10, fontSize:12, color:T.muted, padding:"8px 12px",
                 background:T.bg, borderRadius:3, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
                 우측 상단 <strong style={{ color:T.ink }}>API 키 입력</strong>을 먼저 완료하세요.<br/>
-                <span style={{ fontSize:10.5 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
+                <span style={{ fontSize:11 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
               </div>
             )}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
@@ -3675,7 +3684,7 @@ REQUIRED OUTPUT FORMAT:
               ) : "조판 스타일 생성하기"}
             </button>
             {err && (
-              <div style={{ marginTop:8, fontSize:11.5, color:"#555", padding:"7px 10px",
+              <div style={{ marginTop:8, fontSize:12, color:"#555", padding:"7px 10px",
                 background:T.bg, borderRadius:3, border:`1px solid ${T.border}` }}>
                 {err}
               </div>
@@ -3692,15 +3701,15 @@ REQUIRED OUTPUT FORMAT:
               background:T.surface, flexShrink:0 }}>
               <div style={{ display:"flex", gap:20, alignItems:"center" }}>
                 {runLog.map((entry, i) => (
-                  <div key={entry.id} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11.5 }}>
+                  <div key={entry.id} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12 }}>
                     {entry.status === "running" ? (
-                      <div style={{ width:8, height:8, border:"1.5px solid #bbb",
+                      <div style={{ width:8, height:8, border:"1.5px solid #CCC",
                         borderTopColor:T.ink, borderRadius:"50%",
                         animation:"spin 0.8s linear infinite", flexShrink:0 }} />
                     ) : entry.status === "done" ? (
                       <div style={{ width:8, height:8, borderRadius:"50%", background:T.ink }} />
                     ) : (
-                      <div style={{ width:8, height:8, borderRadius:"50%", background:"#c44" }} />
+                      <div style={{ width:8, height:8, borderRadius:"50%", background:T.muted }} />
                     )}
                     <span style={{ color: entry.status === "running" ? T.ink : T.muted,
                       fontWeight: entry.status === "running" ? 600 : 400 }}>
@@ -3718,17 +3727,16 @@ REQUIRED OUTPUT FORMAT:
               alignItems:"center", justifyContent:"center", gap:20, padding:48 }}>
               <div style={{ width:40, height:40, border:`1px solid ${T.border}`,
                 borderRadius:4, opacity:0.4 }} />
-              <div style={{ textAlign:"center", lineHeight:1.8 }}>
+              <div style={{ lineHeight:1.8, width:"100%" }}>
                 <div style={{ fontSize:15, fontWeight:600, color:T.ink, marginBottom:8 }}>
                   텍스트를 입력하고 조판 스타일 생성하기를 클릭하세요
                 </div>
-                <div style={{ fontSize:12.5, color:T.muted, maxWidth:380, lineHeight:1.8 }}>
-                  본문을 분석해 253개 편집 디자인 레퍼런스 중 가장 적합한 스타일을 선택하고,<br/>
-                  XeLaTeX 조판 파일을 자동으로 만들어 드립니다.
+                <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>
+                  본문을 분석해 253개 편집 디자인 레퍼런스 중 가장 적합한 스타일을 선택하고, XeLaTeX 조판 파일을 자동으로 만들어 드립니다.
                 </div>
               </div>
               <div style={{ padding:"16px 24px", background:T.surface, borderRadius:3,
-                border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:2, maxWidth:380 }}>
+                border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:2, width:"100%" }}>
                 <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>작동 방식</strong>
                 ① 입력한 텍스트의 장르·형태 분석<br/>
                 ② 253개 레퍼런스에서 최적 스타일 선택<br/>
@@ -3787,7 +3795,7 @@ REQUIRED OUTPUT FORMAT:
                       padding:"4px 9px", borderRadius:3,
                       border:`1px solid ${T.border}`, background:T.bg,
                     }}>
-                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
+                      <span style={{ fontSize:11, fontWeight:500, color:T.muted }}>{label}</span>
                       <span style={{ fontSize:11, fontWeight:600, color:T.ink,
                         fontFamily:T.mono }}>{value}</span>
                     </div>
@@ -3817,7 +3825,7 @@ REQUIRED OUTPUT FORMAT:
                   ["sty","스타일 파일"],
                 ].map(([key,label]) => (
                   <button key={key} onClick={() => setTab(key)}
-                    style={{ padding:"10px 16px", fontSize:12.5, fontWeight:tab===key?700:400,
+                    style={{ padding:"10px 16px", fontSize:13, fontWeight:tab===key?700:400,
                       border:"none", borderBottom:`2px solid ${tab===key ? T.ink : "transparent"}`,
                       background:"transparent", color:tab===key ? T.ink : T.muted,
                       cursor:"pointer", marginBottom:-1 }}>
@@ -3832,7 +3840,7 @@ REQUIRED OUTPUT FORMAT:
                 {/* 작업 의도 */}
                 {tab === "intent" && (
                   <div style={{ padding:"24px" }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:T.ink, marginBottom:16 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:T.ink, marginBottom:16 }}>
                       이 스타일을 선택한 이유
                     </div>
 
@@ -3870,7 +3878,7 @@ REQUIRED OUTPUT FORMAT:
                           <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
                             레퍼런스 원본 정보
                           </div>
-                          <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8 }}>
+                          <div style={{ fontSize:13, color:T.muted, lineHeight:1.8 }}>
                             {pkg.summary}
                           </div>
                           {pkg.why_font && (
@@ -3929,8 +3937,8 @@ REQUIRED OUTPUT FORMAT:
                       ];
                       return (
                         <div style={{ marginBottom:14, padding:"10px 14px", background:T.bg,
-                          borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5 }}>
-                          <div style={{ fontWeight:700, color:T.ink, marginBottom:6 }}>LaTeX 검증</div>
+                          borderRadius:3, border:`1px solid ${T.border}`, fontSize:12 }}>
+                          <div style={{ fontWeight:600, color:T.ink, marginBottom:6 }}>LaTeX 검증</div>
                           <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px" }}>
                             {checks.map((c,i) => (
                               <span key={i} style={{ color: c.warn ? '#888' : c.ok ? '#444' : '#888' }}>
@@ -3946,7 +3954,7 @@ REQUIRED OUTPUT FORMAT:
                         <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
                           main.tex
                         </div>
-                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.7 }}>
+                        <div style={{ fontSize:12, color:T.muted, marginTop:2, lineHeight:1.7 }}>
                           <strong style={{ color:T.ink }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
                           imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
                         </div>
@@ -3954,14 +3962,14 @@ REQUIRED OUTPUT FORMAT:
                       <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
                         <button onClick={() => downloadFile(latex, 'main.tex')}
                           style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
                             background:T.surface, color:T.ink, cursor:"pointer",
                             transition:"all 150ms" }}>
                           ⬇ 다운로드
                         </button>
                         <button onClick={copy}
                           style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
                             background:copied ? T.ink : T.surface,
                             color:copied ? "#fff" : T.ink, cursor:"pointer",
                             transition:"all 150ms" }}>
@@ -3969,23 +3977,23 @@ REQUIRED OUTPUT FORMAT:
                         </button>
                       </div>
                     </div>
-                    <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
-                      background:T.surface, padding:"16px 20px", borderRadius:7,
+                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.65,
+                      background:T.surface, padding:"16px 20px", borderRadius:3,
                       border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
                       wordBreak:"break-all", color:T.ink, margin:0 }}>
                       {latex}
                     </pre>
                     <div style={{ marginTop:12, padding:"12px 16px", background:T.surface,
-                      borderRadius:6, border:`1px solid ${T.border}`, fontSize:11.5,
+                      borderRadius:3, border:`1px solid ${T.border}`, fontSize:12,
                       color:T.muted, lineHeight:2 }}>
                       <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
-                      폴더 구조: <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:10.5 }}>작업폴더/ main.tex · imprint-style.sty · fonts/</code><br/>
+                      폴더 구조: <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:11 }}>작업폴더/ main.tex · imprint-style.sty · fonts/</code><br/>
                       1) main.tex + imprint-style.sty → 작업 폴더<br/>
                       2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
                       3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
-                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:"#a05000" }}>
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:T.muted }}>
                         <strong style={{ display:"block", marginBottom:2 }}>Missing character 경고가 계속되면</strong>
-                        기존 <code style={{ fontFamily:T.mono, background:"#fff3e0", padding:"1px 4px", borderRadius:3, fontSize:10.5 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
+                        기존 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:11 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
                       </div>
                       <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
                         <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
@@ -3994,15 +4002,15 @@ REQUIRED OUTPUT FORMAT:
                       </div>
                     </div>
                     {requiredFonts.length > 0 && (
-                      <div style={{ marginTop:10, padding:"12px 16px", background:"#fffbe6",
-                        borderRadius:6, border:`1px solid #e8d88a`, fontSize:11.5, lineHeight:1.9 }}>
-                        <strong style={{ color:"#7a6000", display:"block", marginBottom:4 }}>
-                          ★ 필요한 폰트 파일 — <code style={{ fontFamily:"monospace", background:"#fff3c0", padding:"1px 4px", borderRadius:3 }}>fonts/</code> 하위 폴더에 저장
+                      <div style={{ marginTop:10, padding:"12px 16px", background:T.bg,
+                        borderRadius:3, border:`1px solid ${T.border}`, fontSize:12, lineHeight:1.9 }}>
+                        <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>
+                          필요한 폰트 파일 — <code style={{ fontFamily:T.mono, background:T.surface, padding:"1px 4px", borderRadius:3 }}>fonts/</code> 하위 폴더에 저장
                         </strong>
-                        <div style={{ fontFamily:T.mono, fontSize:11, color:"#5a4800" }}>
+                        <div style={{ fontFamily:T.mono, fontSize:11, color:T.muted }}>
                           {requiredFonts.map(f => <div key={f}>{f}</div>)}
                         </div>
-                        <div style={{ marginTop:6, fontSize:11, color:"#7a6000" }}>
+                        <div style={{ marginTop:6, fontSize:11, color:T.ink }}>
                           폰트 파일이 없으면 XeLaTeX이 "cannot be found" 오류를 냅니다.
                         </div>
                       </div>
@@ -4015,21 +4023,21 @@ REQUIRED OUTPUT FORMAT:
                   <div style={{ padding:"20px 24px" }}>
                     <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:10 }}>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>
+                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
                           스타일 파일 (imprint-style.sty)
                         </div>
-                        <div style={{ fontSize:11.5, color:T.muted, marginTop:2, lineHeight:1.6 }}>
+                        <div style={{ fontSize:12, color:T.muted, marginTop:2, lineHeight:1.6 }}>
                           판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 패키지 파일입니다.<br/>
                           이 파일 하나로 본문 길이와 관계없이 동일한 스타일이 유지됩니다.<br/>
                           <strong style={{ color:T.ink }}>사용법:</strong> main.tex과 같은 폴더에 저장.
                           main.tex에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>{"\\usepackage{imprint-style}"}</code> 이미 포함됨.<br/>
-                          <span style={{ color:"#c44", fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
+                          <span style={{ color:T.ink, fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
                         </div>
                       </div>
                       <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
                         <button onClick={() => downloadFile(styCode, 'imprint-style.sty')}
                           style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
                             background:T.surface, color:T.ink, cursor:"pointer",
                             transition:"all 150ms" }}>
                           ⬇ 다운로드
@@ -4041,15 +4049,15 @@ REQUIRED OUTPUT FORMAT:
                             } else { _fallbackCopy(styCode); done(); }
                           }}
                           style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:5, whiteSpace:"nowrap",
+                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
                             background:copiedSty ? T.ink : T.surface,
                             color:copiedSty ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
                           {copiedSty ? "복사됨 ✓" : "복사"}
                         </button>
                       </div>
                     </div>
-                    <pre style={{ fontFamily:T.mono, fontSize:11.5, lineHeight:1.65,
-                      background:T.surface, padding:"16px 20px", borderRadius:7,
+                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.65,
+                      background:T.surface, padding:"16px 20px", borderRadius:3,
                       border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
                       wordBreak:"break-all", color:T.ink, margin:0 }}>
                       {styCode}
@@ -4070,7 +4078,7 @@ REQUIRED OUTPUT FORMAT:
           flexDirection:"column", background:T.surface, overflow:"hidden" }}>
 
           <div style={{ padding:"14px 16px", borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>스타일 조정</div>
+            <div style={{ fontSize:12, fontWeight:600, color:T.ink }}>스타일 조정</div>
             <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>
               생성 결과를 자연어로 수정 요청하세요
             </div>
@@ -4083,7 +4091,7 @@ REQUIRED OUTPUT FORMAT:
               {["여백 더 넓게","2단으로 변경","글자 크기 줄여줘","행간 넓혀줘","각주 추가","1단으로 변경"].map(hint => (
                 <button key={hint} onClick={() => setRefineInput(hint)}
                   style={{ padding:"4px 10px", fontSize:11, border:`1px solid ${T.border}`,
-                    borderRadius:12, background:T.bg, color:T.ink,
+                    borderRadius:3, background:T.bg, color:T.ink,
                     cursor:"pointer", whiteSpace:"nowrap" }}>
                   {hint}
                 </button>
@@ -4103,7 +4111,7 @@ REQUIRED OUTPUT FORMAT:
               </div>
             ) : refineHistory.map((msg, i) => (
               <div key={i} style={{
-                padding:"10px 12px", borderRadius:7, fontSize:12, lineHeight:1.6,
+                padding:"10px 12px", borderRadius:3, fontSize:12, lineHeight:1.6,
                 background: msg.role === "user" ? T.ink : T.bg,
                 color: msg.role === "user" ? "#fff" : T.ink,
                 alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
@@ -4114,7 +4122,7 @@ REQUIRED OUTPUT FORMAT:
               </div>
             ))}
             {loading && (
-              <div style={{ padding:"10px 12px", borderRadius:7, fontSize:12,
+              <div style={{ padding:"10px 12px", borderRadius:3, fontSize:12,
                 background:T.bg, border:`1px solid ${T.border}`, color:T.muted,
                 display:"flex", alignItems:"center", gap:6, alignSelf:"flex-start" }}>
                 <div style={{ width:8, height:8, border:"1.5px solid #ccc",
@@ -4140,13 +4148,13 @@ REQUIRED OUTPUT FORMAT:
                   }
                 }}
                 style={{ flex:1, padding:"8px 10px", fontSize:12,
-                  border:`1px solid ${T.border}`, borderRadius:6,
+                  border:`1px solid ${T.border}`, borderRadius:3,
                   background: (!isDone || loading) ? T.bg : T.surface,
                   color:T.ink, lineHeight:1.5, resize:"none" }}
               />
               <button onClick={refine} disabled={!isDone || loading || !refineInput.trim()}
-                style={{ padding:"0 14px", fontSize:12, fontWeight:700,
-                  border:"none", borderRadius:6,
+                style={{ padding:"0 14px", fontSize:12, fontWeight:600,
+                  border:"none", borderRadius:3,
                   background: (!isDone || loading || !refineInput.trim()) ? T.border : T.ink,
                   color: (!isDone || loading || !refineInput.trim()) ? T.muted : "#fff",
                   cursor: (!isDone || loading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
