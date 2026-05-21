@@ -2716,12 +2716,21 @@ export default function App() {
           finalBodyContent = buildMissingBodyPlaceholder();
         }
 
-        // 단 구성 보장: 고정단(사용자 지정) 또는 자동(DB c.구성 2~5단) — JS가 직접 래핑
+        // 단 구성 보장: 고정단(사용자 지정) 또는 자동(DB layout_type/c.구성 수치) — JS가 직접 래핑
         if (colMode === 'fixed' && (styleConfig.fixedColumns || 1) > 1) {
           finalBodyContent = wrapFixedColumns(finalBodyContent, styleConfig.fixedColumns, p.c.간격 || 10);
-        } else if (colMode === 'auto' && baseN >= 2 && baseN <= 5 && !isModuleGrid) {
-          // 자동 모드: DB c.구성 수치 그대로 적용 (AI 힌트 의존 제거)
-          finalBodyContent = wrapFixedColumns(finalBodyContent, baseN, p.c.간격 || 10);
+        } else if (colMode === 'auto' && !isYeol && !noteUnits) {
+          // 자동 모드 규칙:
+          //   ① 열 표기(isYeol)는 모듈 그리드 — gap 없음, multicols 미적용
+          //   ② noteUnits 있으면 paracol이 별도 처리 → 여기서 래핑하지 않음
+          //   ③ 단 수는 layout_type의 bodyUnits 우선, 없으면 c.구성 baseN 사용
+          //   ④ 실용 상한: 8단 (그 이상은 LaTeX 가독성 한계)
+          const _autoCols = bodyUnits || baseN;
+          if (_autoCols >= 2 && _autoCols <= 8) {
+            finalBodyContent = wrapFixedColumns(finalBodyContent, _autoCols, p.c.간격 || 10);
+            pushLog('layout', '단 구성 적용', 'info',
+              `자동 ${_autoCols}단 (${bodyUnits ? 'layout_type 파싱' : 'c.구성 기본값'}: ${layoutType || 구성})`);
+          }
         }
 
         // ── 각주 후처리 — wrapVariableLayout 전에 실행 (paracol 내에서 \footnote 동작 보장) ──
