@@ -2925,8 +2925,9 @@ export default function App() {
                   const gapStr = `${actualGap.toFixed(1)}mm`;
                   const wrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
 
-                  // top/bottom → adjustwidth (paracol 사용 불가)
-                  if (notePosition === 'top' || notePosition === 'bottom') {
+                  // top → adjustwidth + 주석 블록 위에 배치
+                  // bottom → \ImpFN{N}을 \footnote{내용}으로 인라인 치환 (per-page 각주, 미주 방지)
+                  if (notePosition === 'top') {
                     finalBodyContent = gridComment + '\n' + wrapVariableLayout({
                       bodyLatex: wrappedBody,
                       noteLatex: allNotesLatex,
@@ -2934,7 +2935,22 @@ export default function App() {
                       notePosition,
                       textW,
                     });
-                    // top/bottom 처리 완료 — plines 조립 생략
+                    // top 처리 완료 — plines 조립 생략
+                  } else if (notePosition === 'bottom') {
+                    // \ImpFN{N} → \footnote{내용} 인라인 치환
+                    // LaTeX \footnote이 각 마커가 있는 페이지 하단에 배치를 보장
+                    // (기존 adjustwidth noteBlock 방식은 모든 주석을 문서 끝에 몰아 미주처럼 출력)
+                    let bottomBody = wrappedBody;
+                    bottomBody = bottomBody.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
+                      const content = fnMap[n];
+                      return content ? `\\footnote{${latexEscFn(stripWrappingQuotes(content))}}` : '';
+                    });
+                    const rightIndentBottomBody = (textW - grid.bodyW).toFixed(1);
+                    const bottomLayout = parseFloat(rightIndentBottomBody) > 0
+                      ? [`\\begin{adjustwidth}{0mm}{${rightIndentBottomBody}mm}`, bottomBody.trim(), `\\end{adjustwidth}`].join('\n')
+                      : bottomBody.trim();
+                    finalBodyContent = gridComment + '\n' + bottomLayout;
+                    // bottom 처리 완료 — plines 조립 생략
                   } else {
 
                   // ── 본문을 단락 경계로 분리 → 마커 있는 단락 뒤에 주석 삽입 ──
