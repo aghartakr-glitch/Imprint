@@ -1366,9 +1366,9 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
       const pos = layoutConfig.notePosition || 'right';
       const isLR = pos === 'left' || pos === 'right';
       if (isLR && (vg.body + vg.note) > vg.total)
-        errors.push(`layout: left/right 모드에서 body(${vg.body})+note(${vg.note}) > total(${vg.total})`);
+        errors.push(`가변단 오류: 본문 열(${vg.body}) + 주석 열(${vg.note}) = ${vg.body+vg.note} > 총 그리드(${vg.total}) — 주석 열을 ${vg.total - vg.body} 이하로 줄이세요`);
       if (!isLR && (vg.body > vg.total || vg.note > vg.total))
-        errors.push(`layout: top/bottom 모드에서 body(${vg.body}) 또는 note(${vg.note}) > total(${vg.total})`);
+        errors.push(`가변단 오류: 본문 열(${vg.body}) 또는 주석 열(${vg.note})이 총 그리드(${vg.total})를 초과합니다`);
       const btc = Number(layoutConfig.bodyTextColumns || 1);
       const ntc = Number(layoutConfig.noteTextColumns || 1);
       if (btc > vg.body)
