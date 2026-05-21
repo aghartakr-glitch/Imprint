@@ -3336,6 +3336,10 @@ REQUIRED OUTPUT FORMAT:
           messages: [{ role: "user", content: prompt }],
         }),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(`API 오류 ${res.status}: ${errData.error?.message || res.statusText}`);
+      }
       const data = await res.json();
       const raw = (data.content || []).map(c => c.text || "").join("");
       const cleaned = raw.replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
@@ -3348,15 +3352,27 @@ REQUIRED OUTPUT FORMAT:
         changesText = changesSplit[1].replace("%%END%%", "").trim();
       }
 
+      // ── 빈 latex 가드: 기존 코드를 절대 지우지 않는다 ──────────────
+      if (!newLatex || newLatex.length < 80 || !newLatex.includes('\\documentclass')) {
+        setRefineHistory(h => [...h, {
+          role: "assistant",
+          content: `- ⚠ API가 유효한 LaTeX를 반환하지 않았습니다.\n- 기존 코드가 유지됩니다. 다시 시도해주세요.`,
+          changes: '',
+          diffLines: [],
+          isError: true,
+        }]);
+        return;
+      }
+
       const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
       const diffLines = diffLatex(latex, sanitizedNewLatex);
       setLatex(sanitizedNewLatex);
       setTab("final");
-      // fallback: changesText 없으면 diffLines로 대체, 그것도 없으면 안내 메시지
+      // fallback: changesText 없으면 diffLines로 대체
       const fallbackContent = changesText || (
         diffLines.length > 0
           ? diffLines.map(d => `- ${d}`).join('\n')
-          : '- 요청된 변경사항이 반영되었습니다.\n- (구체적 수치 변화 없음 또는 구조 변경)'
+          : `- 구조 변경이 적용되었습니다.\n- (수치 변화는 없으나 코드가 수정되었습니다)`
       );
       setRefineHistory(h => [...h, {
         role: "assistant",
