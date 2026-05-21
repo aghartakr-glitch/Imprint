@@ -3769,6 +3769,24 @@ REQUIRED OUTPUT FORMAT:
                     </>
                   )}
                 </div>
+                {/* 각주 단 수 */}
+                <div>
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
+                    color:T.muted, marginBottom:5 }}>
+                    하단 각주 단 수
+                  </label>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <input type="number" min={1} max={4}
+                      value={fields.각주단 || 1}
+                      onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
+                      style={{ width:52, padding:"5px 7px", fontSize:12,
+                        border:`1px solid ${T.border}`, borderRadius:3,
+                        background:T.bg, color:T.ink, textAlign:"center" }} />
+                    <span style={{ fontSize:11, color:T.muted }}>
+                      {(fields.각주단 || 1) >= 2 ? `${fields.각주단}단 각주 (bigfoot 패키지)` : '기본 (1단)'}
+                    </span>
+                  </div>
+                </div>
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:500,
                     color:T.muted, marginBottom:5 }}>
