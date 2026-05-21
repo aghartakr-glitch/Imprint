@@ -1298,9 +1298,10 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     const switchColCount  = count(mainTex, /\\switchcolumn(?!\*)/g);
     const endParacolCount = count(mainTex, /\\end\{paracol\}/g);
     if (paracolCount !== 1)
-      errors.push(`main.tex: \\begin{paracol} 가 ${paracolCount}개 — 정확히 1개여야 합니다 (Method A)`);
-    if (switchColCount !== 1)
-      errors.push(`main.tex: \\switchcolumn 이 ${switchColCount}개 — 정확히 1개여야 합니다 (Method A)`);
+      errors.push(`main.tex: \\begin{paracol} 가 ${paracolCount}개 — 정확히 1개여야 합니다`);
+    // Method B(interleaved)는 마커마다 \switchcolumn 쌍 생성 → 1개 이상이면 유효
+    if (switchColCount < 1)
+      errors.push(`main.tex: \\switchcolumn 이 없습니다 — paracol 내부 열 전환 누락`);
     if (endParacolCount !== 1)
       errors.push(`main.tex: \\end{paracol} 이 ${endParacolCount}개 — 정확히 1개여야 합니다`);
     // paracol 적용 순서 검증: \setlength{\columnsep}와 \setcolumnwidth가 \begin{paracol}보다 앞에 있어야 함
@@ -1314,28 +1315,40 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     if (paracolCount === 1 && endParacolCount === 1 && paracolCount !== endParacolCount)
       errors.push('main.tex: \\begin{paracol} / \\end{paracol} 짝이 맞지 않습니다');
 
-    // bodyTextColumns 검증 (layoutConfig 있을 때만)
-    if (layoutConfig) {
+    // [G5] \textsuperscript{N} ↔ \ImpFN{N} 대응 검증
+    // Method A(단일 switchcolumn): body/note 구간 분리 검사
+    // Method B(interleaved): body/note가 교차 배치 → mainTex 전체에서 검색
+    const isMethodB = switchColCount > 1;
+    if (isMethodB) {
+      // Method B: mainTex 전체에서 양쪽 마커 존재 여부 확인
+      const allSupNums = [...mainTex.matchAll(/\\textsuperscript\{(\d+)\}/g)].map(m => m[1]);
+      for (const n of [...new Set(allSupNums)]) {
+        if (!mainTex.includes(`\\ImpFN{${n}}`))
+          errors.push(`main.tex: \\textsuperscript{${n}} 있지만 \\ImpFN{${n}} 없음 — body 마커 소실`);
+      }
+    } else {
+      // Method A: 첫 번째 switchcolumn 기준으로 body/note 분리 검사
+      const switchIdx = mainTex.indexOf('\\switchcolumn');
+      if (switchIdx !== -1) {
+        const bodyColTex = mainTex.slice(0, switchIdx);
+        const noteColTex = mainTex.slice(switchIdx);
+        const noteSupNums = [...noteColTex.matchAll(/\\textsuperscript\{(\d+)\}/g)].map(m => m[1]);
+        for (const n of noteSupNums) {
+          if (!bodyColTex.includes(`\\ImpFN{${n}}`))
+            errors.push(`main.tex: note column에 \\textsuperscript{${n}}이 있지만 body column에 \\ImpFN{${n}}이 없습니다`);
+        }
+      }
+    }
+
+    // bodyTextColumns 검증 (layoutConfig 있을 때만, Method A에서만 적용)
+    if (layoutConfig && !isMethodB) {
       const btc = Number(layoutConfig.bodyTextColumns || 1);
-      // switchcolumn 앞부분 = body column 내용
       const beforeSwitch = mainTex.split('\\switchcolumn')[0] || '';
       const multicolsInBody = count(beforeSwitch, /\\begin\{multicols\}/g);
       if (btc >= 2 && multicolsInBody === 0)
         errors.push(`main.tex: bodyTextColumns=${btc}인데 body column 안에 \\begin{multicols}가 없습니다`);
       if (btc === 1 && multicolsInBody > 0)
         errors.push(`main.tex: bodyTextColumns=1인데 body column 안에 \\begin{multicols}가 ${multicolsInBody}개 있습니다`);
-    }
-
-    // [G5] note column의 \textsuperscript{N} ↔ body column의 \ImpFN{N} 대응 검증
-    const switchIdx = mainTex.indexOf('\\switchcolumn');
-    if (switchIdx !== -1) {
-      const bodyColTex = mainTex.slice(0, switchIdx);
-      const noteColTex = mainTex.slice(switchIdx);
-      const noteSupNums = [...noteColTex.matchAll(/\\textsuperscript\{(\d+)\}/g)].map(m => m[1]);
-      for (const n of noteSupNums) {
-        if (!bodyColTex.includes(`\\ImpFN{${n}}`))
-          errors.push(`main.tex: note column에 \\textsuperscript{${n}}이 있지만 body column에 \\ImpFN{${n}}이 없습니다`);
-      }
     }
   }
 
