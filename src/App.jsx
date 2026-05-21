@@ -3352,10 +3352,16 @@ REQUIRED OUTPUT FORMAT:
       const diffLines = diffLatex(latex, sanitizedNewLatex);
       setLatex(sanitizedNewLatex);
       setTab("final");
+      // fallback: changesText 없으면 diffLines로 대체, 그것도 없으면 안내 메시지
+      const fallbackContent = changesText || (
+        diffLines.length > 0
+          ? diffLines.map(d => `- ${d}`).join('\n')
+          : '- 요청된 변경사항이 반영되었습니다.\n- (구체적 수치 변화 없음 또는 구조 변경)'
+      );
       setRefineHistory(h => [...h, {
         role: "assistant",
-        content: changesText || "Code updated.",
-        changes: changesText,
+        content: fallbackContent,
+        changes: fallbackContent,
         diffLines: diffLines
       }]);
       // ── Refine 로그 업데이트 ─────────────────────────────────────
