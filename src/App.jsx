@@ -2324,10 +2324,27 @@ export default function App() {
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
         `\\newcommand{\\notef}{${p.pn_font === '명조' ? '\\rmfamily' : '\\sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
-        // 각주 들여쓰기 없이 시작, 번호 뒤 0.4em 간격 (item 4)
-        '\\makeatletter',
-        '\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}',
-        '\\makeatother',
+        // 각주 N단 지원: fields.각주단 >= 2이면 bigfoot 패키지로 다단 각주 구성
+        (() => {
+          const fnCols = parseInt(fields.각주단 || '1', 10);
+          if (fnCols >= 2) {
+            return [
+              '% 각주 ' + fnCols + '단 설정 (bigfoot)',
+              '\\usepackage{bigfoot}',
+              '\\DeclareNewFootnote{A}[arabic]',
+              '\\footnotelayout{c}[' + fnCols + ']',
+              '\\let\\footnote\\footnoteA',
+              '\\let\\footnotemark\\footnoteAmark',
+              '\\let\\footnotetext\\footnoteAtext',
+            ].join('\n');
+          }
+          // 1단: 기존 방식
+          return [
+            '\\makeatletter',
+            '\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}',
+            '\\makeatother',
+          ].join('\n');
+        })(),
         '',
         colGap > 0 ? '\\setlength{\\columnsep}{' + colGap + 'mm}' : '',
         '',
