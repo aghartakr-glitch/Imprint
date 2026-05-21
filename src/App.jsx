@@ -1228,7 +1228,10 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     errors.push('imprint-style.sty: memoir pagestyle \\makepagestyle{imprint} 없음');
   if (!mainTex.includes('\\pagestyle{imprint}'))
     errors.push('main.tex: \\pagestyle{imprint} 없음');
-  if (!sty.includes('\\thepage'))
+  // \thepage: DB에서 쪽번호가 '없음'/'-'이 아닌 경우에만 필수
+  const pnVal = (layoutConfig?.selectedPkg?.pn || '').trim();
+  const pnIsNone = pnVal === '없음' || pnVal === '-' || pnVal === '';
+  if (!pnIsNone && !sty.includes('\\thepage'))
     errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
   // ── 추가 구조 검증 ────────────────────────────────────────────
   // \end{document} 뒤 stray character 검사
