@@ -4357,11 +4357,13 @@ REQUIRED OUTPUT FORMAT:
                   <div>
                     {/* 헤더: 실제 변경 여부 / 오류에 따라 다르게 표시 */}
                     <div style={{fontWeight:700, fontSize:12, marginBottom:6, display:'flex', alignItems:'center', gap:5}}>
-                      {msg.isError
-                        ? <><span style={{color:'#c0392b'}}>⚠</span> 오류</>
-                        : msg.codeChanged === false
-                          ? <><span style={{color:'#888'}}>−</span> 변경 없음</>
-                          : <><span style={{color:'#2d7d46'}}>✓</span> 코드 수정됨</>
+                      {msg.isStructural
+                        ? <><span style={{color:'#e67e22'}}>↩</span> UI에서 변경하세요</>
+                        : msg.isError
+                          ? <><span style={{color:'#c0392b'}}>⚠</span> 오류</>
+                          : msg.codeChanged === false
+                            ? <><span style={{color:'#888'}}>−</span> 변경 없음</>
+                            : <><span style={{color:'#2d7d46'}}>✓</span> 코드 수정됨</>
                       }
                     </div>
                     {/* 변경 내역 줄 */}
