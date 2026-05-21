@@ -3278,7 +3278,7 @@ REQUIRED OUTPUT FORMAT:
       const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
       const diffLines = diffLatex(latex, sanitizedNewLatex);
       setLatex(sanitizedNewLatex);
-      setTab("code");
+      setTab("final");
       setRefineHistory(h => [...h, {
         role: "assistant",
         content: changesText || "Code updated.",
