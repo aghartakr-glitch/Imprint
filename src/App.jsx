@@ -4215,10 +4215,59 @@ REQUIRED OUTPUT FORMAT:
                 background: msg.role === "user" ? T.ink : T.bg,
                 color: msg.role === "user" ? "#fff" : T.ink,
                 alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                maxWidth:"90%",
+                maxWidth:"92%",
                 border: msg.role === "user" ? "none" : `1px solid ${T.border}`,
               }}>
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <div>
+                    <div style={{fontWeight:700, fontSize:12, marginBottom:6, display:'flex', alignItems:'center', gap:5}}>
+                      <span style={{color:'#2d7d46'}}>✓</span> 수정 완료
+                    </div>
+                    {(msg.changes && msg.changes.trim()
+                      ? msg.changes.split('\n').filter(l => l.trim())
+                      : (msg.diffLines && msg.diffLines.length > 0
+                          ? msg.diffLines.map(d => `- ${d}`)
+                          : ['- 변경 적용됨 (수치 차이 없음)'])
+                    ).map((line, li) => {
+                      const clean = line.replace(/^[-•]\s*/, '');
+                      const parts = clean.split(/→|→/);
+                      return (
+                        <div key={li} style={{
+                          fontSize:11, lineHeight:1.6, marginTop:4,
+                          paddingLeft:8, borderLeft:`2px solid ${T.border}`,
+                          color: T.ink,
+                        }}>
+                          {parts.length >= 2 ? (
+                            <>
+                              <span style={{color:T.muted}}>{parts[0].replace(/:.*/, '').trim()}</span>
+                              <span style={{color:'#aaa', margin:'0 4px'}}>:</span>
+                              <span style={{color:'#c0392b', textDecoration:'line-through', marginRight:4}}>
+                                {parts[0].includes(':') ? parts[0].split(':').slice(1).join(':').trim() : ''}
+                              </span>
+                              <span style={{color:'#888', marginRight:4}}>→</span>
+                              <span style={{color:'#2d7d46', fontWeight:600}}>
+                                {parts[1].replace(/\(.*\)/, '').trim()}
+                              </span>
+                              {parts[1].match(/\((.+)\)/) && (
+                                <span style={{color:T.muted, fontSize:10, marginLeft:4}}>
+                                  ({parts[1].match(/\((.+)\)/)[1]})
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span>{clean}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <div style={{
+                      fontSize:10, color:T.muted, marginTop:8,
+                      paddingTop:6, borderTop:`1px solid ${T.border}`,
+                    }}>
+                      오른쪽 패널에서 결과 확인 →
+                    </div>
+                  </div>
+                ) : msg.content}
               </div>
             ))}
             {loading && (
