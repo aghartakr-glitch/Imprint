@@ -4286,14 +4286,14 @@ REQUIRED OUTPUT FORMAT:
                 ) : msg.content}
               </div>
             ))}
-            {loading && (
+            {refineLoading && (
               <div style={{ padding:"10px 12px", borderRadius:3, fontSize:12,
                 background:T.bg, border:`1px solid ${T.border}`, color:T.muted,
                 display:"flex", alignItems:"center", gap:6, alignSelf:"flex-start" }}>
                 <div style={{ width:8, height:8, border:"1.5px solid #ccc",
                   borderTopColor:T.ink, borderRadius:"50%",
                   animation:"spin 0.8s linear infinite" }} />
-                조정 중…
+                코드 수정 중…
               </div>
             )}
           </div>
