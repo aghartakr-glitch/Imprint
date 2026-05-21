@@ -2890,15 +2890,18 @@ export default function App() {
                     // top/bottom 처리 완료 — plines 조립 생략
                   } else {
 
-                  // ── 본문을 \par 경계로 단락 분리 → 마커 있는 단락 뒤에 주석 삽입 ──
+                  // ── 본문을 단락 경계로 분리 → 마커 있는 단락 뒤에 주석 삽입 ──
                   // \switchcolumn* = 동기화 스위치: 두 열이 이 지점에 도달할 때까지 기다린 후 진행
                   // 결과: 주석이 마커 단락과 같은 수직 위치에 배치됨
-                  const rawParaParts = bodyLatex.trim().split(/(\\par\b)/);
+                  // 단락 구분자: \par 명령 OR 빈 줄(\n\n) — Claude 출력 방식 무관하게 처리
+                  const rawParaParts = bodyLatex.trim().split(/(\\par\b|\n{2,})/);
                   const paraChunks = [];
                   for (let pi = 0; pi < rawParaParts.length; pi += 2) {
                     const txt = rawParaParts[pi] || '';
-                    const par = rawParaParts[pi + 1] || '';
-                    const full = txt + par;
+                    const sep = rawParaParts[pi + 1] || '';
+                    // \par 명령은 그대로 보존, 빈 줄은 \par로 정규화
+                    const parCmd = sep.startsWith('\\par') ? sep : (sep.trim() === '' && sep.includes('\n') ? '\\par' : sep);
+                    const full = txt + parCmd;
                     if (full.trim()) paraChunks.push(full);
                   }
 
