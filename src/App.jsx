@@ -4304,26 +4304,26 @@ REQUIRED OUTPUT FORMAT:
               <textarea
                 value={refineInput} rows={2}
                 onChange={e => setRefineInput(e.target.value)}
-                disabled={!isDone || loading}
+                disabled={!isDone || loading || refineLoading}
                 placeholder={isDone ? "수정 사항을 입력하세요…" : "먼저 조판 스타일을 생성하세요"}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    if (refineInput.trim()) refine();
+                    if (refineInput.trim() && !refineLoading) refine();
                   }
                 }}
                 style={{ flex:1, padding:"8px 10px", fontSize:12,
                   border:`1px solid ${T.border}`, borderRadius:3,
-                  background: (!isDone || loading) ? T.bg : T.surface,
+                  background: (!isDone || loading || refineLoading) ? T.bg : T.surface,
                   color:T.ink, lineHeight:1.5, resize:"none" }}
               />
-              <button onClick={refine} disabled={!isDone || loading || !refineInput.trim()}
+              <button onClick={refine} disabled={!isDone || loading || refineLoading || !refineInput.trim()}
                 style={{ padding:"0 14px", fontSize:12, fontWeight:600,
                   border:"none", borderRadius:3,
-                  background: (!isDone || loading || !refineInput.trim()) ? T.border : T.ink,
-                  color: (!isDone || loading || !refineInput.trim()) ? T.muted : "#fff",
-                  cursor: (!isDone || loading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
-                전송
+                  background: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.border : T.ink,
+                  color: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.muted : "#fff",
+                  cursor: (!isDone || loading || refineLoading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
+                {refineLoading ? "처리 중…" : "전송"}
               </button>
             </div>
           </div>
