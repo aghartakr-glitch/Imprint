@@ -2908,7 +2908,8 @@ export default function App() {
                   const bodyLines = [];
                   const notesEmitted2 = new Set();
 
-                  for (const chunk of paraChunks) {
+                  for (let chunkIdx = 0; chunkIdx < paraChunks.length; chunkIdx++) {
+                    const chunk = paraChunks[chunkIdx];
                     // btc >= 2: 각 청크를 독립 multicols로 래핑
                     bodyLines.push(btc >= 2 ? wrapBodyTextColumns(chunk, btc) : chunk);
 
@@ -2925,7 +2926,7 @@ export default function App() {
 
                     if (chunkNoteNums.length > 0) {
                       // 마커 있는 단락 → 주석 열로 전환
-                      const isLastChunk = chunk === paraChunks[paraChunks.length - 1];
+                      const isLastChunk = chunkIdx === paraChunks.length - 1;
                       bodyLines.push('');
                       bodyLines.push('\\switchcolumn');
                       bodyLines.push('');
