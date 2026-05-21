@@ -1228,10 +1228,13 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     errors.push('imprint-style.sty: memoir pagestyle \\makepagestyle{imprint} 없음');
   if (!mainTex.includes('\\pagestyle{imprint}'))
     errors.push('main.tex: \\pagestyle{imprint} 없음');
-  // \thepage: DB에서 쪽번호가 '없음'/'-'이 아닌 경우에만 필수
-  const pnVal = (layoutConfig?.selectedPkg?.pn || '').trim();
-  const pnIsNone = pnVal === '없음' || pnVal === '-' || pnVal === '';
-  if (!pnIsNone && !sty.includes('\\thepage'))
+  // \thepage: makeoddfoot/makeoddhead에 {}{}{}(전부 비어있음)이 아니면 필수
+  // → 쪽번호 없음 설정이면 모든 foot/head가 {}{}{}이므로 \thepage 불필요
+  const allEmpty = /\\makeoddfoot\{imprint\}\{\}\{\}\{\}/.test(sty)
+    && /\\makeevenfoot\{imprint\}\{\}\{\}\{\}/.test(sty)
+    && /\\makeoddhead\{imprint\}\{\}\{\}\{\}/.test(sty)
+    && /\\makeevenhead\{imprint\}\{\}\{\}\{\}/.test(sty);
+  if (!allEmpty && !sty.includes('\\thepage'))
     errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
   // ── 추가 구조 검증 ────────────────────────────────────────────
   // \end{document} 뒤 stray character 검사
