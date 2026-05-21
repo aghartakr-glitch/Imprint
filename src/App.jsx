@@ -4241,22 +4241,29 @@ REQUIRED OUTPUT FORMAT:
               }}>
                 {msg.role === 'assistant' ? (
                   <div>
+                    {/* 헤더: 실제 변경 여부 / 오류에 따라 다르게 표시 */}
                     <div style={{fontWeight:700, fontSize:12, marginBottom:6, display:'flex', alignItems:'center', gap:5}}>
-                      <span style={{color:'#2d7d46'}}>✓</span> 수정 완료
+                      {msg.isError
+                        ? <><span style={{color:'#c0392b'}}>⚠</span> 오류</>
+                        : msg.codeChanged === false
+                          ? <><span style={{color:'#888'}}>−</span> 변경 없음</>
+                          : <><span style={{color:'#2d7d46'}}>✓</span> 코드 수정됨</>
+                      }
                     </div>
+                    {/* 변경 내역 줄 */}
                     {(msg.changes && msg.changes.trim()
                       ? msg.changes.split('\n').filter(l => l.trim())
                       : (msg.diffLines && msg.diffLines.length > 0
                           ? msg.diffLines.map(d => `- ${d}`)
-                          : ['- 변경 적용됨 (수치 차이 없음)'])
-                    ).map((line, li) => {
+                          : null)
+                    )?.map((line, li) => {
                       const clean = line.replace(/^[-•]\s*/, '');
                       const parts = clean.split(/→|→/);
                       return (
                         <div key={li} style={{
                           fontSize:11, lineHeight:1.6, marginTop:4,
                           paddingLeft:8, borderLeft:`2px solid ${T.border}`,
-                          color: T.ink,
+                          color: msg.isError ? '#c0392b' : T.ink,
                         }}>
                           {parts.length >= 2 ? (
                             <>
@@ -4281,12 +4288,15 @@ REQUIRED OUTPUT FORMAT:
                         </div>
                       );
                     })}
-                    <div style={{
-                      fontSize:10, color:T.muted, marginTop:8,
-                      paddingTop:6, borderTop:`1px solid ${T.border}`,
-                    }}>
-                      오른쪽 패널에서 결과 확인 →
-                    </div>
+                    {/* 하단 안내: 코드가 실제로 바뀐 경우에만 */}
+                    {!msg.isError && msg.codeChanged !== false && (
+                      <div style={{
+                        fontSize:10, color:T.muted, marginTop:8,
+                        paddingTop:6, borderTop:`1px solid ${T.border}`,
+                      }}>
+                        가운데 패널 LaTeX 탭에서 결과 확인
+                      </div>
+                    )}
                   </div>
                 ) : msg.content}
               </div>
