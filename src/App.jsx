@@ -3366,19 +3366,24 @@ REQUIRED OUTPUT FORMAT:
 
       const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
       const diffLines = diffLatex(latex, sanitizedNewLatex);
+      const prevLatex = latex; // 변경 전 보관
       setLatex(sanitizedNewLatex);
       setTab("final");
-      // fallback: changesText 없으면 diffLines로 대체
+      const codeActuallyChanged = sanitizedNewLatex.trim() !== prevLatex.trim();
+      // fallback: changesText 없으면 diffLines → 실제 변경 여부로 판단
       const fallbackContent = changesText || (
         diffLines.length > 0
           ? diffLines.map(d => `- ${d}`).join('\n')
-          : `- 구조 변경이 적용되었습니다.\n- (수치 변화는 없으나 코드가 수정되었습니다)`
+          : codeActuallyChanged
+            ? `- 구조 변경이 적용되었습니다 (단 구성, 명령어 순서 등 수치 외 변경)`
+            : `- 변경사항이 없습니다. 요청이 이미 반영된 상태이거나 적용 불가한 항목입니다.`
       );
       setRefineHistory(h => [...h, {
         role: "assistant",
         content: fallbackContent,
         changes: fallbackContent,
-        diffLines: diffLines
+        diffLines: diffLines,
+        codeChanged: codeActuallyChanged,
       }]);
       // ── Refine 로그 업데이트 ─────────────────────────────────────
       setCurrentLog(prev => {
