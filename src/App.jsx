@@ -1362,9 +1362,14 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
         errors.push(`main.tex: \\setlength{\\columnsep}{${gapMatch[1]}} — styleConfig.columnGapMm=${expectedGap}mm와 불일치`);
     }
     if (layoutConfig.variableGrid) {
-      const vg = layoutConfig.variableGrid;
       const pos = layoutConfig.notePosition || 'right';
       const isLR = pos === 'left' || pos === 'right';
+      // 검증 전 자동 보정: left/right 모드에서 body+note > total이면 note를 줄임
+      const _vgChk = layoutConfig.variableGrid;
+      const vg = (isLR && (_vgChk.body + _vgChk.note) > _vgChk.total)
+        ? { ..._vgChk, note: Math.max(1, _vgChk.total - _vgChk.body) }
+        : _vgChk;
+      // 보정 후에도 초과하면 에러 (total 자체가 너무 작은 경우)
       if (isLR && (vg.body + vg.note) > vg.total)
         errors.push(`가변단 오류: 본문 열(${vg.body}) + 주석 열(${vg.note}) = ${vg.body+vg.note} > 총 그리드(${vg.total}) — 주석 열을 ${vg.total - vg.body} 이하로 줄이세요`);
       if (!isLR && (vg.body > vg.total || vg.note > vg.total))
