@@ -3679,10 +3679,17 @@ REQUIRED OUTPUT FORMAT:
                                       const v = Math.max(1, parseInt(e.target.value) || 1);
                                       setStyleConfig(s => {
                                         const prev = s.variableGrid || { total:5, body:4, note:1 };
-                                        // 각 값은 total을 넘지 않도록 clamp만 — 다른 필드 자동 수정 없음
                                         const next = { ...prev, [key]: v };
-                                        if (key !== 'total') {
-                                          next[key] = Math.min(v, next.total);
+                                        // total을 넘지 않도록 clamp
+                                        if (key !== 'total') next[key] = Math.min(v, next.total);
+                                        // left/right 모드에서 note 입력 시 body+note <= total 보장
+                                        const pos = s.notePosition || 'right';
+                                        const isSide = pos === 'left' || pos === 'right';
+                                        if (isSide && key === 'note') {
+                                          next.note = Math.min(next.note, Math.max(1, next.total - next.body));
+                                        }
+                                        if (isSide && key === 'body') {
+                                          next.note = Math.min(next.note, Math.max(1, next.total - next.body));
                                         }
                                         return { ...s, variableGrid: next };
                                       });
