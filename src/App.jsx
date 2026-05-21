@@ -3723,7 +3723,20 @@ REQUIRED OUTPUT FORMAT:
                             const active = (styleConfig.notePosition || 'right') === val;
                             return (
                               <button key={val}
-                                onClick={() => setStyleConfig(s => ({ ...s, notePosition: val }))}
+                                onClick={() => setStyleConfig(s => {
+                                  const newPos = val;
+                                  const isNewSide = newPos === 'right' || newPos === 'left';
+                                  const vg = s.variableGrid || { total: 5, body: 4, note: 1 };
+                                  // left/right 전환 시 note가 total-body 초과하면 자동 보정
+                                  const safeNote = isNewSide
+                                    ? Math.min(vg.note, Math.max(1, vg.total - vg.body))
+                                    : vg.note;
+                                  return {
+                                    ...s,
+                                    notePosition: newPos,
+                                    variableGrid: { ...vg, note: safeNote },
+                                  };
+                                })}
                                 style={{ padding:"4px 10px", fontSize:11, fontWeight: active?600:400,
                                   border:`1px solid ${active ? T.ink : T.border}`,
                                   borderRadius:3, background: active ? T.ink : "transparent",
