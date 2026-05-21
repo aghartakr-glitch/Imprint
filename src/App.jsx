@@ -3308,10 +3308,46 @@ export default function App() {
       .trim();
   }
 
+  // ── 구조적 변경 요청 감지 ──────────────────────────────────────
+  // 리파인 채팅으로 처리 불가한 요청을 UI로 유도
+  const STRUCTURAL_PATTERNS = [
+    { re: /본문\s*내부\s*단|본문\s*\d+\s*단으로|body.*column|단\s*구성\s*변경/, label: '본문 내부 단', path: '왼쪽 패널 → 단 구성 → 본문 내부 단' },
+    { re: /주석\s*내부\s*단|주석\s*\d+\s*단으로|note.*column/, label: '주석 내부 단', path: '왼쪽 패널 → 단 구성 → 주석 내부 단' },
+    { re: /주석\s*위치|주석을?\s*(오른쪽|왼쪽|상단|하단|우측|좌측)/, label: '주석 위치', path: '왼쪽 패널 → 단 구성 → 주석 위치' },
+    { re: /총\s*그리드|본문\s*열|주석\s*열|가변단|고정단/, label: '단 구성 그리드', path: '왼쪽 패널 → 단 구성' },
+    { re: /각주\s*단\s*수|각주\s*\d+\s*단|주석\s*하단.*\d+\s*단|하단.*각주.*\d+\s*단/, label: '각주 단 수', path: '왼쪽 패널 → 단 구성 → 각주 단 수' },
+    { re: /판형|용지\s*크기|paperwidth|paperheight/, label: '판형', path: '(판형은 DB 스타일에 고정됩니다)' },
+  ];
+  function detectStructuralRequest(msg) {
+    for (const { re, label, path } of STRUCTURAL_PATTERNS) {
+      if (re.test(msg)) return { label, path };
+    }
+    return null;
+  }
+
   async function refine() {
     if (!refineInput.trim() || !latex) return;
     const p = DB[selIdx];
     const userMsg = refineInput.trim();
+
+    // ── 구조적 변경 요청이면 API 호출 없이 안내 메시지 ──────────
+    const structural = detectStructuralRequest(userMsg);
+    if (structural) {
+      setRefineInput('');
+      setRefineHistory(h => [...h,
+        { role: 'user', content: userMsg },
+        {
+          role: 'assistant',
+          content: `- ⚠ "${structural.label}" 변경은 채팅으로 처리할 수 없습니다.\n- 구조 변경은 재생성해야 정확히 반영됩니다.\n- ${structural.path} 값을 바꾼 뒤 [조판 스타일 생성하기]를 다시 누르세요.`,
+          changes: '',
+          diffLines: [],
+          isError: false,
+          isStructural: true,
+          codeChanged: false,
+        }
+      ]);
+      return;
+    }
     setRefineInput("");
     setRefineLoading(true);
     setRefineHistory(h => [...h, { role: "user", content: userMsg }]);
