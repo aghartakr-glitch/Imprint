@@ -3794,7 +3794,15 @@ REQUIRED OUTPUT FORMAT:
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
                     ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
                     ["자간", `${pkg.b.자간}`],
-                    ["단", pkg.c.구성],
+                    ["단", (() => {
+                      // layout_type에서 본문 단 수 파싱 (예: "본문 2단 + 주석 4단" → "본문 2단")
+                      const lt = pkg.layout_type || '';
+                      const bodyM = lt.match(/본문\s*(\d+)[단열]/);
+                      const noteM = lt.match(/주석\s*(\d+)[단열]/);
+                      if (bodyM && noteM) return `본문 ${bodyM[1]}단 + 주석 ${noteM[1]}단`;
+                      if (bodyM) return `본문 ${bodyM[1]}단`;
+                      return pkg.c.구성; // fallback: DB 원본 값
+                    })()],
                     ["서체", pkg.ty.분류?.split(' ')[0] || "—"],
                     ["정렬", pkg.align_body?.replace(' 정렬','') || "—"],
                     ["여백", `상${pkg.m.상}·하${pkg.m.하}·안${pkg.m.안}·밖${pkg.m.밖}`],
