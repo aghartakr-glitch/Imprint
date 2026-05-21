@@ -2173,16 +2173,20 @@ export default function App() {
       } else if (!isModuleGrid && baseN <= 1) {
         colSetupBlock = '';
 
-      } else if (!isModuleGrid && baseN <= 5 && !noteUnits) {
+      } else if (!isYeol && !noteUnits) {
+        // 단(열 아님) + 주석 열 없음 → 일반 multicols 레이아웃
+        // 단 수: layout_type의 bodyUnits 우선, 없으면 c.구성 baseN 사용 (6단+ 포함)
+        const _effN = bodyUnits || baseN;
         colPackages = '\\usepackage{multicol}\n';
         colSetupBlock =
-          '% ' + baseN + '-column layout' + (isVariable
+          '% ' + _effN + '-column layout' + (_effN !== baseN ? ' (layout_type: ' + layoutType + ')' : '') +
+          (isVariable
             ? ' (VARIABLE — analyze content and vary columns editorially)\n' +
-              '% Base: ' + baseN + ' cols. Headlines/openers → full-width. Body → ' + baseN + ' cols. Vary intentionally.\n' +
+              '% Base: ' + _effN + ' cols. Headlines/openers → full-width. Body → ' + _effN + ' cols. Vary intentionally.\n' +
               '% Each switch: \\end{multicols} → \\begin{multicols}{N}\n'
             : '\n') +
           '\\setlength{\\columnsep}{' + colGap + 'mm}\n' +
-          '% \\begin{multicols}{' + baseN + '} ... \\end{multicols}\n';
+          '% \\begin{multicols}{' + _effN + '} ... \\end{multicols}\n';
 
       } else {
         // 모듈 그리드 (열 표기) 또는 본문+주석 분리 → paracol
