@@ -2146,7 +2146,13 @@ export default function App() {
 
       if (userOverride && userMode === 'variable') {
         // 사용자 지정 가변 단: variableGrid.total / body / note
-        const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
+        const _vgRaw = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
+        const _notePos = styleConfig.notePosition || 'right';
+        const _isSide = _notePos === 'left' || _notePos === 'right';
+        // left/right 모드에서 body+note > total이면 note를 자동 보정
+        const vg = _isSide && (_vgRaw.body + _vgRaw.note) > _vgRaw.total
+          ? { ..._vgRaw, note: Math.max(1, _vgRaw.total - _vgRaw.body) }
+          : _vgRaw;
         const vGrid = calcVariableGrid(vg, textW, columnGapMm);
         const hasNoteCol = vGrid.noteG > 0;
         const btc = Number(styleConfig.bodyTextColumns || 1);
