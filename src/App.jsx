@@ -2869,8 +2869,8 @@ export default function App() {
                   ).join('\n');
                   const allNotesLatex = wrapNoteTextColumns(noteLines, ntc);
 
-                  // paracol 구조 조립 (Method A: 단일 switchcolumn)
-                  // \setlength{\columnsep} + 2-인수 \setcolumnwidth — gap은 절대 column width에 넣지 않음
+                  // paracol 구조 조립 (Method B: interleaved switchcolumn)
+                  // 각 주석이 마커가 있는 단락 옆에 수직 정렬되도록 \switchcolumn*로 동기화
                   const isLeft = notePosition === 'left';
                   const { bodyW, noteW, gap: actualGap } = grid;
                   const col1W = isLeft ? noteW : bodyW;
@@ -2890,28 +2890,79 @@ export default function App() {
                     // top/bottom 처리 완료 — plines 조립 생략
                   } else {
 
+                  // ── 본문을 \par 경계로 단락 분리 → 마커 있는 단락 뒤에 주석 삽입 ──
+                  // \switchcolumn* = 동기화 스위치: 두 열이 이 지점에 도달할 때까지 기다린 후 진행
+                  // 결과: 주석이 마커 단락과 같은 수직 위치에 배치됨
+                  const rawParaParts = bodyLatex.trim().split(/(\\par\b)/);
+                  const paraChunks = [];
+                  for (let pi = 0; pi < rawParaParts.length; pi += 2) {
+                    const txt = rawParaParts[pi] || '';
+                    const par = rawParaParts[pi + 1] || '';
+                    const full = txt + par;
+                    if (full.trim()) paraChunks.push(full);
+                  }
+
+                  const bodyLines = [];
+                  const notesEmitted2 = new Set();
+
+                  for (const chunk of paraChunks) {
+                    // btc >= 2: 각 청크를 독립 multicols로 래핑
+                    bodyLines.push(btc >= 2 ? wrapBodyTextColumns(chunk, btc) : chunk);
+
+                    // 이 단락의 \ImpFN{N} 마커 수집 (등장 순서대로)
+                    const chunkMarkerRe = /\\ImpFN\{(\d+)\}/g;
+                    let chunkMk;
+                    const chunkNoteNums = [];
+                    while ((chunkMk = chunkMarkerRe.exec(chunk)) !== null) {
+                      if (!notesEmitted2.has(chunkMk[1])) {
+                        chunkNoteNums.push(chunkMk[1]);
+                        notesEmitted2.add(chunkMk[1]);
+                      }
+                    }
+
+                    if (chunkNoteNums.length > 0) {
+                      // 마커 있는 단락 → 주석 열로 전환 후 동기화 복귀
+                      bodyLines.push('');
+                      bodyLines.push('\\switchcolumn');
+                      bodyLines.push('');
+                      for (const noteN of chunkNoteNums) {
+                        if (fnMap[noteN]) {
+                          const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\textsuperscript{${noteN}}~${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
+                          bodyLines.push(ntc >= 2 ? wrapNoteTextColumns(nc, ntc) : nc);
+                        }
+                      }
+                      bodyLines.push('');
+                      bodyLines.push('\\switchcolumn*'); // 동기화: 본문 열과 주석 열을 이 지점에서 맞춤
+                      bodyLines.push('');
+                    }
+                  }
+
+                  // 마커 없이 남은 주석 → 끝에 추가 (fallback)
+                  const unemittedNotes = sorted.filter(n => fnMap[n] && !notesEmitted2.has(n));
+                  if (unemittedNotes.length > 0) {
+                    bodyLines.push('');
+                    bodyLines.push('\\switchcolumn');
+                    bodyLines.push('');
+                    for (const noteN of unemittedNotes) {
+                      const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\textsuperscript{${noteN}}~${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
+                      bodyLines.push(ntc >= 2 ? wrapNoteTextColumns(nc, ntc) : nc);
+                    }
+                  }
+
+                  const interleavedBody = bodyLines.join('\n');
+
                   const plines = [];
                   plines.push(gridComment);
-                  // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞
                   plines.push(`\\setlength{\\columnsep}{${gapStr}}`);
                   plines.push(`\\setcolumnwidth{${col1W}mm,${col2W}mm}`);
                   plines.push(`\\begin{paracol}{2}`);
                   plines.push('');
                   if (isLeft) {
-                    // 왼쪽 주석: col0=주석, col1=본문
-                    plines.push(allNotesLatex);
+                    // col0=주석, col1=본문 → 먼저 col1(본문)으로 이동 후 interleave
+                    plines.push('\\switchcolumn');
                     plines.push('');
-                    plines.push(`\\switchcolumn`);
-                    plines.push('');
-                    plines.push(wrappedBody);
-                  } else {
-                    // 오른쪽 주석(기본): col0=본문, col1=주석
-                    plines.push(wrappedBody);
-                    plines.push('');
-                    plines.push(`\\switchcolumn`);
-                    plines.push('');
-                    plines.push(allNotesLatex);
                   }
+                  plines.push(interleavedBody);
                   plines.push('');
                   plines.push(`\\end{paracol}`);
 
