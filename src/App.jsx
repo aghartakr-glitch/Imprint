@@ -2924,7 +2924,8 @@ export default function App() {
                     }
 
                     if (chunkNoteNums.length > 0) {
-                      // 마커 있는 단락 → 주석 열로 전환 후 동기화 복귀
+                      // 마커 있는 단락 → 주석 열로 전환
+                      const isLastChunk = chunk === paraChunks[paraChunks.length - 1];
                       bodyLines.push('');
                       bodyLines.push('\\switchcolumn');
                       bodyLines.push('');
@@ -2935,8 +2936,12 @@ export default function App() {
                         }
                       }
                       bodyLines.push('');
-                      bodyLines.push('\\switchcolumn*'); // 동기화: 본문 열과 주석 열을 이 지점에서 맞춤
-                      bodyLines.push('');
+                      if (!isLastChunk) {
+                        // 동기화 복귀: 두 열을 이 지점에서 맞춘 뒤 본문 계속
+                        // 마지막 단락이면 \end{paracol}이 바로 따라오므로 sync 불필요
+                        bodyLines.push('\\switchcolumn*');
+                        bodyLines.push('');
+                      }
                     }
                   }
 
