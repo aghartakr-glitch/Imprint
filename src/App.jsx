@@ -1632,21 +1632,22 @@ export default function App() {
       if (t.includes('중앙') && p.align_body.includes('중앙')) alignScore += 0.5;
     }
 
-    // ── pubTypeScore: hint와 출판형태 일치
+    // ── pubTypeScore: hint가 pub_type 전용일 때만 적용
+    // 장르(g)와 출판형태(pub_type)를 구분: hint가 장르에 매칭되면 pubTypeScore 0
+    // (장르 hint인데 pub_type도 우연히 포함하는 경우 이중 가산 방지)
     let pubTypeScore = 0;
-    if (hint && (p.pub_type||'').includes(hint)) pubTypeScore += 2;
+    const isGenreHint = hint && DB.some(d => d.g.includes(hint));
+    if (hint && !isGenreHint && (p.pub_type||'').includes(hint)) pubTypeScore += 2;
 
-    // ── layoutScore: 데이터 완성도
-    let layoutScore = 0;
-    if (p.m.상>0 && p.m.하>0 && p.m.안>0 && p.m.밖>0) layoutScore += 1;
-    if (p.b.크기>0 && p.b.행간>0) layoutScore += 0.5;
-    if (p.summary) layoutScore += 0.5;
-    if (p.why_font) layoutScore += 0.3;
+    // ── layoutScore 제거 ──
+    // 데이터 완성도는 선택 관련성과 무관함.
+    // 완성도 높은 항목(플라톤의 위염 등)이 모든 장르에서 반복 선택되는 원인이었음.
+    const layoutScore = 0;
 
     // 분리 점수를 p 객체에 붙여서 rerank에서 참조 가능하게
     p._scores = { contentScore, genreScore, pubTypeScore, layoutScore, alignScore };
 
-    return contentScore + genreScore + pubTypeScore + layoutScore + alignScore;
+    return contentScore + genreScore + pubTypeScore + alignScore;
   }
 
   // ── 텍스트 구조/의미 분석 (v29: 3축 분리 + 전시도록 근거 카운트) ─
