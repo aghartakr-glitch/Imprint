@@ -3527,23 +3527,54 @@ ${compressedLatex}
       }
 
       const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
+
+      // ── 전/후 cmdMap 직접 비교 (Claude의 %%CHANGES%% 와 별개로 확실한 수치 diff) ──
+      const cmdMapAfter = extractLatexCommandMap(sanitizedNewLatex);
+      const directDiffs = [];
+      const cmLabel = {
+        bodySize:     '본문 크기',
+        bodyLeading:  '본문 행간',
+        noteSize:     '주석 크기',
+        noteLeading:  '주석 행간',
+        footnoteSize: '각주 크기',
+        footnoteLeading:'각주 행간',
+        letterSpace:  '자간',
+        marginTop:    '상단 여백',
+        marginBottom: '하단 여백',
+        marginInner:  '내측 여백',
+        marginOuter:  '외측 여백',
+      };
+      const cmUnit = { marginTop:'mm',marginBottom:'mm',marginInner:'mm',marginOuter:'mm' };
+      for (const key of Object.keys(cmLabel)) {
+        const before = cmdMap[key], after = cmdMapAfter[key];
+        if (before !== undefined && after !== undefined && before !== after) {
+          const unit = cmUnit[key] || 'pt';
+          directDiffs.push(`- ${cmLabel[key]}: ${before}${unit} → ${after}${unit}`);
+        }
+      }
+
       const diffLines = diffLatex(latex, sanitizedNewLatex);
       const prevLatex = latex; // 변경 전 보관
       setLatex(sanitizedNewLatex);
       setTab("final");
       const codeActuallyChanged = sanitizedNewLatex.trim() !== prevLatex.trim();
-      // fallback: changesText 없으면 diffLines → 실제 변경 여부로 판단
-      const fallbackContent = changesText || (
-        diffLines.length > 0
-          ? diffLines.map(d => `- ${d}`).join('\n')
-          : codeActuallyChanged
-            ? `- 구조 변경이 적용되었습니다 (단 구성, 명령어 순서 등 수치 외 변경)`
-            : `- 변경사항이 없습니다. 요청이 이미 반영된 상태이거나 적용 불가한 항목입니다.`
-      );
+
+      // ── 변경 표시 우선순위: directDiffs > changesText > diffLines > fallback ──
+      const displayChanges =
+        directDiffs.length > 0
+          ? directDiffs.join('\n')
+          : changesText && changesText.trim()
+            ? changesText
+            : diffLines.length > 0
+              ? diffLines.map(d => `- ${d}`).join('\n')
+              : codeActuallyChanged
+                ? `- 코드가 수정되었으나 주요 수치 변경 없음 (구조·텍스트·순서 조정)`
+                : `- 변경사항이 없습니다. 요청이 이미 반영된 상태이거나 적용 불가한 항목입니다.`;
+
       setRefineHistory(h => [...h, {
         role: "assistant",
-        content: fallbackContent,
-        changes: fallbackContent,
+        content: displayChanges,
+        changes: displayChanges,
         diffLines: diffLines,
         codeChanged: codeActuallyChanged,
       }]);
