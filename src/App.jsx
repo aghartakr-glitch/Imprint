@@ -4541,14 +4541,24 @@ ${compressedLatex}`;
                 ) : msg.content}
               </div>
             ))}
+            {/* 스트리밍 중 실시간 말풍선 */}
             {refineLoading && (
-              <div style={{ padding:"10px 12px", borderRadius:3, fontSize:12,
-                background:T.bg, border:`1px solid ${T.border}`, color:T.muted,
-                display:"flex", alignItems:"center", gap:6, alignSelf:"flex-start" }}>
-                <div style={{ width:8, height:8, border:"1.5px solid #ccc",
-                  borderTopColor:T.ink, borderRadius:"50%",
-                  animation:"spin 0.8s linear infinite" }} />
-                코드 수정 중…
+              <div style={{ padding:"10px 12px", borderRadius:3, fontSize:12, lineHeight:1.7,
+                background:T.bg, border:`1px solid ${T.border}`, color:T.ink,
+                alignSelf:"flex-start", maxWidth:"92%", whiteSpace:"pre-wrap" }}>
+                {streamingText
+                  ? <>{streamingText}<span style={{
+                      display:"inline-block", width:2, height:'1em',
+                      background:T.ink, marginLeft:2, verticalAlign:'text-bottom',
+                      animation:"blink 1s step-end infinite",
+                    }} /></>
+                  : <span style={{color:T.muted, display:'flex', alignItems:'center', gap:6}}>
+                      <span style={{ width:8, height:8, border:"1.5px solid #ccc",
+                        borderTopColor:T.ink, borderRadius:"50%", display:'inline-block',
+                        animation:"spin 0.8s linear infinite" }} />
+                      생각 중…
+                    </span>
+                }
               </div>
             )}
           </div>
