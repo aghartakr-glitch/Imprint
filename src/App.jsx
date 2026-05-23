@@ -2295,8 +2295,9 @@ export default function App() {
             '% Notes → ' + noteUnits + ' units = ' + nw + 'mm\n' +
             (imageUnits ? '% Image → ' + imageUnits + ' units = ' + unitWidth(imageUnits) + 'mm\n' : '') +
             '\\setlength{\\columnsep}{' + colGap + 'mm}\n' +
-            '% \\begin{paracol}{2}\\setcolumnwidth{' + bw + 'mm,' + nw + 'mm}\n' +
-            '% <body> \\switchcolumn <notes> \\end{paracol}\n' +
+            '% \\setcolumnwidth{' + bw + 'mm,' + nw + 'mm}\n' +
+            '% \\begin{paracol}{2} <body> \\switchcolumn <notes> \\end{paracol}\n' +
+            '% CRITICAL: do NOT use \\begin{imprintlayout} — use \\begin{paracol}{2} directly\n' +
             (isVariable ? '% Variable layout: section breaks may switch column configuration\n' : '');
         } else {
           const effectiveCols = bodyUnits || (isYeol ? Math.round(baseN * 0.65) : (baseN <= 4 ? baseN : Math.round(baseN / 3)));
