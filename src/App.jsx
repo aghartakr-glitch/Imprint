@@ -1284,6 +1284,15 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   // multicol 패키지 검사
   if (/\\begin\{multicols\}/.test(mainTex) && !sty.includes('multicol'))
     errors.push('imprint-style.sty: \\RequirePackage{multicol} 없음 (main.tex에 \\begin{multicols} 사용 중)');
+  // imprintlayout 미정의 환경 검사 (→ LaTeX 즉시 오류, post-processing으로 제거되어야 함)
+  if (/\\begin\{imprintlayout\}/.test(mainTex))
+    errors.push('main.tex: \\begin{imprintlayout} — 정의되지 않은 환경입니다. 재생성해 주세요');
+  // body에 \usepackage 잔존 검사
+  const bodyMatch2 = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+  if (bodyMatch2) {
+    const bodyOnly = bodyMatch2[1];
+    if (/^\\usepackage\{/m.test(bodyOnly))
+      errors.push('main.tex: \\usepackage 가 document body 안에 있습니다 — preamble 명령은 body에 사용 불가');};
   // document body에 실제 내용 있는지 확인
   const bodyMatch = mainTex.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
   const bodySection = bodyMatch ? bodyMatch[1].replace(/\\XeTeXlinebreaklocale[^\n]*\n?/g, '')
