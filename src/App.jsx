@@ -4457,20 +4457,7 @@ ${compressedLatex}
             </div>
           </div>
 
-          {/* 빠른 수정 버튼 */}
-          {isDone && (
-            <div style={{ padding:"10px 12px", borderBottom:`1px solid ${T.border}`,
-              display:"flex", flexWrap:"wrap", gap:5, flexShrink:0 }}>
-              {["여백 더 넓게","2단으로 변경","글자 크기 줄여줘","행간 넓혀줘","각주 추가","1단으로 변경"].map(hint => (
-                <button key={hint} onClick={() => setRefineInput(hint)}
-                  style={{ padding:"4px 10px", fontSize:11, border:`1px solid ${T.border}`,
-                    borderRadius:3, background:T.bg, color:T.ink,
-                    cursor:"pointer", whiteSpace:"nowrap" }}>
-                  {hint}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* 빠른 수정 버튼 — 제거됨 */}
 
           {/* 채팅 메시지 */}
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px",
