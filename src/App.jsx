@@ -1632,12 +1632,8 @@ export default function App() {
       if (t.includes('중앙') && p.align_body.includes('중앙')) alignScore += 0.5;
     }
 
-    // ── pubTypeScore: hint가 pub_type 전용일 때만 적용
-    // 장르(g)와 출판형태(pub_type)를 구분: hint가 장르에 매칭되면 pubTypeScore 0
-    // (장르 hint인데 pub_type도 우연히 포함하는 경우 이중 가산 방지)
-    let pubTypeScore = 0;
-    const isGenreHint = hint && DB.some(d => d.g.includes(hint));
-    if (hint && !isGenreHint && (p.pub_type||'').includes(hint)) pubTypeScore += 2;
+    // pubTypeScore 제거 — 출판형태는 필터 기준이 아닌 책의 속성 정보
+    const pubTypeScore = 0;
 
     // ── layoutScore 제거 ──
     // 데이터 완성도는 선택 관련성과 무관함.
