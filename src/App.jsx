@@ -3406,7 +3406,7 @@ export default function App() {
     const p = DB[selIdx];
     const userMsg = refineInput.trim();
 
-    // ── 구조적 변경 요청이면 API 호출 없이 안내 메시지 ──────────
+    // ── 구조적 변경 요청이면 API 호출 없이 안내 ─────────────────
     const structural = detectStructuralRequest(userMsg);
     if (structural) {
       setRefineInput('');
@@ -3414,202 +3414,199 @@ export default function App() {
         { role: 'user', content: userMsg },
         {
           role: 'assistant',
-          content: `- ⚠ "${structural.label}" 변경은 채팅으로 처리할 수 없습니다.\n- 구조 변경은 재생성해야 정확히 반영됩니다.\n- ${structural.path} 값을 바꾼 뒤 [조판 스타일 생성하기]를 다시 누르세요.`,
+          chatContent: `"${structural.label}" 변경은 채팅으로 처리할 수 없습니다. ${structural.path} 값을 바꾼 뒤 [조판 스타일 생성하기]를 다시 누르세요.`,
+          content: '',
           changes: '',
-          diffLines: [],
-          isError: false,
           isStructural: true,
           codeChanged: false,
         }
       ]);
       return;
     }
-    setRefineInput("");
+
+    setRefineInput('');
     setRefineLoading(true);
-    setRefineHistory(h => [...h, { role: "user", content: userMsg }]);
+    setStreamingText('');
+    setRefineHistory(h => [...h, { role: 'user', content: userMsg }]);
 
-    // ── 현재 LaTeX에서 실제 수치 추출 ────────────────────────────
+    // ── 현재 LaTeX 수치 스냅샷 (수정 전) ─────────────────────────
     const cmdMap = extractLatexCommandMap(latex);
-
-    // ── 이전 수정 이력: 수치 변경 항목만 누적 ────────────────────
-    const historyContext = refineHistory
-      .filter(m => m.role === 'assistant' && m.codeChanged && m.changes)
-      .slice(-3)
-      .map((m, i) => `[수정${i+1}] ${m.changes.split('\n').filter(l=>l.trim().startsWith('-')).slice(0,3).join(' / ')}`)
-      .join('\n');
-
     const compressedLatex = compressLatex(latex);
 
-    // ── 커맨드 맵을 한국어로 정리 ────────────────────────────────
+    // ── 커맨드 맵 요약 (시스템 프롬프트용) ───────────────────────
     const cmdMapStr = [
-      cmdMap.bodySize    && `- 본문 크기/행간:  \\fontsize{${cmdMap.bodySize}pt}{${cmdMap.bodyLeading}pt}\\selectfont`,
-      cmdMap.noteSize    && `- 주석(side note) 크기/행간:  \\newcommand{\\notef}{...\\fontsize{${cmdMap.noteSize}pt}{${cmdMap.noteLeading}pt}...}  ← 주석 크기는 반드시 여기`,
-      cmdMap.footnoteSize && `- 각주(하단) 크기/행간:  \\renewcommand{\\footnotesize}{\\fontsize{${cmdMap.footnoteSize}pt}{${cmdMap.footnoteLeading}pt}...}`,
-      cmdMap.letterSpace && `- 자간(LetterSpace):  LetterSpace=${cmdMap.letterSpace}  in \\setmainfont`,
-      cmdMap.marginTop   && `- 여백:  top=${cmdMap.marginTop}mm / bottom=${cmdMap.marginBottom}mm / inner=${cmdMap.marginInner}mm / outer=${cmdMap.marginOuter}mm  (\\geometry 안)`,
-      cmdMap.pnFoot      && `- 쪽번호 하단(홀수면):  \\makeoddfoot{imprint}${cmdMap.pnFoot}`,
-      cmdMap.pnHead      && `- 쪽번호 상단(홀수면):  \\makeoddhead{imprint}${cmdMap.pnHead}`,
+      cmdMap.bodySize     && `본문: ${cmdMap.bodySize}pt / 행간 ${cmdMap.bodyLeading}pt`,
+      cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt  ← "각주/주석/옆 글씨" 요청 시 여기 수정`,
+      cmdMap.footnoteSize && `하단각주(\\footnotesize): ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
+      cmdMap.letterSpace  && `자간(LetterSpace): ${cmdMap.letterSpace}`,
+      cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
     ].filter(Boolean).join('\n');
 
-    const prompt = `현재 LaTeX 수치 구조:
-${cmdMapStr || '(추출 실패 — LaTeX 전체 참고)'}
+    // ── 시스템 프롬프트 ───────────────────────────────────────────
+    const systemPrompt = `너는 Imprint 조판 시스템의 스타일 어시스턴트다. 한국어로 자연스럽게 대화한다.
 
-불변 항목 (절대 변경 금지):
-- 판형: ${p.f.w}×${p.f.h}mm
-- 본문 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
+현재 스타일 수치:
+${cmdMapStr || '(수치 추출 실패 — LaTeX 직접 참고)'}
+판형: ${p.f.w}×${p.f.h}mm (절대 불변)
+본문 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
 
-조정 가능 항목 — 수치 없는 자연어 요청 시 아래 기준으로 변환:
-- "조금/약간" → ±10%
-- "좀/더" → ±15%
-- "크게/넓게/많이" → ±25%
-- "훨씬/아주" → ±35%
-예) 본문 ${cmdMap.bodySize||'?'}pt에서 "글자 좀 작게" → ${cmdMap.bodySize ? (parseFloat(cmdMap.bodySize)*0.85).toFixed(1) : '?'}pt
+수치 없는 자연어 변환 기준:
+"조금/약간" = ±10%,  "좀/더" = ±15%,  "크게/많이" = ±25%,  "훨씬/아주" = ±35%
 
-중요 커맨드 규칙:
+LaTeX 커맨드 라우팅 규칙:
 ${cmdMap.noteSize
-  ? `- 이 레이아웃은 오른쪽/왼쪽 여백 주석 열(\\notef)을 사용합니다.
-- 사용자가 "각주", "주석", "사이드노트", "옆 글씨", "여백 텍스트" 등을 언급하면 → \\notef 안의 \\fontsize만 수정 (현재: ${cmdMap.noteSize}pt/${cmdMap.noteLeading}pt)
-- \\footnote, \\footnotesize는 절대 건드리지 말 것`
-  : `- 이 레이아웃에는 여백 주석 열이 없습니다.`}
+  ? `- "각주", "주석", "사이드노트", "옆 글씨", "여백 텍스트" → \\notef 안의 \\fontsize만 수정 (현재 ${cmdMap.noteSize}pt)`
+  : `- 이 레이아웃에는 여백 주석(\\notef)이 없음`}
 ${cmdMap.footnoteSize
-  ? `- 하단 각주 크기 변경 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}\\selectfont} 수정 (현재: ${cmdMap.footnoteSize}pt)`
-  : `- 이 레이아웃에는 하단 각주(\\footnotesize) 정의가 없습니다. 하단 각주 관련 요청은 "적용 불가" 응답.`}
-- 자간 변경 → \\setmainfont 의 LetterSpace= 값만 수정
-- 여백 변경 → \\geometry 의 top/bottom/inner/outer 값만 수정 (판형 절대 불변)
-- 쪽번호 위치 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead 수정
+  ? `- 하단 각주 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}\\selectfont}`
+  : `- 이 레이아웃에는 하단 각주 정의 없음 → 관련 요청은 "불가" 안내`}
+- 자간 → \\setmainfont 의 LetterSpace= 만 수정
+- 여백 → \\geometry 의 top/bottom/inner/outer 만 수정
+- 쪽번호 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead
 
-${historyContext ? '이전 수정 이력:\n'+historyContext+'\n' : ''}사용자 요청: "${userMsg}"
+출력 규칙:
+1. 먼저 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
+2. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
+3. 수정이 없으면 <latex_update> 태그를 출력하지 않고 대화만 한다.
+4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX 코드만 넣는다.
 
 현재 LaTeX:
-${compressedLatex}
+${compressedLatex}`;
 
----
-출력 형식 (반드시 준수):
-1. 수정된 XeLaTeX 전체 코드 (마크다운 없이)
-2. 그 다음 정확히 이 블록:
-%%CHANGES%%
-- 항목명: 이전값 → 새값
-%%END%%
-
-규칙: %%CHANGES%% 각 줄은 반드시 수치를 포함할 것. "크기 조정" 같은 모호한 표현 금지.
-예) - 주석 크기: \\fontsize{6pt}{10pt} → \\fontsize{5pt}{9pt}`;
+    // ── 멀티턴 대화 히스토리 구성 ────────────────────────────────
+    // assistant 메시지는 chatContent(자연어 부분)만 전달 — LaTeX 코드 제외
+    const messages = [
+      ...refineHistory.map(m => ({
+        role: m.role,
+        content: m.role === 'user'
+          ? m.content
+          : (m.chatContent || '').trim() || '(이전 수정 완료)',
+      })).filter(m => m.content),
+      { role: 'user', content: userMsg },
+    ];
 
     try {
-      const res = await fetch("/anthropic/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 12000,
-          system: '너는 한국 편집 디자인 전문가이자 XeLaTeX 전문가다. 수정된 LaTeX 코드 전체를 출력하고, 그 다음 %%CHANGES%% 블록을 출력한다. 코드 앞에 어떠한 설명도 붙이지 않는다.\n\n출력 구조:\n<수정된 전체 LaTeX 코드>\n%%CHANGES%%\n- 항목명: 이전값 → 새값\n%%END%%\n\n%%CHANGES%% 각 항목은 반드시 구체적인 수치를 포함해야 한다.',
-          messages: [{ role: "user", content: prompt }],
+          stream: true,
+          system: systemPrompt,
+          messages,
         }),
       });
+
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(`API 오류 ${res.status}: ${errData.error?.message || res.statusText}`);
       }
-      const data = await res.json();
-      const raw = (data.content || []).map(c => c.text || "").join("");
-      const cleaned = raw.replace(/```latex\n?/g, "").replace(/```\n?/g, "").trim();
 
-      // Split code from changes summary
-      const changesSplit = cleaned.split("%%CHANGES%%");
-      const newLatex = changesSplit[0].trim();
-      let changesText = "";
-      if (changesSplit[1]) {
-        changesText = changesSplit[1].replace("%%END%%", "").trim();
-      }
+      // ── SSE 스트리밍 파싱 ─────────────────────────────────────
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
 
-      // ── 빈 latex 가드: 기존 코드를 절대 지우지 않는다 ──────────────
-      if (!newLatex || newLatex.length < 80 || !newLatex.includes('\\documentclass')) {
-        setRefineHistory(h => [...h, {
-          role: "assistant",
-          content: `- ⚠ API가 유효한 LaTeX를 반환하지 않았습니다.\n- 기존 코드가 유지됩니다. 다시 시도해주세요.`,
-          changes: '',
-          diffLines: [],
-          isError: true,
-        }]);
-        return;
-      }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      const sanitizedNewLatex = sanitizeUnicodeForLatex(newLatex);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // 마지막 불완전한 라인은 다음 청크에
 
-      // ── 전/후 cmdMap 직접 비교 (Claude의 %%CHANGES%% 와 별개로 확실한 수치 diff) ──
-      const cmdMapAfter = extractLatexCommandMap(sanitizedNewLatex);
-      const directDiffs = [];
-      const cmLabel = {
-        bodySize:     '본문 크기',
-        bodyLeading:  '본문 행간',
-        noteSize:     '주석 크기',
-        noteLeading:  '주석 행간',
-        footnoteSize: '각주 크기',
-        footnoteLeading:'각주 행간',
-        letterSpace:  '자간',
-        marginTop:    '상단 여백',
-        marginBottom: '하단 여백',
-        marginInner:  '내측 여백',
-        marginOuter:  '외측 여백',
-      };
-      const cmUnit = { marginTop:'mm',marginBottom:'mm',marginInner:'mm',marginOuter:'mm' };
-      for (const key of Object.keys(cmLabel)) {
-        const before = cmdMap[key], after = cmdMapAfter[key];
-        // before가 없다가 새로 생겼거나, 값이 바뀐 경우 모두 잡기
-        if (after !== undefined && before !== after) {
-          const unit = cmUnit[key] || 'pt';
-          const fromStr = before !== undefined ? `${before}${unit}` : '(없음)';
-          directDiffs.push(`- ${cmLabel[key]}: ${fromStr} → ${after}${unit}`);
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]' || !data) continue;
+          try {
+            const ev = JSON.parse(data);
+            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+              fullText += ev.delta.text;
+              // 실시간 표시: <latex_update> 태그 이후는 숨김
+              const displayText = fullText.replace(/<latex_update>[\s\S]*/i, '').trim();
+              setStreamingText(displayText);
+            }
+          } catch { /* JSON 파싱 오류 무시 */ }
         }
       }
 
-      const diffLines = diffLatex(latex, sanitizedNewLatex);
-      const prevLatex = latex;
-      setLatex(sanitizedNewLatex);
-      setTab("final");
-      const codeActuallyChanged = sanitizedNewLatex.trim() !== prevLatex.trim();
+      // ── 스트리밍 완료 후 처리 ─────────────────────────────────
+      setStreamingText('');
 
-      // ── 채팅 응답 메시지 생성 ─────────────────────────────────────
-      let chatMsg = '';
-      if (directDiffs.length > 0) {
-        // 수치 변경이 실제로 잡힌 경우: 변경 항목 나열
-        chatMsg = directDiffs.join('\n');
-      } else if (changesText && changesText.trim()) {
-        chatMsg = changesText;
-      } else if (diffLines.length > 0) {
-        chatMsg = diffLines.map(d => `- ${d}`).join('\n');
-      } else if (codeActuallyChanged) {
-        chatMsg = '- 수치 외 구조 변경 적용됨 (순서·텍스트·패키지 옵션 등)';
-      } else {
-        // 아무것도 안 바뀐 경우 — 이유를 명시
-        const hasNoteCmd = sanitizedNewLatex.includes('\\newcommand{\\notef}');
-        const hasFnCmd   = sanitizedNewLatex.includes('\\renewcommand{\\footnotesize}');
-        if (!hasNoteCmd && !hasFnCmd) {
-          chatMsg = '- ⚠ 이 레이아웃에는 주석/각주 명령어가 없어 크기 수정이 불가합니다.';
-        } else {
-          chatMsg = '- 요청한 항목이 이미 반영된 상태이거나 현재 값과 동일합니다.';
+      // <latex_update> 태그 추출
+      const latexMatch = fullText.match(/<latex_update>([\s\S]+?)<\/latex_update>/i);
+      const chatContent = fullText.replace(/<latex_update>[\s\S]+?<\/latex_update>/i, '').trim();
+
+      let directDiffs = [];
+      let finalLatex = latex;
+      let codeChanged = false;
+
+      if (latexMatch) {
+        const extracted = latexMatch[1].trim()
+          .replace(/^```latex\n?/i, '').replace(/\n?```$/i, '').trim();
+
+        if (extracted.length > 80 && extracted.includes('\\documentclass')) {
+          const sanitized = sanitizeUnicodeForLatex(extracted);
+
+          // 전/후 cmdMap 직접 비교
+          const cmdMapAfter = extractLatexCommandMap(sanitized);
+          const cmLabel = {
+            bodySize:'본문 크기', bodyLeading:'본문 행간',
+            noteSize:'주석 크기', noteLeading:'주석 행간',
+            footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
+            letterSpace:'자간',
+            marginTop:'상단 여백', marginBottom:'하단 여백',
+            marginInner:'내측 여백', marginOuter:'외측 여백',
+          };
+          const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm' };
+          for (const key of Object.keys(cmLabel)) {
+            const before = cmdMap[key], after = cmdMapAfter[key];
+            if (after !== undefined && before !== after) {
+              const unit = cmUnit[key] || 'pt';
+              const fromStr = before !== undefined ? `${before}${unit}` : '(없음)';
+              directDiffs.push(`- ${cmLabel[key]}: ${fromStr} → ${after}${unit}`);
+            }
+          }
+
+          finalLatex = sanitized;
+          codeChanged = sanitized.trim() !== latex.trim();
+          if (codeChanged) {
+            setLatex(sanitized);
+            setTab('final');
+          }
         }
+      }
+
+      // ── 변경 요약 메시지 ──────────────────────────────────────
+      let changesSummary = directDiffs.join('\n');
+      if (!changesSummary && latexMatch && !codeChanged) {
+        changesSummary = '- 수정 내용이 기존과 동일하거나 적용 불가한 항목입니다.';
       }
 
       setRefineHistory(h => [...h, {
-        role: "assistant",
-        content: chatMsg,
-        changes: chatMsg,
-        diffLines: diffLines,
-        codeChanged: codeActuallyChanged,
+        role: 'assistant',
+        chatContent,             // 자연어 응답 (다음 턴 히스토리에도 사용)
+        content: chatContent,
+        changes: changesSummary, // 수치 변경 요약
+        codeChanged,
       }]);
-      // ── Refine 로그 업데이트 ─────────────────────────────────────
+
+      // ── 로그 업데이트 ─────────────────────────────────────────
       setCurrentLog(prev => {
         if (!prev) return prev;
         const refineEntry = {
           at: new Date().toISOString(),
           user_request: userMsg,
-          changed_summary: changesText.split('\n').filter(l=>l.trim()).slice(0,5).join(' / '),
+          changed_summary: directDiffs.slice(0,5).join(' / '),
           latex_hash_before: simpleHash(latex),
-          latex_hash_after: simpleHash(newLatex),
+          latex_hash_after: simpleHash(finalLatex),
         };
         const updated = {
           ...prev,
-          output: { ...prev.output, latex_code: newLatex, latex_length: newLatex.length, latex_hash: simpleHash(newLatex) }, // LOG_FULL_LATEX 상수 제거 후 직접 삽입
+          output: { ...prev.output, latex_code: finalLatex, latex_length: finalLatex.length, latex_hash: simpleHash(finalLatex) },
           style_features_used: { ...prev.style_features_used, refine_used: true },
           prompts: { ...prev.prompts, refine_prompt_hash: simpleHash(userMsg) },
           refine_history: [...(prev.refine_history||[]), refineEntry],
@@ -3618,8 +3615,17 @@ ${compressedLatex}
         setAllLogs(all => [updated, ...all.filter(l => l.id !== updated.id)].slice(0, 100));
         return updated;
       });
+
     } catch (e) {
-      setRefineHistory(h => [...h, { role: "assistant", content: `Error: ${e.message}`, changes: "" }]);
+      setStreamingText('');
+      setRefineHistory(h => [...h, {
+        role: 'assistant',
+        chatContent: `오류가 발생했습니다: ${e.message}`,
+        content: '',
+        changes: '',
+        codeChanged: false,
+        isError: true,
+      }]);
     } finally {
       setRefineLoading(false);
     }
