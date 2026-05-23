@@ -3553,34 +3553,46 @@ ${compressedLatex}
       const cmUnit = { marginTop:'mm',marginBottom:'mm',marginInner:'mm',marginOuter:'mm' };
       for (const key of Object.keys(cmLabel)) {
         const before = cmdMap[key], after = cmdMapAfter[key];
-        if (before !== undefined && after !== undefined && before !== after) {
+        // before가 없다가 새로 생겼거나, 값이 바뀐 경우 모두 잡기
+        if (after !== undefined && before !== after) {
           const unit = cmUnit[key] || 'pt';
-          directDiffs.push(`- ${cmLabel[key]}: ${before}${unit} → ${after}${unit}`);
+          const fromStr = before !== undefined ? `${before}${unit}` : '(없음)';
+          directDiffs.push(`- ${cmLabel[key]}: ${fromStr} → ${after}${unit}`);
         }
       }
 
       const diffLines = diffLatex(latex, sanitizedNewLatex);
-      const prevLatex = latex; // 변경 전 보관
+      const prevLatex = latex;
       setLatex(sanitizedNewLatex);
       setTab("final");
       const codeActuallyChanged = sanitizedNewLatex.trim() !== prevLatex.trim();
 
-      // ── 변경 표시 우선순위: directDiffs > changesText > diffLines > fallback ──
-      const displayChanges =
-        directDiffs.length > 0
-          ? directDiffs.join('\n')
-          : changesText && changesText.trim()
-            ? changesText
-            : diffLines.length > 0
-              ? diffLines.map(d => `- ${d}`).join('\n')
-              : codeActuallyChanged
-                ? `- 코드가 수정되었으나 주요 수치 변경 없음 (구조·텍스트·순서 조정)`
-                : `- 변경사항이 없습니다. 요청이 이미 반영된 상태이거나 적용 불가한 항목입니다.`;
+      // ── 채팅 응답 메시지 생성 ─────────────────────────────────────
+      let chatMsg = '';
+      if (directDiffs.length > 0) {
+        // 수치 변경이 실제로 잡힌 경우: 변경 항목 나열
+        chatMsg = directDiffs.join('\n');
+      } else if (changesText && changesText.trim()) {
+        chatMsg = changesText;
+      } else if (diffLines.length > 0) {
+        chatMsg = diffLines.map(d => `- ${d}`).join('\n');
+      } else if (codeActuallyChanged) {
+        chatMsg = '- 수치 외 구조 변경 적용됨 (순서·텍스트·패키지 옵션 등)';
+      } else {
+        // 아무것도 안 바뀐 경우 — 이유를 명시
+        const hasNoteCmd = sanitizedNewLatex.includes('\\newcommand{\\notef}');
+        const hasFnCmd   = sanitizedNewLatex.includes('\\renewcommand{\\footnotesize}');
+        if (!hasNoteCmd && !hasFnCmd) {
+          chatMsg = '- ⚠ 이 레이아웃에는 주석/각주 명령어가 없어 크기 수정이 불가합니다.';
+        } else {
+          chatMsg = '- 요청한 항목이 이미 반영된 상태이거나 현재 값과 동일합니다.';
+        }
+      }
 
       setRefineHistory(h => [...h, {
         role: "assistant",
-        content: displayChanges,
-        changes: displayChanges,
+        content: chatMsg,
+        changes: chatMsg,
         diffLines: diffLines,
         codeChanged: codeActuallyChanged,
       }]);
