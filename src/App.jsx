@@ -941,13 +941,18 @@ function wrapParacol(body, bodyMm, noteMm, colGapMm) {
   const idx = body.indexOf(PARACOL_MARKER);
   const mainPart = body.slice(0, idx).trim();
   const notePart = body.slice(idx + PARACOL_MARKER.length).trim();
-  // imprintlayout 환경 사용 (.sty에 정의됨 — \begin{paracol} 직접 사용 안 함)
+  const gap = colGapMm || 8;
+  const bMm = bodyMm || 60;
+  const nMm = noteMm || 24;
+  // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞에 위치해야 함
   return [
-    `\\begin{imprintlayout}`,
+    `\\setlength{\\columnsep}{${gap}mm}`,
+    `\\setcolumnwidth{${bMm}mm,${nMm}mm}`,
+    `\\begin{paracol}{2}`,
     mainPart,
     `\\switchcolumn`,
     notePart,
-    `\\end{imprintlayout}`,
+    `\\end{paracol}`,
   ].join('\n');
 }
 
