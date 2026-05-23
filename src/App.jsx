@@ -3343,6 +3343,33 @@ export default function App() {
     return null;
   }
 
+  // ── 현재 LaTeX에서 실제 수치 커맨드 맵 추출 ──────────────────────
+  // Claude가 "어느 명령어를 얼마나 바꿔야 하는지" 정확히 알 수 있도록
+  function extractLatexCommandMap(latexStr) {
+    const map = {};
+    // \fontsize{Xpt}{Ypt} — 본문 (첫 번째 등장)
+    const bodyFont = latexStr.match(/\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}\\selectfont/);
+    if (bodyFont) { map.bodySize = bodyFont[1]; map.bodyLeading = bodyFont[2]; }
+    // \notef 정의: \fontsize{Xpt}{Ypt}
+    const notef = latexStr.match(/\\newcommand\{\\notef\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
+    if (notef) { map.noteSize = notef[1]; map.noteLeading = notef[2]; }
+    // \geometry 여백
+    const geo = latexStr.match(/top=([\d.]+)mm.*?bottom=([\d.]+)mm.*?inner=([\d.]+)mm.*?outer=([\d.]+)mm/s);
+    if (geo) { map.marginTop=geo[1]; map.marginBottom=geo[2]; map.marginInner=geo[3]; map.marginOuter=geo[4]; }
+    // LetterSpace (자간)
+    const ls = latexStr.match(/LetterSpace=([-\d.]+)/);
+    if (ls) map.letterSpace = ls[1];
+    // \footnotemark / \footnotesize (일반 각주)
+    const fnSize = latexStr.match(/\\renewcommand\{\\footnotesize\}\{\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
+    if (fnSize) { map.footnoteSize = fnSize[1]; map.footnoteLeading = fnSize[2]; }
+    // 쪽번호 위치 (makeoddfoot/makeoddhead)
+    const pnFoot = latexStr.match(/\\makeoddfoot\{imprint\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/);
+    const pnHead = latexStr.match(/\\makeoddhead\{imprint\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/);
+    if (pnFoot) map.pnFoot = `{${pnFoot[1]}}{${pnFoot[2]}}{${pnFoot[3]}}`;
+    if (pnHead) map.pnHead = `{${pnHead[1]}}{${pnHead[2]}}{${pnHead[3]}}`;
+    return map;
+  }
+
   async function refine() {
     if (!refineInput.trim() || !latex) return;
     const p = DB[selIdx];
@@ -3370,48 +3397,65 @@ export default function App() {
     setRefineLoading(true);
     setRefineHistory(h => [...h, { role: "user", content: userMsg }]);
 
-    // 히스토리 최근 4개(2교환)만 유지 + LaTeX 주석 제거해서 전송
-    const historyContext = refineHistory.slice(-4).map(m =>
-      `${m.role === "user" ? "사용자 요청" : "수정 결과 요약"}: ${m.role === "user" ? m.content : (m.diffLines||[]).join(', ') || m.content.slice(0,80)}`
-    ).join("\n");
+    // ── 현재 LaTeX에서 실제 수치 추출 ────────────────────────────
+    const cmdMap = extractLatexCommandMap(latex);
+
+    // ── 이전 수정 이력: 수치 변경 항목만 누적 ────────────────────
+    const historyContext = refineHistory
+      .filter(m => m.role === 'assistant' && m.codeChanged && m.changes)
+      .slice(-3)
+      .map((m, i) => `[수정${i+1}] ${m.changes.split('\n').filter(l=>l.trim().startsWith('-')).slice(0,3).join(' / ')}`)
+      .join('\n');
 
     const compressedLatex = compressLatex(latex);
-    const prompt = `You are a Korean editorial design specialist and XeLaTeX expert.
-The user requests a refinement in Korean natural language. Interpret the intent as an editorial designer would and adjust LaTeX parameters accordingly.
 
-IMMUTABLE — NEVER change regardless of any request:
-- Paper size: ${p.f.w}×${p.f.h}mm — fixed forever
-- Alignment: ${runMeta?.selectedAlignment||'justified'} (${runMeta?.alignmentReason||''}) — DO NOT change alignment
-- If lengthCompare/lockedStyle mode: font-size, leading, tracking, margins, page-number position, running-head position also fixed
+    // ── 커맨드 맵을 한국어로 정리 ────────────────────────────────
+    const cmdMapStr = [
+      cmdMap.bodySize    && `- 본문 크기/행간:  \\fontsize{${cmdMap.bodySize}pt}{${cmdMap.bodyLeading}pt}\\selectfont`,
+      cmdMap.noteSize    && `- 주석(side note) 크기/행간:  \\newcommand{\\notef}{...\\fontsize{${cmdMap.noteSize}pt}{${cmdMap.noteLeading}pt}...}  ← 주석 크기는 반드시 여기`,
+      cmdMap.footnoteSize && `- 각주(하단) 크기/행간:  \\renewcommand{\\footnotesize}{\\fontsize{${cmdMap.footnoteSize}pt}{${cmdMap.footnoteLeading}pt}...}`,
+      cmdMap.letterSpace && `- 자간(LetterSpace):  LetterSpace=${cmdMap.letterSpace}  in \\setmainfont`,
+      cmdMap.marginTop   && `- 여백:  top=${cmdMap.marginTop}mm / bottom=${cmdMap.marginBottom}mm / inner=${cmdMap.marginInner}mm / outer=${cmdMap.marginOuter}mm  (\\geometry 안)`,
+      cmdMap.pnFoot      && `- 쪽번호 하단(홀수면):  \\makeoddfoot{imprint}${cmdMap.pnFoot}`,
+      cmdMap.pnHead      && `- 쪽번호 상단(홀수면):  \\makeoddhead{imprint}${cmdMap.pnHead}`,
+    ].filter(Boolean).join('\n');
 
-ADJUSTABLE — change freely when user requests:
-- Margins (top/bottom/inner/outer): user may explicitly request margin changes — apply them
-- Font size, leading, tracking, column layout, page number position: all adjustable (except in locked modes)
-OVERFLOW: reduce font size or leading; do NOT change margins unless user asked. If widow/orphan detected: adjust leading, paragraph spacing, or add \\newpage — do NOT loosen tolerance.
+    const prompt = `현재 LaTeX 수치 구조:
+${cmdMapStr || '(추출 실패 — LaTeX 전체 참고)'}
 
-Current parameters:
-- Paper: ${p.f.w}×${p.f.h}mm
-- Margins: top=${(appliedMargins||p.m).상}mm, bottom=${(appliedMargins||p.m).하}mm, inner=${(appliedMargins||p.m).안}mm, outer=${(appliedMargins||p.m).밖}mm
-- Columns: ${p.c.구성}, gap=${p.c.간격}mm
-- Body: ${p.b.크기}pt / leading ${p.b.행간}pt (\\fontsize{${p.b.크기}pt}{${p.b.행간}pt}\\selectfont) / tracking ${p.b.자간}
-- Typeface class: ${p.ty.분류}
-- Alignment: ${runMeta?.selectedAlignment||'justified'} (locked)
-- Page number position: ${p.pn}${p.pn_size ? ', size: '+p.pn_size : ''}${p.pn_font ? ', font: '+p.pn_font : ''}${p.pn_style ? ', style: '+p.pn_style : ''}
-- Running head: ${fields.면주 || '없음'}
-- Footnote style: ${p.footnote || '없음'} (no-indent, number+0.4em gap fixed in preamble)
+불변 항목 (절대 변경 금지):
+- 판형: ${p.f.w}×${p.f.h}mm
+- 본문 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
 
-${historyContext ? 'Previous refinements:\n'+historyContext+'\n' : ''}User request (in Korean): "${userMsg}"
+조정 가능 항목 — 수치 없는 자연어 요청 시 아래 기준으로 변환:
+- "조금/약간" → ±10%
+- "좀/더" → ±15%
+- "크게/넓게/많이" → ±25%
+- "훨씬/아주" → ±35%
+예) 본문 ${cmdMap.bodySize||'?'}pt에서 "글자 좀 작게" → ${cmdMap.bodySize ? (parseFloat(cmdMap.bodySize)*0.85).toFixed(1) : '?'}pt
 
-Current LaTeX:
+중요 커맨드 규칙:
+- 주석(오른쪽/왼쪽 열) 크기 변경 → \\notef 안의 \\fontsize만 수정. \\footnote, \\footnotesize 건드리지 말 것
+- 각주(하단) 크기 변경 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}...} 수정
+- 자간 변경 → \\setmainfont 의 LetterSpace= 값만 수정
+- 여백 변경 → \\geometry 의 top/bottom/inner/outer 값만 수정 (판형 절대 불변)
+- 쪽번호 위치 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead 수정
+
+${historyContext ? '이전 수정 이력:\n'+historyContext+'\n' : ''}사용자 요청: "${userMsg}"
+
+현재 LaTeX:
 ${compressedLatex}
 
 ---
-REQUIRED OUTPUT FORMAT:
-1. Full corrected XeLaTeX code (no markdown, no backticks)
-2. Then exactly this block:
+출력 형식 (반드시 준수):
+1. 수정된 XeLaTeX 전체 코드 (마크다운 없이)
+2. 그 다음 정확히 이 블록:
 %%CHANGES%%
-- [parameter]: [old value] → [new value] (reason)
-%%END%%`;
+- 항목명: 이전값 → 새값
+%%END%%
+
+규칙: %%CHANGES%% 각 줄은 반드시 수치를 포함할 것. "크기 조정" 같은 모호한 표현 금지.
+예) - 주석 크기: \\fontsize{6pt}{10pt} → \\fontsize{5pt}{9pt}`;
 
     try {
       const res = await fetch("/anthropic/v1/messages", {
@@ -3420,7 +3464,7 @@ REQUIRED OUTPUT FORMAT:
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 12000,
-        system: 'You are a Korean editorial design specialist and XeLaTeX expert. Output ONLY the modified LaTeX code, then the %%CHANGES%% block, then %%END%%. No prose before the code.\n\nREQUIRED OUTPUT STRUCTURE (strictly follow):\n<full corrected LaTeX code>\n%%CHANGES%%\n- 항목명: 이전값 → 새값 (이유)\n%%END%%\n\nAll %%CHANGES%% lines MUST be in Korean.\n\nINTERPRETATION GUIDE (use EXACT patterns — do NOT improvise):\n- 자간 넓게 → LetterSpace increase in \\setmainfont\n- 행간 넓게 → increase 2nd arg in \\fontsize{크기}{행간}\n- 여백 넓게 → increase margins in \\geometry (NOT paper size)\n- 본문 크기 크게 → increase 1st arg in \\fontsize\n- 쪽번호 위치 → adjust \\fancyhead/\\fancyfoot\n- 단 변경 → adjust multicols{N} count\n\n각주/주석 N단 (하단) — EXACT CODE, do NOT use other methods:\n  In preamble, ADD these lines (replace existing @makefntext block):\n  \\usepackage{bigfoot}\n  \\DeclareNewFootnote{A}[arabic]\n  \\footnotelayout{c}[N]   % N = column count\n  \\let\\footnote\\footnoteA\n  \\let\\footnotemark\\footnoteAmark\n  \\let\\footnotetext\\footnoteAtext\n  Remove the old \\makeatletter...\\@makefntext...\\makeatother block.\n\nOVERFLOW: keep \\tolerance=400 \\emergencystretch=3em; reduce font or leading, NOT margins.',
+          system: '너는 한국 편집 디자인 전문가이자 XeLaTeX 전문가다. 수정된 LaTeX 코드 전체를 출력하고, 그 다음 %%CHANGES%% 블록을 출력한다. 코드 앞에 어떠한 설명도 붙이지 않는다.\n\n출력 구조:\n<수정된 전체 LaTeX 코드>\n%%CHANGES%%\n- 항목명: 이전값 → 새값\n%%END%%\n\n%%CHANGES%% 각 항목은 반드시 구체적인 수치를 포함해야 한다.',
           messages: [{ role: "user", content: prompt }],
         }),
       });
