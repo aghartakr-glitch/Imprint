@@ -1704,16 +1704,16 @@ export default function App() {
         ? `topic:${profile.topic||''} form:${profile.textForm||''} pubType:${profile.pubType||''} tone:${profile.tone||''} structure:${profile.structure||''} exhibitEv:${profile.exhibitEvidence??0}`
         : '';
 
-      // v29 혼합 후보 구성
-      const byGenre   = ranked.filter(r => r.p.g.includes(hint||'')).slice(0, 4);
-      const byPubType = ranked.filter(r => (r.p.pub_type||'').includes(hint||'')).slice(0, 3);
-      const byContent = ranked.slice(0, 3);
+      // 후보 구성 — 장르/출판형태 엄격 분리
+      // hint가 있으면 이미 run()에서 해당 필드로만 필터된 ranked가 들어옴
+      // rerank 단계에서도 섞이지 않도록 byPubType 분기 제거
+      const byContent = ranked.slice(0, 6);
       // 레이아웃 다양성: 이미 뽑힌 layout_type과 다른 것
-      const usedLayouts = new Set([...byGenre,...byPubType,...byContent].map(r=>r.p.layout_type));
-      const byLayout = ranked.filter(r => !usedLayouts.has(r.p.layout_type)).slice(0, 2);
+      const usedLayouts = new Set(byContent.map(r=>r.p.layout_type));
+      const byLayout = ranked.filter(r => !usedLayouts.has(r.p.layout_type)).slice(0, 4);
       // 합치고 중복 제거
       const seen = new Set();
-      const pool = [...byGenre,...byPubType,...byContent,...byLayout].filter(r => {
+      const pool = [...byContent,...byLayout].filter(r => {
         if (seen.has(r.i)) return false;
         seen.add(r.i); return true;
       }).slice(0, 10);
