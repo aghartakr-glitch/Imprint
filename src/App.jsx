@@ -3488,7 +3488,7 @@ ${compressedLatex}`;
     try {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 12000,
