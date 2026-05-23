@@ -4488,51 +4488,43 @@ ${compressedLatex}`;
                 {msg.role === 'assistant' ? (
                   <div>
                     {msg.isStructural ? (
-                      <span style={{color:'#e67e22'}}>↩ UI 슬라이더에서 직접 변경하세요</span>
+                      // 구조 변경 안내
+                      <span style={{color:'#e67e22', fontSize:12}}>{msg.chatContent}</span>
                     ) : msg.isError ? (
-                      <>
-                        <div style={{fontWeight:700, color:'#c0392b', marginBottom:4}}>⚠ 오류</div>
-                        <div style={{fontSize:11, color:'#c0392b', whiteSpace:'pre-wrap'}}>{msg.content}</div>
-                      </>
+                      // 오류
+                      <span style={{color:'#c0392b', fontSize:12}}>{msg.chatContent}</span>
                     ) : (
                       <>
-                        {/* 변경 내역: directDiffs 또는 fallback 텍스트 */}
-                        {(msg.changes || '').split('\n').filter(l => l.trim()).map((line, li) => {
-                          const raw = line.replace(/^[-•]\s*/, '');
-                          const isWarn = raw.startsWith('⚠');
-                          const parts = raw.replace(/^⚠\s*/, '').split(/\s*→\s*/);
-                          return (
-                            <div key={li} style={{
-                              fontSize:11, lineHeight:1.75,
-                              marginTop: li > 0 ? 5 : 0,
-                              color: isWarn ? '#e67e22' : T.ink,
-                            }}>
-                              {parts.length >= 2 ? (
-                                // "항목 이름: 이전값 → 새값" 형식
-                                (() => {
-                                  const colonIdx = parts[0].lastIndexOf(':');
-                                  const label = colonIdx >= 0 ? parts[0].slice(0, colonIdx).trim() : parts[0].trim();
-                                  const oldVal = colonIdx >= 0 ? parts[0].slice(colonIdx+1).trim() : '';
-                                  const newVal = parts[1].trim();
-                                  return <>
-                                    <span style={{color:T.muted, fontSize:10}}>{label}</span>
-                                    {oldVal && <><span style={{color:'#bbb', margin:'0 4px', fontSize:10}}>:</span>
-                                    <span style={{color:'#c0392b', textDecoration:'line-through', fontSize:10, marginRight:4}}>{oldVal}</span></>}
-                                    <span style={{color:'#888', marginRight:4, fontSize:10}}>→</span>
+                        {/* 자연어 응답 */}
+                        {msg.chatContent && (
+                          <div style={{fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap', marginBottom: msg.changes ? 8 : 0}}>
+                            {msg.chatContent}
+                          </div>
+                        )}
+                        {/* 수치 변경 요약 (directDiffs) */}
+                        {msg.changes && (
+                          <div style={{borderTop: msg.chatContent ? `1px solid ${T.border}` : 'none',
+                            paddingTop: msg.chatContent ? 7 : 0}}>
+                            {msg.changes.split('\n').filter(l => l.trim()).map((line, li) => {
+                              const raw = line.replace(/^[-•]\s*/, '');
+                              const parts = raw.split(/\s*→\s*/);
+                              if (parts.length >= 2) {
+                                const colonIdx = parts[0].lastIndexOf(':');
+                                const label = colonIdx >= 0 ? parts[0].slice(0, colonIdx).trim() : parts[0].trim();
+                                const oldVal = colonIdx >= 0 ? parts[0].slice(colonIdx+1).trim() : '';
+                                const newVal = parts[1].trim();
+                                return (
+                                  <div key={li} style={{fontSize:11, lineHeight:1.7, marginTop: li > 0 ? 3 : 0}}>
+                                    <span style={{color:T.muted}}>{label}</span>
+                                    <span style={{color:'#bbb', margin:'0 3px'}}>:</span>
+                                    {oldVal && <span style={{color:'#c0392b', textDecoration:'line-through', marginRight:4}}>{oldVal}</span>}
+                                    <span style={{color:'#888', marginRight:3}}>→</span>
                                     <span style={{color:'#2d7d46', fontWeight:700}}>{newVal}</span>
-                                  </>;
-                                })()
-                              ) : (
-                                <span>{raw.replace(/^⚠\s*/, '')}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {/* 실제로 코드가 바뀐 경우에만 LaTeX 탭 안내 */}
-                        {msg.codeChanged && (
-                          <div style={{fontSize:10, color:T.muted, marginTop:7,
-                            paddingTop:6, borderTop:`1px solid ${T.border}`}}>
-                            스타일 파일 탭에서 수정 내용 확인
+                                  </div>
+                                );
+                              }
+                              return <div key={li} style={{fontSize:11, color:T.muted, marginTop: li > 0 ? 3 : 0}}>{raw}</div>;
+                            })}
                           </div>
                         )}
                       </>
