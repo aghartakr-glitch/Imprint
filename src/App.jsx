@@ -4480,63 +4480,55 @@ ${compressedLatex}
               }}>
                 {msg.role === 'assistant' ? (
                   <div>
-                    {/* 헤더: 실제 변경 여부 / 오류에 따라 다르게 표시 */}
-                    <div style={{fontWeight:700, fontSize:12, marginBottom:6, display:'flex', alignItems:'center', gap:5}}>
-                      {msg.isStructural
-                        ? <><span style={{color:'#e67e22'}}>↩</span> UI에서 변경하세요</>
-                        : msg.isError
-                          ? <><span style={{color:'#c0392b'}}>⚠</span> 오류</>
-                          : msg.codeChanged === false
-                            ? <><span style={{color:'#888'}}>−</span> 변경 없음</>
-                            : <><span style={{color:'#2d7d46'}}>✓</span> 코드 수정됨</>
-                      }
-                    </div>
-                    {/* 변경 내역 줄 */}
-                    {(msg.changes && msg.changes.trim()
-                      ? msg.changes.split('\n').filter(l => l.trim())
-                      : (msg.diffLines && msg.diffLines.length > 0
-                          ? msg.diffLines.map(d => `- ${d}`)
-                          : null)
-                    )?.map((line, li) => {
-                      const clean = line.replace(/^[-•]\s*/, '');
-                      const parts = clean.split(/→|→/);
-                      return (
-                        <div key={li} style={{
-                          fontSize:11, lineHeight:1.6, marginTop:4,
-                          paddingLeft:8, borderLeft:`2px solid ${T.border}`,
-                          color: msg.isError ? '#c0392b' : T.ink,
-                        }}>
-                          {parts.length >= 2 ? (
-                            <>
-                              <span style={{color:T.muted}}>{parts[0].replace(/:.*/, '').trim()}</span>
-                              <span style={{color:'#aaa', margin:'0 4px'}}>:</span>
-                              <span style={{color:'#c0392b', textDecoration:'line-through', marginRight:4}}>
-                                {parts[0].includes(':') ? parts[0].split(':').slice(1).join(':').trim() : ''}
-                              </span>
-                              <span style={{color:'#888', marginRight:4}}>→</span>
-                              <span style={{color:'#2d7d46', fontWeight:600}}>
-                                {parts[1].replace(/\(.*\)/, '').trim()}
-                              </span>
-                              {parts[1].match(/\((.+)\)/) && (
-                                <span style={{color:T.muted, fontSize:10, marginLeft:4}}>
-                                  ({parts[1].match(/\((.+)\)/)[1]})
-                                </span>
+                    {msg.isStructural ? (
+                      <span style={{color:'#e67e22'}}>↩ UI 슬라이더에서 직접 변경하세요</span>
+                    ) : msg.isError ? (
+                      <>
+                        <div style={{fontWeight:700, color:'#c0392b', marginBottom:4}}>⚠ 오류</div>
+                        <div style={{fontSize:11, color:'#c0392b', whiteSpace:'pre-wrap'}}>{msg.content}</div>
+                      </>
+                    ) : (
+                      <>
+                        {/* 변경 내역: directDiffs 또는 fallback 텍스트 */}
+                        {(msg.changes || '').split('\n').filter(l => l.trim()).map((line, li) => {
+                          const raw = line.replace(/^[-•]\s*/, '');
+                          const isWarn = raw.startsWith('⚠');
+                          const parts = raw.replace(/^⚠\s*/, '').split(/\s*→\s*/);
+                          return (
+                            <div key={li} style={{
+                              fontSize:11, lineHeight:1.75,
+                              marginTop: li > 0 ? 5 : 0,
+                              color: isWarn ? '#e67e22' : T.ink,
+                            }}>
+                              {parts.length >= 2 ? (
+                                // "항목 이름: 이전값 → 새값" 형식
+                                (() => {
+                                  const colonIdx = parts[0].lastIndexOf(':');
+                                  const label = colonIdx >= 0 ? parts[0].slice(0, colonIdx).trim() : parts[0].trim();
+                                  const oldVal = colonIdx >= 0 ? parts[0].slice(colonIdx+1).trim() : '';
+                                  const newVal = parts[1].trim();
+                                  return <>
+                                    <span style={{color:T.muted, fontSize:10}}>{label}</span>
+                                    {oldVal && <><span style={{color:'#bbb', margin:'0 4px', fontSize:10}}>:</span>
+                                    <span style={{color:'#c0392b', textDecoration:'line-through', fontSize:10, marginRight:4}}>{oldVal}</span></>}
+                                    <span style={{color:'#888', marginRight:4, fontSize:10}}>→</span>
+                                    <span style={{color:'#2d7d46', fontWeight:700}}>{newVal}</span>
+                                  </>;
+                                })()
+                              ) : (
+                                <span>{raw.replace(/^⚠\s*/, '')}</span>
                               )}
-                            </>
-                          ) : (
-                            <span>{clean}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {/* 하단 안내: 코드가 실제로 바뀐 경우에만 */}
-                    {!msg.isError && msg.codeChanged !== false && (
-                      <div style={{
-                        fontSize:10, color:T.muted, marginTop:8,
-                        paddingTop:6, borderTop:`1px solid ${T.border}`,
-                      }}>
-                        가운데 패널 LaTeX 탭에서 결과 확인
-                      </div>
+                            </div>
+                          );
+                        })}
+                        {/* 실제로 코드가 바뀐 경우에만 LaTeX 탭 안내 */}
+                        {msg.codeChanged && (
+                          <div style={{fontSize:10, color:T.muted, marginTop:7,
+                            paddingTop:6, borderTop:`1px solid ${T.border}`}}>
+                            스타일 파일 탭에서 수정 내용 확인
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 ) : msg.content}
