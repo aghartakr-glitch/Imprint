@@ -3163,7 +3163,26 @@ export default function App() {
 
         // 최종 export 직전 — 전체 sanitize (반각 CJK 완전 제거)
         let finalMainTex = sanitizeUnicodeForLatex(mainTex);
-        const finalStyContent = sanitizeUnicodeForLatex(styContent);
+        let finalStyContent = sanitizeUnicodeForLatex(styContent);
+
+        // ── .sty 누락 패키지 자동 보완 ─────────────────────────────────────
+        // main.tex에서 사용하는 패키지가 .sty에 없을 때 자동으로 추가
+        // (Claude가 auto 모드에서 독자적으로 \begin{paracol}/\begin{multicols}를 생성한 경우 대비)
+        {
+          const _needPkg = [];
+          if (/\\begin\{paracol\}/.test(finalMainTex) && !finalStyContent.includes('paracol'))
+            _needPkg.push('\\RequirePackage{paracol}');
+          if (/\\begin\{multicols\}/.test(finalMainTex) && !finalStyContent.includes('multicol'))
+            _needPkg.push('\\RequirePackage{multicol}');
+          if (_needPkg.length > 0) {
+            // \RequirePackage{fontspec} 바로 앞에 삽입 (필수 패키지 블록 상단)
+            finalStyContent = finalStyContent.replace(
+              '\\RequirePackage{fontspec}',
+              _needPkg.join('\n') + '\n\\RequirePackage{fontspec}'
+            );
+            pushLog('layout', '패키지 자동 보완', 'info', '누락 패키지 자동 추가: ' + _needPkg.join(', '));
+          }
+        }
 
         // ── \end{document} 뒤 stray character 제거 ────────────────────────
         // Claude 또는 문자열 조합 버그로 \end{document} 뒤에 문자가 붙는 경우 방지
