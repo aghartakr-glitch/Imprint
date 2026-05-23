@@ -3695,6 +3695,7 @@ ${compressedLatex}`;
     <div style={{ height:"100vh", background:T.bg, fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#CCCCCC; border-radius:2px; }
