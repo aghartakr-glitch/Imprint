@@ -1021,8 +1021,8 @@ function stripWrappingQuotes(s) {
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
 // notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
 // hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
-// hasNote=true, right/left → paracol (imprintlayout)
-// hasNote=true, top/bottom → imprintnotearea 블록
+// hasNote=true, right/left → paracol 직접 조립 (\setlength + \setcolumnwidth + \begin{paracol}{2})
+// hasNote=true, top/bottom → adjustwidth 블록 (상/하 배치)
 function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 84 }) {
   const { bodyW, noteW, gap } = grid;
   const pos = notePosition || 'right';
