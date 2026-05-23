@@ -2768,6 +2768,39 @@ export default function App() {
         }
         // 반각 CJK 문자 정규화 (UnBatang 폴백 폰트 누락 오류 방지)
         bodyContentOnly = sanitizeUnicodeForLatex(bodyContentOnly);
+
+        // ── Claude 출력 후처리: 프리앰블 명령 제거 + 미정의 환경 수정 ──────────
+        // (1) \usepackage / \RequirePackage — body에 있으면 LaTeX 오류
+        bodyContentOnly = bodyContentOnly.replace(/^\\(?:use|Require)Package\{[^}]*\}[^\n]*\n?/gm, '');
+        // (2) \documentclass — body에 있으면 오류
+        bodyContentOnly = bodyContentOnly.replace(/^\\documentclass[^\n]*\n?/gm, '');
+        // (3) \begin{imprintlayout}...\end{imprintlayout} → \begin{paracol} 구조로 교체
+        //     imprintlayout 환경은 .sty에 정의되지 않음 → XeLaTeX 즉시 오류
+        if (bodyContentOnly.includes('\\begin{imprintlayout}')) {
+          bodyContentOnly = bodyContentOnly.replace(
+            /\\begin\{imprintlayout\}([\s\S]*?)\\switchcolumn([\s\S]*?)\\end\{imprintlayout\}/g,
+            (_, bodyPart, notePart) => {
+              // 그리드 값: variable mode면 vGrid 사용, 아니면 기본값
+              const _gap = (typeof columnGapMm === 'number' ? columnGapMm : 8);
+              const _bMm = (typeof grid !== 'undefined' && grid.bodyW) ? grid.bodyW : Math.round(textW * 0.7 * 10) / 10;
+              const _nMm = (typeof grid !== 'undefined' && grid.noteW) ? grid.noteW : Math.round(textW * 0.3 * 10) / 10;
+              return [
+                `\\setlength{\\columnsep}{${_gap}mm}`,
+                `\\setcolumnwidth{${_bMm}mm,${_nMm}mm}`,
+                `\\begin{paracol}{2}`,
+                bodyPart.trim(),
+                `\\switchcolumn`,
+                notePart.trim(),
+                `\\end{paracol}`,
+              ].join('\n');
+            }
+          );
+          // \begin{imprintlayout}만 열리고 닫히지 않은 경우 (비정상 출력)
+          bodyContentOnly = bodyContentOnly
+            .replace(/\\begin\{imprintlayout\}/g, '\\begin{paracol}{2}')
+            .replace(/\\end\{imprintlayout\}/g, '\\end{paracol}');
+        }
+
         // 미닫힌 환경 닫기
         if (bodyContentOnly.includes('\\begin{multicols}') &&
             !bodyContentOnly.includes('\\end{multicols}')) {
