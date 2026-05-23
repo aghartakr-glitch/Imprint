@@ -468,25 +468,54 @@ function PagePreview({ p, bodyText }) {
 // ── Auto-diff LaTeX changes ──────────────────────────────────────
 function diffLatex(oldCode, newCode) {
   if (!oldCode || !newCode) return [];
-  const patterns = [
-    [/top=(-?\d+)mm/, 'Top margin'],
-    [/bottom=(-?\d+)mm/, 'Bottom margin'],
-    [/inner=(-?\d+)mm/, 'Inner margin'],
-    [/outer=(-?\d+)mm/, 'Outer margin'],
-    [/paperwidth=(-?\d+)mm/, 'Paper width'],
-    [/paperheight=(-?\d+)mm/, 'Paper height'],
-    [/\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/, 'Font size/leading'],
-    [/letterspace=(-?\d+)/, 'Letter space'],
-    [/fontsize\{([\d.]+)\}/, 'Font size'],
-  ];
   const diffs = [];
-  for (const [regex, label] of patterns) {
-    const oldVal = oldCode.match(regex)?.[1];
-    const newVal = newCode.match(regex)?.[1];
-    if (oldVal && newVal && oldVal !== newVal) {
-      diffs.push(label + ': ' + oldVal + ' → ' + newVal);
-    }
+
+  // ── 전용 추출 헬퍼: 첫 번째 매치 값 ──────────────────────────────
+  const get = (str, re) => str.match(re)?.[1];
+
+  // ── \notef 전용 (본문 fontsize보다 먼저 체크) ─────────────────────
+  // 형식: \newcommand{\notef}{\rmfamily\fontsize{Xpt}{Ypt}\selectfont}
+  const notef = /\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/;
+  const oldNote  = oldCode.match(notef);
+  const newNote  = newCode.match(notef);
+  if (oldNote && newNote) {
+    if (oldNote[1] !== newNote[1]) diffs.push(`주석 크기: ${oldNote[1]}pt → ${newNote[1]}pt`);
+    if (oldNote[2] !== newNote[2]) diffs.push(`주석 행간: ${oldNote[2]}pt → ${newNote[2]}pt`);
   }
+
+  // ── \footnotesize (하단 각주) ─────────────────────────────────────
+  const fnre = /\\renewcommand\{\\footnotesize\}\{\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/;
+  const oldFn = oldCode.match(fnre), newFn = newCode.match(fnre);
+  if (oldFn && newFn) {
+    if (oldFn[1] !== newFn[1]) diffs.push(`각주 크기: ${oldFn[1]}pt → ${newFn[1]}pt`);
+    if (oldFn[2] !== newFn[2]) diffs.push(`각주 행간: ${oldFn[2]}pt → ${newFn[2]}pt`);
+  }
+
+  // ── 본문 fontsize (\\selectfont 바로 앞) ──────────────────────────
+  const bodyre = /\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}\\selectfont/;
+  const oldBody = oldCode.match(bodyre), newBody = newCode.match(bodyre);
+  if (oldBody && newBody) {
+    if (oldBody[1] !== newBody[1]) diffs.push(`본문 크기: ${oldBody[1]}pt → ${newBody[1]}pt`);
+    if (oldBody[2] !== newBody[2]) diffs.push(`본문 행간: ${oldBody[2]}pt → ${newBody[2]}pt`);
+  }
+
+  // ── 여백 ─────────────────────────────────────────────────────────
+  const margins = [
+    [/top=([\d.]+)mm/,    '상단 여백'],
+    [/bottom=([\d.]+)mm/, '하단 여백'],
+    [/inner=([\d.]+)mm/,  '내측 여백'],
+    [/outer=([\d.]+)mm/,  '외측 여백'],
+  ];
+  for (const [re, label] of margins) {
+    const o = get(oldCode, re), n = get(newCode, re);
+    if (o && n && o !== n) diffs.push(`${label}: ${o}mm → ${n}mm`);
+  }
+
+  // ── 자간 ─────────────────────────────────────────────────────────
+  const oldLS = get(oldCode, /LetterSpace=([-\d.]+)/);
+  const newLS = get(newCode, /LetterSpace=([-\d.]+)/);
+  if (oldLS && newLS && oldLS !== newLS) diffs.push(`자간: ${oldLS} → ${newLS}`);
+
   return diffs;
 }
 
