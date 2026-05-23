@@ -3465,8 +3465,14 @@ ${cmdMapStr || '(추출 실패 — LaTeX 전체 참고)'}
 예) 본문 ${cmdMap.bodySize||'?'}pt에서 "글자 좀 작게" → ${cmdMap.bodySize ? (parseFloat(cmdMap.bodySize)*0.85).toFixed(1) : '?'}pt
 
 중요 커맨드 규칙:
-- 주석(오른쪽/왼쪽 열) 크기 변경 → \\notef 안의 \\fontsize만 수정. \\footnote, \\footnotesize 건드리지 말 것
-- 각주(하단) 크기 변경 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}...} 수정
+${cmdMap.noteSize
+  ? `- 이 레이아웃은 오른쪽/왼쪽 여백 주석 열(\\notef)을 사용합니다.
+- 사용자가 "각주", "주석", "사이드노트", "옆 글씨", "여백 텍스트" 등을 언급하면 → \\notef 안의 \\fontsize만 수정 (현재: ${cmdMap.noteSize}pt/${cmdMap.noteLeading}pt)
+- \\footnote, \\footnotesize는 절대 건드리지 말 것`
+  : `- 이 레이아웃에는 여백 주석 열이 없습니다.`}
+${cmdMap.footnoteSize
+  ? `- 하단 각주 크기 변경 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}\\selectfont} 수정 (현재: ${cmdMap.footnoteSize}pt)`
+  : `- 이 레이아웃에는 하단 각주(\\footnotesize) 정의가 없습니다. 하단 각주 관련 요청은 "적용 불가" 응답.`}
 - 자간 변경 → \\setmainfont 의 LetterSpace= 값만 수정
 - 여백 변경 → \\geometry 의 top/bottom/inner/outer 값만 수정 (판형 절대 불변)
 - 쪽번호 위치 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead 수정
