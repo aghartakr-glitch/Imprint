@@ -3350,8 +3350,9 @@ export default function App() {
     // \fontsize{Xpt}{Ypt} — 본문 (첫 번째 등장)
     const bodyFont = latexStr.match(/\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}\\selectfont/);
     if (bodyFont) { map.bodySize = bodyFont[1]; map.bodyLeading = bodyFont[2]; }
-    // \notef 정의: \fontsize{Xpt}{Ypt}
-    const notef = latexStr.match(/\\newcommand\{\\notef\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
+    // \notef 정의: \newcommand{\notef}{\rmfamily\fontsize{Xpt}{Ypt}\selectfont}
+    // [^}]* 는 \fontsize{Xpt} 안의 } 에서 멈추므로, (?:\\[a-zA-Z]+)* 로 수정
+    const notef = latexStr.match(/\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
     if (notef) { map.noteSize = notef[1]; map.noteLeading = notef[2]; }
     // \geometry 여백
     const geo = latexStr.match(/top=([\d.]+)mm.*?bottom=([\d.]+)mm.*?inner=([\d.]+)mm.*?outer=([\d.]+)mm/s);
