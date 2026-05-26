@@ -1659,13 +1659,17 @@ export default function App() {
     // ── genreScore: hint와 장르 일치 + GENRE_KW 키워드 매칭
     let genreScore = 0;
     if (hint) {
-      if (p.g.includes(hint)) genreScore += 3;
+      // 장르 선택 모드: 선택 장르 일치 항목에 강한 부스트 (동일 contentScore라도 확실히 우선)
+      if (p.g.includes(hint)) genreScore += 8; // 고정 +3 → +8로 상향
+      // 장르 다양성 보너스: 더 많은 장르에 분포한 항목이 다채로운 결과를 냄
+      if (p.g.includes(hint) && p.g.length > 1) genreScore += 0.5;
     } else {
+      // 자동 모드: 장르 이름이 텍스트에 있으면 소폭 부스트
       if (p.g && t.includes(p.g.split('/')[0].toLowerCase())) genreScore += 1;
       // GENRE_KW 기반 장르 추론 부스트
       const gKw = GENRE_KW[p.g] || [];
       const gMatch = gKw.filter(k => t.includes(k)).length;
-      if (gMatch > 0) genreScore += Math.min(gMatch * 0.4, 1.5);
+      if (gMatch > 0) genreScore += Math.min(gMatch * 0.5, 2.0); // 가중치 상향
     }
 
     // ── alignScore: 정렬 방식 매칭
