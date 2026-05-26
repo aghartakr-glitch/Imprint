@@ -1129,54 +1129,56 @@ function wrapVariableLayout({
 }
 
 // memoir page style 생성 (fancyhdr 대체)
-// pnPos: "상단-외측", "하단-내측", "하단-중앙" 등
-function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead }) {
-  const pos = (pnPos || '하단-외측').replace(/\s/g, '');
-  const isNone = pos === '없음' || pos === '-' || pos === '';
+// pnPos: 쪽번호 위치 "상단-외측"|"하단-내측"|"하단-중앙"|"없음" 등
+// rhPos: 면주 위치 "상단-외측"|"상단-내측"|"상단-중앙"|"하단-외측"|"하단-내측"|"하단-중앙" (pnPos와 독립)
+function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
+  const pPos = (pnPos || '하단-외측').replace(/\s/g, '');
+  const rPos = (rhPos  || '상단-외측').replace(/\s/g, '');
+  const pnNone = pPos === '없음' || pPos === '-' || pPos === '';
 
   const pnCmd = `{\\foliof\\thepage}`;
-  const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : `{}`;
+  const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : null;
   const mt = `{}`;
 
-  let oddHead = `${mt}${mt}${mt}`, evenHead = `${mt}${mt}${mt}`;
-  let oddFoot = `${mt}${mt}${mt}`, evenFoot = `${mt}${mt}${mt}`;
-
-  if (!isNone) {
-    const isTop    = pos.includes('상단');
-    const isOuter  = pos.includes('외측');
-    const isInner  = pos.includes('내측');
-
-    if (isTop) {
-      // 쪽번호가 상단: 면주와 쪽번호를 같은 header에 배치
-      if (isOuter) {
-        oddHead  = `${rhCmd}${mt}${pnCmd}`;
-        evenHead = `${pnCmd}${mt}${rhCmd}`;
-      } else if (isInner) {
-        oddHead  = `${pnCmd}${mt}${rhCmd}`;
-        evenHead = `${rhCmd}${mt}${pnCmd}`;
-      } else {
-        oddHead  = `${mt}${pnCmd}${mt}`;
-        evenHead = `${mt}${pnCmd}${mt}`;
-      }
-    } else {
-      // 쪽번호가 하단: footer에 쪽번호, header에 면주(별도)
-      if (isOuter) {
-        oddFoot  = `${mt}${mt}${pnCmd}`;
-        evenFoot = `${pnCmd}${mt}${mt}`;
-      } else if (isInner) {
-        oddFoot  = `${pnCmd}${mt}${mt}`;
-        evenFoot = `${mt}${mt}${pnCmd}`;
-      } else {
-        oddFoot  = `${mt}${pnCmd}${mt}`;
-        evenFoot = `${mt}${pnCmd}${mt}`;
-      }
-      // 면주는 항상 상단 외측에 별도 배치 (하단 쪽번호와 독립)
-      if (hasRunningHead) {
-        oddHead  = `${rhCmd}${mt}${mt}`;
-        evenHead = `${mt}${mt}${rhCmd}`;
-      }
-    }
+  // 위치 문자열 → {odd: [L,C,R], even: [L,C,R]} 반환
+  function placementSlots(cmd, posStr) {
+    const isTop   = posStr.includes('상단');
+    const isOuter = posStr.includes('외측');
+    const isInner = posStr.includes('내측');
+    // 외측: 홀수=오른쪽, 짝수=왼쪽 / 내측: 홀수=왼쪽, 짝수=오른쪽 / 중앙: 가운데
+    if (isOuter)      return { odd: [mt, mt, cmd],  even: [cmd, mt, mt],  top: isTop };
+    else if (isInner) return { odd: [cmd, mt, mt],  even: [mt, mt, cmd],  top: isTop };
+    else              return { odd: [mt, cmd, mt],  even: [mt, cmd, mt],  top: isTop };
   }
+
+  let headSlots = { odd: [mt,mt,mt], even: [mt,mt,mt] };
+  let footSlots = { odd: [mt,mt,mt], even: [mt,mt,mt] };
+
+  // 쪽번호 배치
+  if (!pnNone) {
+    const ps = placementSlots(pnCmd, pPos);
+    if (ps.top) headSlots = { odd: ps.odd, even: ps.even };
+    else        footSlots = { odd: ps.odd, even: ps.even };
+  }
+
+  // 면주 배치 — 쪽번호와 같은 슬롯에 겹치면 같은 줄에 합침, 다른 위치면 독립 배치
+  if (hasRunningHead && rhCmd) {
+    const rs = placementSlots(rhCmd, rPos);
+    const target = rs.top ? headSlots : footSlots;
+    // 각 슬롯(L/C/R)에 기존 내용이 {}이면 면주로 채우고, 이미 쪽번호가 있으면 건너뜀
+    // (같은 위치에 쪽번호+면주가 겹치면 쪽번호 우선)
+    ['odd','even'].forEach(side => {
+      [0,1,2].forEach(i => {
+        if (target[side][i] === mt) target[side][i] = rs[side][i];
+      });
+    });
+  }
+
+  const join3 = (arr) => arr.join('');
+  const oddHead  = join3(headSlots.odd);
+  const evenHead = join3(headSlots.even);
+  const oddFoot  = join3(footSlots.odd);
+  const evenFoot = join3(footSlots.even);
 
   const folioSize = pnSizePt || 8;
   const folioLead = computeLeading(folioSize, 'folio');
