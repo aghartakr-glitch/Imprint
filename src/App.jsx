@@ -1514,6 +1514,15 @@ export default function App() {
     extraDirective: '',
   });
 
+  // ── 유효 면주 텍스트 (자동=제목 / 수동=직접 입력) ─────────────
+  // rhAuto: true → fields.제목 첫 40자 / false → fields.면주
+  function effectiveRH() {
+    if (styleConfig.rhAuto !== false) {
+      return (fields.제목 || '').trim().slice(0, 40);
+    }
+    return (fields.면주 || '').trim();
+  }
+
   // ── 각주 자동 파싱 ─────────────────────────────────────────────
   // 본문의 상위 번호(¹²³, [1], ^1)와 각주 칸의 번호 목록을 매칭해
   // LaTeX \footnote{} 명령으로 인라인 삽입
