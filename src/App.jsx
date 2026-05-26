@@ -4175,7 +4175,12 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     </div>
                   </div>
                   <textarea value={fields["면주"]} rows={1}
-                    placeholder={`페이지 ${styleConfig.rhPos || '상단-외측'}에 반복될 텍스트 (선택)`}
+                    placeholder={(() => {
+                      const rp = styleConfig.rhPos || '상단-외측';
+                      if (rp === '외측-수직') return '외측 여백에 세로로 들어갈 텍스트 (선택)';
+                      if (rp === '내측-수직') return '내측 여백에 세로로 들어갈 텍스트 (선택)';
+                      return `페이지 ${rp}에 반복될 텍스트 (선택)`;
+                    })()}
                     onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
                     style={{ width:"100%", padding:"9px 11px", fontSize:13,
                       border:`1px solid ${T.border}`, borderRadius:3,
