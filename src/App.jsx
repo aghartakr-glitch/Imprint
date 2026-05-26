@@ -1917,7 +1917,7 @@ export default function App() {
       fields.제목   && `TITLE: ${fields.제목}`,
       fields.소제목 && `SUBTITLE: ${fields.소제목}`,
       processedBody && `BODY:\n${processedBody}`,
-      fields.면주   && `RUNNING HEAD: ${fields.면주}`,
+      effectiveRH() && `RUNNING HEAD: ${effectiveRH()}`,
       styleConfig.extraDirective && `STYLE DIRECTIVE: ${styleConfig.extraDirective}`,
       contentStructureHints && `CONTENT STRUCTURE DETECTED: ${contentStructureHints}`,
       footnoteTextForClaude && `FOOTNOTES:\n${footnoteTextForClaude}`,
