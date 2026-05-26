@@ -2672,6 +2672,7 @@ export default function App() {
         ``,
         `% ── 각주 ──────────────────────────────────────────────────────`,
         `% 크기: ${p.footnote || '-'} / 정렬: ${p.align_note || '-'}`,
+        `\\feetbelowfloat`, // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         `\\renewcommand{\\footnoterule}{}`,
         `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
