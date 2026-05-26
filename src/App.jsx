@@ -1450,6 +1450,9 @@ export default function App() {
     bodyTextColumns: 1,       // 본문 영역 내부 단 수 (1=1단, 2=2단 multicols)
     noteTextColumns: 1,       // 주석 영역 내부 단 수 (1=1단, 2=2단 multicols)
     notePosition: 'right',    // 'right'|'left'|'top'|'bottom'
+    bodyColumnStart: 1,       // 본문 시작 열 (1=왼쪽 끝, top/bottom 모드에서 왼쪽 여백 생성)
+    bottomNoteFlowColumns: 2, // 하단 주석 단 수 (notePosition==='bottom' 일 때)
+    bottomNoteWidth: 'full',  // 'full'=판면 전체 폭 | 'body'=본문 폭에 맞춤
     bodyNoteSplit: null,      // null=auto, {body:N, note:M} (legacy)
     extraDirective: '',
   });
