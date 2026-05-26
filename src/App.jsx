@@ -1748,19 +1748,28 @@ export default function App() {
         ? `topic:${profile.topic||''} form:${profile.textForm||''} pubType:${profile.pubType||''} tone:${profile.tone||''} structure:${profile.structure||''} exhibitEv:${profile.exhibitEvidence??0}`
         : '';
 
-      // 후보 구성 — 장르/출판형태 엄격 분리
-      // hint가 있으면 이미 run()에서 해당 필드로만 필터된 ranked가 들어옴
-      // rerank 단계에서도 섞이지 않도록 byPubType 분기 제거
-      const byContent = ranked.slice(0, 6);
-      // 레이아웃 다양성: 이미 뽑힌 layout_type과 다른 것
+      // ── 후보 풀 구성: 내용 상위 + 레이아웃 다양성 + 장르 다양성 ──────────
+      // hint가 있으면 이미 run()에서 _diverseRanked로 다양성 보장된 ranked가 들어옴
+      // 여기서 최종 풀 구성: 내용 상위 8 + 다른 layout_type 4 + 다른 genre 4 = max 16
+      const byContent = ranked.slice(0, 8);
       const usedLayouts = new Set(byContent.map(r=>r.p.layout_type));
-      const byLayout = ranked.filter(r => !usedLayouts.has(r.p.layout_type)).slice(0, 4);
-      // 합치고 중복 제거
+      const usedGenres = new Set(byContent.map(r=>(r.p.g||['기타'])[0]));
+
+      // 레이아웃 다양성: top 8 이후에서 다른 layout_type
+      const byLayout = ranked.slice(8).filter(r => !usedLayouts.has(r.p.layout_type)).slice(0, 4);
+
+      // 장르 다양성: 다른 장르 항목 추가 (hint 없을 때 특히 중요)
+      const byGenre = ranked.filter(r => {
+        const g0 = (r.p.g||['기타'])[0];
+        return !usedGenres.has(g0) && !byContent.find(c=>c.i===r.i) && !byLayout.find(l=>l.i===r.i);
+      }).slice(0, 4);
+
+      // 합치고 중복 제거 (최대 16개)
       const seen = new Set();
-      const pool = [...byContent,...byLayout].filter(r => {
+      const pool = [...byContent, ...byLayout, ...byGenre].filter(r => {
         if (seen.has(r.i)) return false;
         seen.add(r.i); return true;
-      }).slice(0, 10);
+      }).slice(0, 16);
       // genreCompare 중 이전 선택 항목 감점 표시
       const prevId = testCtx?.prevStyleId;
 
