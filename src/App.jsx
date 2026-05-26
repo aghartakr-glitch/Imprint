@@ -3121,9 +3121,14 @@ export default function App() {
                       const content = fnMap[n];
                       return content ? `\\footnote{${latexEscFn(stripWrappingQuotes(content))}}` : '';
                     });
-                    const rightIndentBottomBody = (textW - grid.bodyW).toFixed(1);
-                    const bottomLayout = parseFloat(rightIndentBottomBody) > 0
-                      ? [`\\begin{adjustwidth}{0mm}{${rightIndentBottomBody}mm}`, bottomBody.trim(), `\\end{adjustwidth}`].join('\n')
+                    // bodyColumnStart 적용: 왼쪽 indent 계산
+                    const _bcsB = Math.max(1, bcs);
+                    const _leftIndB = (_bcsB > 1 && grid.unitW > 0)
+                      ? Math.round((_bcsB - 1) * (grid.unitW + grid.gap) * 10) / 10
+                      : 0;
+                    const rightIndentBottomBody = Math.max(0, textW - grid.bodyW - _leftIndB).toFixed(1);
+                    const bottomLayout = (_leftIndB > 0 || parseFloat(rightIndentBottomBody) > 0)
+                      ? [`\\begin{adjustwidth}{${_leftIndB.toFixed(1)}mm}{${rightIndentBottomBody}mm}`, bottomBody.trim(), `\\end{adjustwidth}`].join('\n')
                       : bottomBody.trim();
                     finalBodyContent = gridComment + '\n' + bottomLayout;
                     // bottom 처리 완료 — plines 조립 생략
