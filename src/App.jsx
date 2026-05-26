@@ -4682,6 +4682,24 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       <span style={{color:'#c0392b', fontSize:12}}>{msg.chatContent}</span>
                     ) : (
                       <>
+                        {/* 인텐트 레이블 (assistant 응답 상단) */}
+                        {msg.intent && !msg.isStructural && !msg.isError && (
+                          <div style={{
+                            display:'inline-block', fontSize:9, fontWeight:700,
+                            padding:'1px 5px', borderRadius:2, marginBottom:6,
+                            background: msg.intent === 'question'
+                              ? T.border
+                              : (msg.codeChanged ? '#1a4a1a' : T.border),
+                            color: msg.intent === 'question'
+                              ? T.muted
+                              : (msg.codeChanged ? '#6fcf97' : T.muted),
+                            letterSpacing:'0.05em',
+                          }}>
+                            {msg.intent === 'question'
+                              ? '답변'
+                              : msg.codeChanged ? '✓ 수정 완료' : '수정 불가'}
+                          </div>
+                        )}
                         {/* 자연어 응답 */}
                         {msg.chatContent && (
                           <div style={{fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap', marginBottom: msg.changes ? 8 : 0}}>
