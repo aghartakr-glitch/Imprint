@@ -3744,9 +3744,21 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       }
 
       // ── 변경 요약 메시지 ──────────────────────────────────────
+      // directDiffs: 수치 비교 결과 (예: "본문 크기: 9pt → 8pt")
+      // 【변경】/【유지】 형식 패턴도 파싱
       let changesSummary = directDiffs.join('\n');
-      if (!changesSummary && latexMatch && !codeChanged) {
+
+      // Claude가 【변경】 형식으로 보고한 경우 추가 수집
+      const claudeChanges = [...chatContent.matchAll(/【변경】([^\n]+)/g)].map(m => `- ${m[1].trim()}`);
+      if (claudeChanges.length > 0 && directDiffs.length === 0) {
+        changesSummary = claudeChanges.join('\n');
+      }
+
+      if (!changesSummary && intent === 'modify' && !codeChanged) {
         changesSummary = '- 수정 내용이 기존과 동일하거나 적용 불가한 항목입니다.';
+      }
+      if (!changesSummary && intent === 'question') {
+        changesSummary = ''; // 질문 모드에서는 변경 요약 없음
       }
 
       setRefineHistory(h => [...h, {
@@ -3755,6 +3767,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         content: chatContent,
         changes: changesSummary, // 수치 변경 요약
         codeChanged,
+        intent,                  // question | modify | ambiguous
       }]);
 
       // ── 로그 업데이트 ─────────────────────────────────────────
