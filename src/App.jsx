@@ -1130,7 +1130,7 @@ function wrapVariableLayout({
 
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: 쪽번호 위치 "상단-외측"|"하단-내측"|"하단-중앙"|"없음" 등
-// rhPos: 면주 위치 "상단-외측"|"상단-내측"|"상단-중앙"|"하단-외측"|"하단-내측"|"하단-중앙" (pnPos와 독립)
+// rhPos: 면주 위치 "상단-외측"|...|"하단-중앙"|"외측-수직"|"내측-수직" (pnPos와 독립)
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
   const pPos = (pnPos || '하단-외측').replace(/\s/g, '');
   const rPos = (rhPos  || '상단-외측').replace(/\s/g, '');
@@ -1140,12 +1140,11 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
   const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : null;
   const mt = `{}`;
 
-  // 위치 문자열 → {odd: [L,C,R], even: [L,C,R]} 반환
+  // 위치 문자열 → {odd: [L,C,R], even: [L,C,R], top} 반환
   function placementSlots(cmd, posStr) {
     const isTop   = posStr.includes('상단');
     const isOuter = posStr.includes('외측');
     const isInner = posStr.includes('내측');
-    // 외측: 홀수=오른쪽, 짝수=왼쪽 / 내측: 홀수=왼쪽, 짝수=오른쪽 / 중앙: 가운데
     if (isOuter)      return { odd: [mt, mt, cmd],  even: [cmd, mt, mt],  top: isTop };
     else if (isInner) return { odd: [cmd, mt, mt],  even: [mt, mt, cmd],  top: isTop };
     else              return { odd: [mt, cmd, mt],  even: [mt, cmd, mt],  top: isTop };
@@ -1161,17 +1160,37 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
     else        footSlots = { odd: ps.odd, even: ps.even };
   }
 
-  // 면주 배치 — 쪽번호와 같은 슬롯에 겹치면 같은 줄에 합침, 다른 위치면 독립 배치
+  // 면주 배치
+  // 수직 여백 배치: \smash + \rlap/\llap + \rotatebox → header 슬롯에서 여백으로 확장
+  // 홀수=외측(오른쪽), 짝수=외측(왼쪽) 에 90° 회전 (아래→위 방향)
+  let extraSty = []; // 수직 면주에 필요한 추가 선언
   if (hasRunningHead && rhCmd) {
-    const rs = placementSlots(rhCmd, rPos);
-    const target = rs.top ? headSlots : footSlots;
-    // 각 슬롯(L/C/R)에 기존 내용이 {}이면 면주로 채우고, 이미 쪽번호가 있으면 건너뜀
-    // (같은 위치에 쪽번호+면주가 겹치면 쪽번호 우선)
-    ['odd','even'].forEach(side => {
-      [0,1,2].forEach(i => {
-        if (target[side][i] === mt) target[side][i] = rs[side][i];
+    const isVertOuter = rPos === '외측-수직';
+    const isVertInner = rPos === '내측-수직';
+    if (isVertOuter || isVertInner) {
+      // \smash: 수직 공간 0으로 만들어 헤더 높이에 영향 없게 함
+      // \rlap: 오른쪽으로 zero-width overflow (외측 여백으로 침범)
+      // \llap: 왼쪽으로 zero-width overflow (내측/외측 여백으로 침범)
+      // \rotatebox{90}: 반시계 90° → 텍스트 하단→상단 방향 (일반 세로 면주)
+      const rhRight = `{\\smash{\\rlap{\\kern3mm\\rotatebox{90}{\\runningheadf\\imprintrunninghead}}}}`;
+      const rhLeft  = `{\\smash{\\llap{\\rotatebox{-90}{\\runningheadf\\imprintrunninghead}\\kern3mm}}}`;
+      if (isVertOuter) {
+        headSlots.odd[2]  = rhRight; // 홀수: 오른쪽=외측
+        headSlots.even[0] = rhLeft;  // 짝수: 왼쪽=외측
+      } else {
+        headSlots.odd[0]  = rhLeft;  // 홀수: 왼쪽=내측
+        headSlots.even[2] = rhRight; // 짝수: 오른쪽=내측
+      }
+    } else {
+      // 수평 6위치: 기존 슬롯 기반 배치
+      const rs = placementSlots(rhCmd, rPos);
+      const target = rs.top ? headSlots : footSlots;
+      ['odd','even'].forEach(side => {
+        [0,1,2].forEach(i => {
+          if (target[side][i] === mt) target[side][i] = rs[side][i];
+        });
       });
-    });
+    }
   }
 
   const join3 = (arr) => arr.join('');
