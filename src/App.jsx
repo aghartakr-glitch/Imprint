@@ -1897,10 +1897,43 @@ export default function App() {
       setTextProfile(profile);
       // analyzeText가 감지한 genre를 hint 없을 때 자동 활용
       const autoGenre = (!h && profile?.genre) ? profile.genre : null;
+
+      // ── 자동 모드: analyzeText 장르 결과로 재스코어링 (hint 없을 때만) ───
+      // 자동 장르가 있으면 해당 장르 항목에 추가 점수를 부여해 다양성 확보
+      if (!h && autoGenre) {
+        ranked.forEach(r => {
+          if (r.p.g.includes(autoGenre)) {
+            r.s += 3; // 자동 감지 장르 부스트
+          }
+        });
+        ranked.sort((a, b) => b.s - a.s);
+      }
+
+      // ── 후보 다양성 보장: layout_type / genre / designer 중복 제한 ───────
+      // semanticRerank에 넣을 상위 후보를 다양하게 구성 (같은 layout_type 3개 이하)
+      const _diverseRanked = (() => {
+        const layoutCount = {};
+        const genreCount = {};
+        const result = [];
+        for (const r of ranked) {
+          const lt = r.p.layout_type || 'unknown';
+          const g0 = (r.p.g || ['기타'])[0];
+          if ((layoutCount[lt] || 0) >= 3) continue; // layout_type 당 최대 3개
+          if (!h && (genreCount[g0] || 0) >= 4) continue; // 자동 모드: genre당 최대 4개
+          layoutCount[lt] = (layoutCount[lt] || 0) + 1;
+          genreCount[g0] = (genreCount[g0] || 0) + 1;
+          result.push(r);
+          if (result.length >= 30) break; // 최대 30개 (rerank pool의 3배)
+        }
+        // 다양성 필터로 너무 적어지면 원본 상위로 보완
+        if (result.length < 10) return ranked.slice(0, 30);
+        return result;
+      })();
+
       const filteredLabel = h
         ? `장르 "${h}" 풀 ${Math.min(ranked.length, 999)}개 중 상위 추출`
         : autoGenre
-          ? `자동 장르 "${autoGenre}" 전체 DB 스코어링`
+          ? `자동 장르 "${autoGenre}" 재스코어링 + 다양성 구성`
           : `전체 DB 상위 추출`;
       pushLog('analyze', '텍스트 분석', 'done',
         profile
