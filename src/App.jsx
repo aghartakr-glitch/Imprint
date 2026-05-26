@@ -3246,12 +3246,16 @@ export default function App() {
               } else {
                 // 각주 없음 → 일반 가변 레이아웃 (bodyTextColumns 반영)
                 const wrappedBody = wrapBodyTextColumns(bodyLatex, btc);
-                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
+                // bottom 모드: noteLatex는 inline \footnote으로 처리됐으므로 블록 전달 금지
+                const _noteLatex1 = notePosition === 'bottom' ? '' : noteLatex;
+                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex: _noteLatex1, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
               }
             } else {
               // 상단/하단 위치 또는 비side 모드 (bodyTextColumns 반영)
               const wrappedBody2 = wrapBodyTextColumns(bodyLatex, btc);
-              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
+              // bottom 모드: noteLatex 블록 전달 금지 (inline \footnote 사용)
+              const _noteLatex2 = notePosition === 'bottom' ? '' : noteLatex;
+              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex: _noteLatex2, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
             }
           }
         }
