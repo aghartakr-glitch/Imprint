@@ -1509,7 +1509,8 @@ export default function App() {
     bottomNoteFlowColumns: 2, // 하단 주석 단 수 (notePosition==='bottom' 일 때)
     bottomNoteWidth: 'full',  // 'full'=판면 전체 폭 | 'body'=본문 폭에 맞춤
     bodyNoteSplit: null,      // null=auto, {body:N, note:M} (legacy)
-    rhPos: '상단-외측',       // 면주 위치: '상단-외측'|'상단-내측'|'상단-중앙'|'하단-외측'|'하단-내측'|'하단-중앙'
+    rhPos: '상단-외측',       // 면주 위치: '상단-외측'|...|'외측-수직'|'내측-수직'
+    rhAuto: true,             // true=제목에서 자동 추출 / false=직접 입력(fields.면주)
     extraDirective: '',
   });
 
