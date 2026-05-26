@@ -3110,6 +3110,9 @@ export default function App() {
                       grid,
                       notePosition,
                       textW,
+                      bodyColumnStart: bcs,
+                      bottomNoteFlowColumns: bnfc,
+                      bottomNoteWidth: bnw,
                     });
                     // top 처리 완료 — plines 조립 생략
                   } else if (notePosition === 'bottom') {
