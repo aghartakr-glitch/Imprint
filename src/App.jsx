@@ -1952,7 +1952,15 @@ export default function App() {
         profile
           ? `genre:${profile.genre||''} · topic:${profile.topic||''} · form:${profile.textForm||''} · pub:${profile.pubType||''} · exhibitEv:${profile.exhibitEvidence??'-'}`
           : '분석 완료');
-      pushLog('kw', '후보 추출', 'done', filteredLabel);
+      // 장르 다양성 확인 로그
+      const _genreDistrib = {};
+      _diverseRanked.slice(0, 16).forEach(r => {
+        const g = (r.p.g||['기타'])[0];
+        _genreDistrib[g] = (_genreDistrib[g] || 0) + 1;
+      });
+      pushLog('kw', '후보 추출', 'done',
+        filteredLabel + ` | 다양성 풀 ${_diverseRanked.slice(0,16).length}개 ` +
+        Object.entries(_genreDistrib).map(([g,n])=>`${g}:${n}`).join(' '));
 
       // ── Stage 2: Semantic Rerank (LaTeX 전에 실행) ───────────────
       pushLog('semantic', '시맨틱 리랭크', 'running', '내용/디자인 의도 기반 최적 레퍼런스 선별 중');
