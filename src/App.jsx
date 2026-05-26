@@ -3339,8 +3339,8 @@ export default function App() {
           `\\XeTeXlinebreaklocale "ko"`,
           `\\XeTeXlinebreakskip=0pt plus 1pt`,
           ``,
-          (fields.면주 && fields.면주.trim())
-            ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(fields.면주.trim())}}`
+          effectiveRH()
+            ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(effectiveRH())}}`
             : null,
           `\\pagestyle{imprint}`,
           ``,
