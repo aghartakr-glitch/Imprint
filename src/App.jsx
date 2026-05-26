@@ -3455,7 +3455,7 @@ export default function App() {
             subtitle: fields.소제목 || '',
             body_length: matchText.length,
             footnote_count: _fnCount,
-            running_head_used: fields.면주 || '',
+            running_head_used: effectiveRH(),
             genre_hint: h,
             style_mode: styleConfig.columnMode || 'auto',
           },
