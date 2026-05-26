@@ -2976,7 +2976,7 @@ export default function App() {
             subtitle: fields.소제목,
             body: _willSideNote ? processedBody : cleanBody,
             footnote: _willSideNote ? '' : (fields.각주 || ''),
-            runningHead: fields.면주,
+            runningHead: effectiveRH(),
             preserveImpFnMarkers: _willSideNote,
           });
         } else {
