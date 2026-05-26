@@ -4238,55 +4238,123 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       {(() => {
                         const notePos = styleConfig.notePosition || 'right';
                         const isSide = notePos === 'right' || notePos === 'left';
+                        const isBottom = notePos === 'bottom';
+                        const vgTotal = styleConfig.variableGrid?.total || 5;
+                        const vgBody  = styleConfig.variableGrid?.body  || 4;
+                        const canIndent = !isSide && vgTotal > vgBody; // top/bottom 모드에서 total>body 일 때만 시작 열 표시
                         return (
-                          <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
-                            {/* 본문 내부 단: 항상 표시 */}
-                            <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                              <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
-                              <input type="number" min={1} max={styleConfig.variableGrid?.body || 1}
-                                value={styleConfig.bodyTextColumns || 1}
-                                onChange={e => {
-                                  setStyleConfig(s => {
-                                    const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.body || 1);
-                                    return { ...s, bodyTextColumns: v };
-                                  });
-                                }}
-                                style={{ width:52, padding:"5px 7px", fontSize:12,
-                                  border:`1px solid ${T.border}`, borderRadius:3,
-                                  background:T.bg, color:T.ink, textAlign:"center" }} />
-                            </div>
-                            {isSide ? (
-                              /* 오른쪽/왼쪽 → 주석 내부 단 */
+                          <>
+                            <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
+                              {/* 본문 내부 단: 항상 표시 */}
                               <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
-                                <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
-                                  value={styleConfig.noteTextColumns || 1}
+                                <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
+                                <input type="number" min={1} max={vgBody}
+                                  value={styleConfig.bodyTextColumns || 1}
                                   onChange={e => {
                                     setStyleConfig(s => {
-                                      const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.note || 1);
-                                      return { ...s, noteTextColumns: v };
+                                      const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.body || 1);
+                                      return { ...s, bodyTextColumns: v };
                                     });
                                   }}
                                   style={{ width:52, padding:"5px 7px", fontSize:12,
                                     border:`1px solid ${T.border}`, borderRadius:3,
                                     background:T.bg, color:T.ink, textAlign:"center" }} />
                               </div>
-                            ) : (
-                              /* 상단/하단 → 각주 단 수 */
-                              <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>각주 단 수</span>
-                                <input type="number" min={1} max={4}
-                                  value={fields.각주단 || 1}
-                                  onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
-                                  style={{ width:52, padding:"5px 7px", fontSize:12,
-                                    border:`1px solid ${T.border}`, borderRadius:3,
-                                    background:T.bg, color:T.ink, textAlign:"center" }} />
-                                {(fields.각주단 || 1) >= 2 && (
-                                  <span style={{ fontSize:10, color:T.muted, marginTop:2 }}>bigfoot 패키지</span>
-                                )}
+                              {isSide ? (
+                                /* 오른쪽/왼쪽 → 주석 내부 단 */
+                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
+                                  <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
+                                    value={styleConfig.noteTextColumns || 1}
+                                    onChange={e => {
+                                      setStyleConfig(s => {
+                                        const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.note || 1);
+                                        return { ...s, noteTextColumns: v };
+                                      });
+                                    }}
+                                    style={{ width:52, padding:"5px 7px", fontSize:12,
+                                      border:`1px solid ${T.border}`, borderRadius:3,
+                                      background:T.bg, color:T.ink, textAlign:"center" }} />
+                                </div>
+                              ) : (
+                                /* 상단/하단 → 각주 단 수 */
+                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>각주 단 수</span>
+                                  <input type="number" min={1} max={4}
+                                    value={fields.각주단 || 1}
+                                    onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
+                                    style={{ width:52, padding:"5px 7px", fontSize:12,
+                                      border:`1px solid ${T.border}`, borderRadius:3,
+                                      background:T.bg, color:T.ink, textAlign:"center" }} />
+                                  {(fields.각주단 || 1) >= 2 && (
+                                    <span style={{ fontSize:10, color:T.muted, marginTop:2 }}>bigfoot 패키지</span>
+                                  )}
+                                </div>
+                              )}
+                              {/* 본문 시작 열: top/bottom 모드에서 total > body 일 때 */}
+                              {canIndent && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 시작 열</span>
+                                  <input type="number" min={1} max={Math.max(1, vgTotal - vgBody + 1)}
+                                    value={styleConfig.bodyColumnStart || 1}
+                                    onChange={e => {
+                                      setStyleConfig(s => {
+                                        const maxStart = Math.max(1, (s.variableGrid?.total || 5) - (s.variableGrid?.body || 4) + 1);
+                                        const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), maxStart);
+                                        return { ...s, bodyColumnStart: v };
+                                      });
+                                    }}
+                                    style={{ width:52, padding:"5px 7px", fontSize:12,
+                                      border:`1px solid ${T.border}`, borderRadius:3,
+                                      background:T.bg, color:T.ink, textAlign:"center" }} />
+                                  <span style={{ fontSize:10, color:T.muted, marginTop:1 }}>왼쪽 여백 생성</span>
+                                </div>
+                              )}
+                            </div>
+                            {/* 하단 주석 설정: bottom 모드 전용 */}
+                            {isBottom && (
+                              <div style={{ marginTop:14, paddingTop:12,
+                                borderTop:`1px dashed ${T.border}` }}>
+                                <span style={{ fontSize:11, color:T.muted, fontWeight:500,
+                                  marginBottom:8, display:"block" }}>하단 주석 레이어</span>
+                                <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-start" }}>
+                                  {/* 하단 주석 단 수 */}
+                                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                                    <span style={{ fontSize:11, color:T.muted }}>단 수</span>
+                                    <input type="number" min={1} max={8}
+                                      value={styleConfig.bottomNoteFlowColumns || 2}
+                                      onChange={e => {
+                                        const v = Math.min(8, Math.max(1, parseInt(e.target.value) || 1));
+                                        setStyleConfig(s => ({ ...s, bottomNoteFlowColumns: v }));
+                                      }}
+                                      style={{ width:52, padding:"5px 7px", fontSize:12,
+                                        border:`1px solid ${T.border}`, borderRadius:3,
+                                        background:T.bg, color:T.ink, textAlign:"center" }} />
+                                  </div>
+                                  {/* 하단 주석 너비 */}
+                                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                                    <span style={{ fontSize:11, color:T.muted }}>너비</span>
+                                    <div style={{ display:"flex", gap:4 }}>
+                                      {[['full','판면 전체'],['body','본문 폭']].map(([val, label]) => {
+                                        const active = (styleConfig.bottomNoteWidth || 'full') === val;
+                                        return (
+                                          <button key={val}
+                                            onClick={() => setStyleConfig(s => ({ ...s, bottomNoteWidth: val }))}
+                                            style={{ padding:"4px 9px", fontSize:11, fontWeight: active?600:400,
+                                              border:`1px solid ${active ? T.ink : T.border}`,
+                                              borderRadius:3, background: active ? T.ink : "transparent",
+                                              color: active ? "#fff" : T.ink, cursor:"pointer",
+                                              transition:"all 150ms" }}>
+                                            {label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             )}
-                          </div>
+                          </>
                         );
                       })()}
                     </>
