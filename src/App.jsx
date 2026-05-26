@@ -1959,7 +1959,7 @@ export default function App() {
         rerank = { i: forceIdx, structured: { reference_reason:'styleLock', content_match:'', layout_reason:'', typography_reason:'', margin_reason:'', rejected:[], prevUsedForced:false, prevUsedReason:'' } };
       } else {
         const testCtx = testMode === 'genreCompare' ? { prevStyleId: runMeta?.selectedStyleId } : null;
-        rerank = await semanticRerank(matchText, profile, ranked, h, testCtx);
+        rerank = await semanticRerank(matchText, profile, _diverseRanked, h, testCtx);
       }
 
       let chosen, structReason;
