@@ -3174,11 +3174,21 @@ export default function App() {
 
                   const bodyLines = [];
                   const notesEmitted2 = new Set();
+                  // btc >= 2 (본문 내부 다단): multicols를 단락마다 열고 닫지 않음
+                  // TeX 그룹이 환경 경계를 넘으면 에러가 나므로,
+                  // multicols를 한 번 열고 \switchcolumn 직전에 닫고 \switchcolumn* 직후에 재오픈
+                  let _inMC = false; // multicols 현재 열려있는지 추적
+                  if (btc >= 2) {
+                    bodyLines.push(`\\begin{multicols}{${btc}}`);
+                    bodyLines.push('');
+                    _inMC = true;
+                  }
 
                   for (let chunkIdx = 0; chunkIdx < paraChunks.length; chunkIdx++) {
                     const chunk = paraChunks[chunkIdx];
-                    // btc >= 2: 각 청크를 독립 multicols로 래핑
-                    bodyLines.push(btc >= 2 ? wrapBodyTextColumns(chunk, btc) : chunk);
+                    // btc >= 2: 청크를 개별 래핑하지 않고 그대로 흐름에 추가
+                    // (multicols가 이미 열려 있으므로 자연스럽게 다단 흐름)
+                    bodyLines.push(chunk);
 
                     // 이 단락의 \ImpFN{N} 마커 수집 (등장 순서대로)
                     const chunkMarkerRe = /\\ImpFN\{(\d+)\}/g;
@@ -3195,6 +3205,8 @@ export default function App() {
                       // 마커 있는 단락 → 주석 열로 전환
                       const isLastChunk = chunkIdx === paraChunks.length - 1;
                       bodyLines.push('');
+                      // multicols 닫기 (열려 있을 때만)
+                      if (_inMC) { bodyLines.push(`\\end{multicols}`); _inMC = false; }
                       bodyLines.push('\\switchcolumn');
                       bodyLines.push('');
                       for (const noteN of chunkNoteNums) {
@@ -3206,12 +3218,16 @@ export default function App() {
                       bodyLines.push('');
                       if (!isLastChunk) {
                         // 동기화 복귀: 두 열을 이 지점에서 맞춘 뒤 본문 계속
-                        // 마지막 단락이면 \end{paracol}이 바로 따라오므로 sync 불필요
                         bodyLines.push('\\switchcolumn*');
                         bodyLines.push('');
+                        // multicols 재오픈 (btc >= 2 일 때)
+                        if (btc >= 2) { bodyLines.push(`\\begin{multicols}{${btc}}`); bodyLines.push(''); _inMC = true; }
                       }
                     }
                   }
+
+                  // multicols 닫기 (아직 열려 있으면)
+                  if (_inMC) { bodyLines.push(''); bodyLines.push(`\\end{multicols}`); _inMC = false; }
 
                   // 마커 없이 남은 주석 → 끝에 추가 (fallback)
                   const unemittedNotes = sorted.filter(n => fnMap[n] && !notesEmitted2.has(n));
