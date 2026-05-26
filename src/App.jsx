@@ -4111,7 +4111,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   { key:"제목", label:"제목", rows:2, placeholder:"출판물 제목" },
                   { key:"소제목", label:"소제목", rows:1, placeholder:"부제 · 챕터 제목 (선택)" },
                   { key:"본문", label:"본문", rows:10, placeholder:`본문 텍스트를 입력하세요\n\n각주 마커: ¹²³ 또는 [1] 또는 ^1` },
-                  { key:"면주", label:"면주", rows:1, placeholder:"페이지 상단에 반복될 텍스트 (선택)" },
                   { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
@@ -4130,6 +4129,42 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     />
                   </div>
                 ))}
+                {/* 면주 — 텍스트 + 위치 선택 */}
+                <div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
+                    <label style={{ fontSize:11, fontWeight:500, color:T.muted }}>면주</label>
+                    <div style={{ display:"flex", gap:3 }}>
+                      {[
+                        ['상단-외측','↑⇥'], ['상단-내측','↑⇤'], ['상단-중앙','↑—'],
+                        ['하단-외측','↓⇥'], ['하단-내측','↓⇤'], ['하단-중앙','↓—'],
+                      ].map(([val, icon]) => {
+                        const active = (styleConfig.rhPos || '상단-외측') === val;
+                        return (
+                          <button key={val} title={val}
+                            onClick={() => setStyleConfig(s => ({ ...s, rhPos: val }))}
+                            style={{ padding:"3px 7px", fontSize:11, lineHeight:1,
+                              border:`1px solid ${active ? T.ink : T.border}`,
+                              borderRadius:3,
+                              background: active ? T.ink : 'transparent',
+                              color: active ? '#fff' : T.muted,
+                              cursor:"pointer", fontFamily:"monospace" }}>
+                            {icon}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <textarea value={fields["면주"]} rows={1}
+                    placeholder={`페이지 ${styleConfig.rhPos || '상단-외측'}에 반복될 텍스트 (선택)`}
+                    onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
+                    style={{ width:"100%", padding:"9px 11px", fontSize:13,
+                      border:`1px solid ${T.border}`, borderRadius:3,
+                      background:T.bg, color:T.ink, lineHeight:1.6,
+                      transition:"border 150ms" }}
+                    onFocus={e => e.target.style.borderColor = T.ink}
+                    onBlur={e => e.target.style.borderColor = T.border}
+                  />
+                </div>
               </>
             ) : (
               <>
