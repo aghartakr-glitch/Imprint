@@ -3228,12 +3228,12 @@ export default function App() {
               } else {
                 // 각주 없음 → 일반 가변 레이아웃 (bodyTextColumns 반영)
                 const wrappedBody = wrapBodyTextColumns(bodyLatex, btc);
-                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex, grid, notePosition, textW });
+                finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody, noteLatex, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
               }
             } else {
               // 상단/하단 위치 또는 비side 모드 (bodyTextColumns 반영)
               const wrappedBody2 = wrapBodyTextColumns(bodyLatex, btc);
-              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex, grid, notePosition, textW });
+              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
             }
           }
         }
