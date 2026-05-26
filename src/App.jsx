@@ -2690,11 +2690,12 @@ export default function App() {
         })()}}`,
         ``,
         `% ── 면주 / 쪽번호 (memoir pagestyle) ─────────────────────────`,
-        `% 위치: ${p.pn || '하단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'} / 서체: ${p.pn_font || '-'}`,
+        `% 쪽번호: ${p.pn || '하단-외측'} / 면주: ${styleConfig.rhPos || '상단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'}`,
         buildMemoirPageStyle({
           pnPos: p.pn || '하단-외측',
           pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!(fields.면주 && fields.면주.trim()),
+          rhPos: styleConfig.rhPos || '상단-외측',
         }),
         ``,
         `% ── 대화문 / 인용문 환경 ──────────────────────────────────────`,
