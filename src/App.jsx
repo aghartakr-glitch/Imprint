@@ -2826,7 +2826,7 @@ export default function App() {
         '5. Regular paragraphs: {\\bodyf\\noindent TEXT\\par}\\vspace{0.5\\baselineskip} for each.\n\n' +
         '# PAGE NUMBER: ' + p.pn +
         ' size=' + (p.pn_size || pnAutoSize + 'pt') +
-        (fields.면주 ? ' running="' + fields.면주 + '"' : ' running=none') + '\n\n' +
+        (effectiveRH() ? ' running="' + effectiveRH() + '"' : ' running=none') + '\n\n' +
         '# COLUMNS\n' + colSetupBlock +
         (corrections.layoutHint ? '# LAYOUT HINT: ' + corrections.layoutHint + '\n' : '') + '\n' +
         '# FOOTNOTES\n' +
