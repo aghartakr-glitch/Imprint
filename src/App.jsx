@@ -1077,13 +1077,21 @@ function wrapVariableLayout({
 
   if (pos === 'bottom') {
     // 본문 블록 (bodyColumnStart 적용)
+    // \leftskip/\rightskip 그룹 사용 — memoir에서 \footnote과 adjustwidth 충돌 방지
     const leftInd = leftIndentBody.toFixed(1);
-    const rightIndentBody = Math.max(0, textW - bodyW - leftIndentBody).toFixed(1);
-    const bodyBlock = [
-      `\\begin{adjustwidth}{${leftInd}mm}{${rightIndentBody}mm}`,
-      bodyLatex.trim(),
-      `\\end{adjustwidth}`,
-    ].join('\n');
+    const rightIndBody = Math.max(0, textW - bodyW - leftIndentBody);
+    const rightIndBodyFmt = rightIndBody.toFixed(1);
+    const _needsIndent = leftIndentBody > 0 || rightIndBody > 0;
+    const bodyBlock = _needsIndent
+      ? [
+          `\\begingroup`,
+          leftIndentBody > 0 ? `\\setlength{\\leftskip}{${leftInd}mm}` : null,
+          rightIndBody > 0   ? `\\setlength{\\rightskip}{${rightIndBodyFmt}mm}` : null,
+          `\\noindent`,
+          bodyLatex.trim(),
+          `\\par\\endgroup`,
+        ].filter(Boolean).join('\n')
+      : bodyLatex.trim();
 
     // 하단 주석 블록 (bottomNoteWidth + bottomNoteFlowColumns 적용)
     const noteContent = (noteLatex || '').trim();
