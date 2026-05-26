@@ -1023,11 +1023,23 @@ function stripWrappingQuotes(s) {
 // hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
 // hasNote=true, right/left → paracol 직접 조립 (\setlength + \setcolumnwidth + \begin{paracol}{2})
 // hasNote=true, top/bottom → adjustwidth 블록 (상/하 배치)
-function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 84 }) {
-  const { bodyW, noteW, gap } = grid;
+function wrapVariableLayout({
+  bodyLatex, noteLatex, grid, notePosition, textW = 84,
+  bodyColumnStart = 1,       // 본문 시작 열 (1=왼쪽 끝) — top/bottom 모드에서 왼쪽 indent
+  bottomNoteFlowColumns = 1, // 하단 주석 flow 단 수 (bottom 모드)
+  bottomNoteWidth = 'full',  // 'full'=판면 전체폭 | 'body'=본문 폭 (bottom 모드)
+}) {
+  const { bodyW, noteW, gap, unitW = 0 } = grid;
   const pos = notePosition || 'right';
   const hasNote = !!(noteLatex && noteLatex.trim());
   const gapFmt = `${typeof gap === 'number' ? gap.toFixed(1) : gap}mm`;
+
+  // 본문 왼쪽 indent 계산 (top/bottom 모드, bodyColumnStart > 1)
+  // (bodyColumnStart-1)개 unitW + (bodyColumnStart-1)개 gap
+  const _bcs = Math.max(1, Number(bodyColumnStart) || 1);
+  const leftIndentBody = (_bcs > 1 && unitW > 0)
+    ? Math.round((_bcs - 1) * (unitW + gap) * 10) / 10
+    : 0;
 
   if (!hasNote) {
     // 주석 없음: paracol로 본문 열 폭 보장
@@ -1047,7 +1059,8 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 
   }
 
   if (pos === 'top') {
-    const rightIndentBody = (textW - bodyW).toFixed(1);
+    const leftInd = leftIndentBody.toFixed(1);
+    const rightIndentBody = Math.max(0, textW - bodyW - leftIndentBody).toFixed(1);
     const rightIndentNote = (textW - noteW).toFixed(1);
     const noteBlock = [
       `\\begin{adjustwidth}{0mm}{${rightIndentNote}mm}`,
@@ -1055,7 +1068,7 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 
       `\\end{adjustwidth}`,
     ].join('\n');
     const bodyBlock = [
-      `\\begin{adjustwidth}{0mm}{${rightIndentBody}mm}`,
+      `\\begin{adjustwidth}{${leftInd}mm}{${rightIndentBody}mm}`,
       bodyLatex.trim(),
       `\\end{adjustwidth}`,
     ].join('\n');
@@ -1063,16 +1076,29 @@ function wrapVariableLayout({ bodyLatex, noteLatex, grid, notePosition, textW = 
   }
 
   if (pos === 'bottom') {
-    const rightIndentBody = (textW - bodyW).toFixed(1);
-    const rightIndentNote = (textW - noteW).toFixed(1);
+    // 본문 블록 (bodyColumnStart 적용)
+    const leftInd = leftIndentBody.toFixed(1);
+    const rightIndentBody = Math.max(0, textW - bodyW - leftIndentBody).toFixed(1);
     const bodyBlock = [
-      `\\begin{adjustwidth}{0mm}{${rightIndentBody}mm}`,
+      `\\begin{adjustwidth}{${leftInd}mm}{${rightIndentBody}mm}`,
       bodyLatex.trim(),
       `\\end{adjustwidth}`,
     ].join('\n');
+
+    // 하단 주석 블록 (bottomNoteWidth + bottomNoteFlowColumns 적용)
+    const noteContent = (noteLatex || '').trim();
+    if (!noteContent) return bodyBlock;
+
+    const noteWidthEff = bottomNoteWidth === 'body' ? bodyW : textW;
+    const leftIndNote = (bottomNoteWidth === 'body' && leftIndentBody > 0) ? leftInd : '0';
+    const rightIndNote = Math.max(0, textW - noteWidthEff - (bottomNoteWidth === 'body' ? leftIndentBody : 0)).toFixed(1);
+    const _bnfc = Math.max(1, Number(bottomNoteFlowColumns) || 1);
+    const wrappedNote = _bnfc >= 2
+      ? [`\\begin{multicols}{${_bnfc}}`, noteContent, `\\end{multicols}`].join('\n')
+      : noteContent;
     const noteBlock = [
-      `\\begin{adjustwidth}{0mm}{${rightIndentNote}mm}`,
-      noteLatex.trim(),
+      `\\begin{adjustwidth}{${leftIndNote}mm}{${rightIndNote}mm}`,
+      wrappedNote,
       `\\end{adjustwidth}`,
     ].join('\n');
     return [bodyBlock, `\\vspace{${gapFmt}}`, noteBlock].join('\n');
