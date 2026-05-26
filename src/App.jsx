@@ -4662,6 +4662,16 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 maxWidth:"92%",
                 border: msg.role === "user" ? "none" : `1px solid ${T.border}`,
               }}>
+                {msg.role === 'user' && msg.intent && msg.intent !== 'ambiguous' && (
+                  <div style={{
+                    display:'inline-block', fontSize:9, fontWeight:700,
+                    padding:'1px 5px', borderRadius:2, marginBottom:4,
+                    background: msg.intent === 'question' ? '#1a5276' : '#1a4a1a',
+                    color: '#fff', letterSpacing:'0.05em',
+                  }}>
+                    {msg.intent === 'question' ? '질문' : '수정'}
+                  </div>
+                )}
                 {msg.role === 'assistant' ? (
                   <div>
                     {msg.isStructural ? (
