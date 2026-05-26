@@ -2961,10 +2961,11 @@ export default function App() {
         // 가변단 left/right일 때 각주를 side column으로 라우팅할지 결정
         // 조건: variable 모드 + left/right 위치 + 각주 있음 + ===NOTE=== 구분자 없음
         const notePos = styleConfig.notePosition || 'right';
+        // bottom 모드: PARACOL_MARKER가 있어도 inline \footnote 경로 사용 (사이드 note 블록 금지)
         const useSideNoteFootnote = hasFootnoteText
           && colMode === 'variable'
           && ['left', 'right', 'top', 'bottom'].includes(notePos)
-          && !finalBodyContent.includes(PARACOL_MARKER);
+          && (!finalBodyContent.includes(PARACOL_MARKER) || notePos === 'bottom');
 
         // parseFootnoteMap 캐싱 — run() 내 여러 경로에서 동일 fields.각주 반복 파싱 방지
         const _cachedFnMap = hasFootnoteText ? parseFootnoteMap(fields.각주).fnMap : {};
