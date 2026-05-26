@@ -2789,8 +2789,8 @@ export default function App() {
         `\\begin{document}\n` +
         `\\XeTeXlinebreaklocale "ko"\n` +
         `\\XeTeXlinebreakskip=0pt plus 1pt\n` +
-        (fields.면주 && fields.면주.trim()
-          ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(fields.면주.trim())}}\n`
+        (effectiveRH()
+          ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(effectiveRH())}}\n`
           : '') +
         `\\pagestyle{imprint}\n`;
 
@@ -2799,8 +2799,8 @@ export default function App() {
         '# FIXED PREAMBLE\n' + preambleSummary + '\n\n' +
         '# DOC START (add these first lines after \\begin{document})\n' +
         '\\XeTeXlinebreaklocale "ko"\n\\XeTeXlinebreakskip=0pt plus 1pt\n' +
-        (fields.면주 && fields.면주.trim()
-          ? '\\renewcommand{\\imprintrunninghead}{' + escapeLatex(fields.면주.trim()) + '}\n'
+        (effectiveRH()
+          ? '\\renewcommand{\\imprintrunninghead}{' + escapeLatex(effectiveRH()) + '}\n'
           : '') +
         '\\pagestyle{imprint}\n\n' +
         '# TYPOGRAPHY\n' +
