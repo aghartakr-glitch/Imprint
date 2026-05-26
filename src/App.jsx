@@ -4156,233 +4156,206 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       })}
                     </div>
                   )}
-                  {/* 가변단: 총/본문/주석 열 수 + 주석 위치 + 사용법 안내 */}
-                  {styleConfig.columnMode === 'variable' && (
-                    <>
-                      {/* 그리드 수치 입력 */}
-                      {(() => {
-                        const vg = styleConfig.variableGrid || { total:5, body:4, note:1 };
-                        const pos = styleConfig.notePosition || 'right';
-                        const isLR = pos === 'left' || pos === 'right';
-                        const overflow = isLR && (vg.body + vg.note) > vg.total;
-                        return (
-                          <>
-                            <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
-                              {[
-                                { key:'total', label:'총 그리드' },
-                                { key:'body',  label:'본문 열' },
-                                { key:'note',  label:'주석 열' },
-                              ].map(({ key, label }) => (
-                                <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:11, color: (overflow && key !== 'total') ? '#888' : T.muted,
-                                    fontWeight:500 }}>{label}</span>
-                                  <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
-                                    value={vg[key] || ''}
-                                    onChange={e => {
-                                      const v = Math.max(1, parseInt(e.target.value) || 1);
-                                      setStyleConfig(s => {
-                                        const prev = s.variableGrid || { total:5, body:4, note:1 };
-                                        const next = { ...prev, [key]: v };
-                                        // total을 넘지 않도록 clamp
-                                        if (key !== 'total') next[key] = Math.min(v, next.total);
-                                        // left/right 모드에서 note 입력 시 body+note <= total 보장
-                                        const pos = s.notePosition || 'right';
-                                        const isSide = pos === 'left' || pos === 'right';
-                                        if (isSide && key === 'note') {
-                                          next.note = Math.min(next.note, Math.max(1, next.total - next.body));
-                                        }
-                                        if (isSide && key === 'body') {
-                                          next.note = Math.min(next.note, Math.max(1, next.total - next.body));
-                                        }
-                                        return { ...s, variableGrid: next };
-                                      });
-                                    }}
-                                    style={{ width:52, padding:"5px 7px", fontSize:12,
-                                      border:`1px solid ${(overflow && key !== 'total') ? '#888' : T.border}`,
-                                      borderRadius:3, background:T.bg, color:T.ink, textAlign:"center" }} />
-                                </div>
-                              ))}
-                            </div>
-                            {overflow && (
-                              <div style={{ fontSize:11, color:'#777', marginTop:3 }}>
-                                본문({vg.body})+주석({vg.note}) = {vg.body+vg.note} &gt; 총({vg.total}) — 좌/우 배치 시 합이 총 그리드를 넘으면 안 됩니다
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                      {/* 열 간격 */}
-                      <div style={{ display:"flex", flexDirection:"column", gap:2, marginTop:16 }}>
-                        <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>열 간격 (mm)</span>
-                        <input type="number" min={2} max={20} step={1}
-                          value={styleConfig.columnGapMm ?? 8}
-                          onChange={e => {
-                            const v = Math.min(20, Math.max(2, parseFloat(e.target.value) || 8));
-                            setStyleConfig(s => ({ ...s, columnGapMm: v }));
-                          }}
-                          style={{ width:52, padding:"5px 7px", fontSize:12,
-                            border:`1px solid ${T.border}`, borderRadius:3,
-                            background:T.bg, color:T.ink, textAlign:"center" }} />
-                      </div>
-                      {/* 주석 위치 선택 */}
-                      <div style={{ marginTop:16 }}>
-                        <span style={{ fontSize:11, color:T.muted, fontWeight:500,
-                          marginBottom:4, display:"block" }}>주석 위치</span>
-                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                          {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => {
-                            const active = (styleConfig.notePosition || 'right') === val;
-                            return (
-                              <button key={val}
-                                onClick={() => setStyleConfig(s => {
-                                  const newPos = val;
-                                  const isNewSide = newPos === 'right' || newPos === 'left';
-                                  const vg = s.variableGrid || { total: 5, body: 4, note: 1 };
-                                  // left/right 전환 시 note가 total-body 초과하면 자동 보정
-                                  const safeNote = isNewSide
-                                    ? Math.min(vg.note, Math.max(1, vg.total - vg.body))
-                                    : vg.note;
-                                  return {
-                                    ...s,
-                                    notePosition: newPos,
-                                    variableGrid: { ...vg, note: safeNote },
-                                  };
-                                })}
-                                style={{ padding:"4px 10px", fontSize:11, fontWeight: active?600:400,
-                                  border:`1px solid ${active ? T.ink : T.border}`,
-                                  borderRadius:3, background: active ? T.ink : "transparent",
-                                  color: active ? "#fff" : T.ink, cursor:"pointer",
-                                  transition:"all 150ms" }}>
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      {/* 본문 내부 단 + 위치별 조건부 단 설정 */}
-                      {(() => {
-                        const notePos = styleConfig.notePosition || 'right';
-                        const isSide = notePos === 'right' || notePos === 'left';
-                        const isBottom = notePos === 'bottom';
-                        const vgTotal = styleConfig.variableGrid?.total || 5;
-                        const vgBody  = styleConfig.variableGrid?.body  || 4;
-                        const canIndent = !isSide && vgTotal > vgBody; // top/bottom 모드에서 total>body 일 때만 시작 열 표시
-                        return (
-                          <>
-                            <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
-                              {/* 본문 내부 단: 항상 표시 */}
-                              <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 내부 단</span>
-                                <input type="number" min={1} max={vgBody}
-                                  value={styleConfig.bodyTextColumns || 1}
+                  {/* 가변단: 4개 그룹으로 구조화 */}
+                  {styleConfig.columnMode === 'variable' && (() => {
+                    const vg = styleConfig.variableGrid || { total:5, body:4, note:1 };
+                    const pos = styleConfig.notePosition || 'right';
+                    const isSide = pos === 'left' || pos === 'right';
+                    const isBottom = pos === 'bottom';
+                    const isTop = pos === 'top';
+                    const vgTotal = vg.total;
+                    const vgBody  = vg.body;
+                    const overflow = isSide && (vg.body + vg.note) > vg.total;
+                    const canIndent = !isSide && vgTotal > vgBody;
+                    const grp = { marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}` };
+                    const grpLbl = { fontSize:10, fontWeight:700, color:T.muted,
+                      letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:8, display:'block' };
+                    const fld = { display:"flex", flexDirection:"column", gap:2 };
+                    const flbl = { fontSize:11, color:T.muted, fontWeight:500 };
+                    const ni = { width:52, padding:"5px 7px", fontSize:12,
+                      border:`1px solid ${T.border}`, borderRadius:3,
+                      background:T.bg, color:T.ink, textAlign:"center" };
+                    return (
+                      <>
+                        {/* ① 그리드 분할 */}
+                        <div style={{ marginTop:8 }}>
+                          <span style={grpLbl}>① 그리드 분할</span>
+                          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                            {[
+                              { key:'total', label:'전체 열' },
+                              { key:'body',  label:`본문 폭${isSide ? '' : ''}` },
+                              { key:'note',  label: isSide ? '주석 폭' : '보조 열' },
+                            ].map(({ key, label }) => (
+                              <div key={key} style={fld}>
+                                <span style={{ ...flbl, color: overflow && key !== 'total' ? '#888' : T.muted }}>
+                                  {label}
+                                </span>
+                                <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
+                                  value={vg[key] || ''}
                                   onChange={e => {
+                                    const v = Math.max(1, parseInt(e.target.value) || 1);
                                     setStyleConfig(s => {
-                                      const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.body || 1);
-                                      return { ...s, bodyTextColumns: v };
+                                      const prev = s.variableGrid || { total:5, body:4, note:1 };
+                                      const next = { ...prev, [key]: v };
+                                      if (key !== 'total') next[key] = Math.min(v, next.total);
+                                      const _p = s.notePosition || 'right';
+                                      const _side = _p === 'left' || _p === 'right';
+                                      if (_side && (key === 'note' || key === 'body'))
+                                        next.note = Math.min(next.note, Math.max(1, next.total - next.body));
+                                      return { ...s, variableGrid: next };
                                     });
                                   }}
-                                  style={{ width:52, padding:"5px 7px", fontSize:12,
-                                    border:`1px solid ${T.border}`, borderRadius:3,
-                                    background:T.bg, color:T.ink, textAlign:"center" }} />
+                                  style={{ ...ni, borderColor: overflow && key !== 'total' ? '#888' : T.border }} />
                               </div>
-                              {isSide ? (
-                                /* 오른쪽/왼쪽 → 주석 내부 단 */
-                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>주석 내부 단</span>
-                                  <input type="number" min={1} max={styleConfig.variableGrid?.note || 1}
-                                    value={styleConfig.noteTextColumns || 1}
-                                    onChange={e => {
-                                      setStyleConfig(s => {
-                                        const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), s.variableGrid?.note || 1);
-                                        return { ...s, noteTextColumns: v };
-                                      });
-                                    }}
-                                    style={{ width:52, padding:"5px 7px", fontSize:12,
-                                      border:`1px solid ${T.border}`, borderRadius:3,
-                                      background:T.bg, color:T.ink, textAlign:"center" }} />
-                                </div>
-                              ) : (
-                                /* 상단/하단 → 각주 단 수 */
-                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>각주 단 수</span>
+                            ))}
+                            <div style={fld}>
+                              <span style={flbl}>열 간격 (mm)</span>
+                              <input type="number" min={2} max={20} step={1}
+                                value={styleConfig.columnGapMm ?? 8}
+                                onChange={e => setStyleConfig(s => ({
+                                  ...s, columnGapMm: Math.min(20, Math.max(2, parseFloat(e.target.value) || 8))
+                                }))}
+                                style={ni} />
+                            </div>
+                          </div>
+                          {overflow && (
+                            <div style={{ fontSize:11, color:'#777', marginTop:4 }}>
+                              본문({vg.body})+주석({vg.note}) = {vg.body+vg.note} &gt; 전체({vg.total}) —
+                              좌·우 배치 시 본문+주석 합이 전체 열을 넘으면 안 됩니다
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ② 주석 배치 */}
+                        <div style={grp}>
+                          <span style={grpLbl}>② 주석 배치</span>
+                          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                            {[['right','오른쪽 열'],['left','왼쪽 열'],['top','본문 위'],['bottom','페이지 하단']].map(([val, label]) => {
+                              const active = pos === val;
+                              return (
+                                <button key={val}
+                                  onClick={() => setStyleConfig(s => {
+                                    const isNewSide = val === 'right' || val === 'left';
+                                    const _vg = s.variableGrid || { total:5, body:4, note:1 };
+                                    const safeNote = isNewSide
+                                      ? Math.min(_vg.note, Math.max(1, _vg.total - _vg.body))
+                                      : _vg.note;
+                                    return { ...s, notePosition: val, variableGrid: { ..._vg, note: safeNote } };
+                                  })}
+                                  style={{ padding:"4px 10px", fontSize:11, fontWeight: active?600:400,
+                                    border:`1px solid ${active ? T.ink : T.border}`,
+                                    borderRadius:3, background: active ? T.ink : "transparent",
+                                    color: active ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* ③ 본문 흐름 */}
+                        <div style={grp}>
+                          <span style={grpLbl}>③ 본문 흐름</span>
+                          <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                            <div style={fld}>
+                              <span style={flbl}>내부 단 수</span>
+                              <input type="number" min={1} max={vgBody}
+                                value={styleConfig.bodyTextColumns || 1}
+                                onChange={e => setStyleConfig(s => ({
+                                  ...s, bodyTextColumns: Math.min(Math.max(1, parseInt(e.target.value)||1), s.variableGrid?.body || 1)
+                                }))}
+                                style={ni} />
+                            </div>
+                            {canIndent && (
+                              <div style={fld}>
+                                <span style={flbl}>시작 열</span>
+                                <input type="number" min={1} max={Math.max(1, vgTotal - vgBody + 1)}
+                                  value={styleConfig.bodyColumnStart || 1}
+                                  onChange={e => setStyleConfig(s => {
+                                    const maxS = Math.max(1, (s.variableGrid?.total||5) - (s.variableGrid?.body||4) + 1);
+                                    return { ...s, bodyColumnStart: Math.min(Math.max(1, parseInt(e.target.value)||1), maxS) };
+                                  })}
+                                  style={ni} />
+                                <span style={{ fontSize:10, color:T.muted }}>왼쪽 여백</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ④ 주석 흐름 */}
+                        <div style={grp}>
+                          <span style={grpLbl}>④ 주석 흐름</span>
+                          <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-start" }}>
+                            {isSide && (
+                              <div style={fld}>
+                                <span style={flbl}>주석 내부 단 수</span>
+                                <input type="number" min={1} max={vg.note}
+                                  value={styleConfig.noteTextColumns || 1}
+                                  onChange={e => setStyleConfig(s => ({
+                                    ...s, noteTextColumns: Math.min(Math.max(1, parseInt(e.target.value)||1), s.variableGrid?.note || 1)
+                                  }))}
+                                  style={ni} />
+                              </div>
+                            )}
+                            {isTop && (
+                              <div style={fld}>
+                                <span style={flbl}>상단 주석 단 수</span>
+                                <input type="number" min={1} max={4}
+                                  value={fields.각주단 || 1}
+                                  onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
+                                  style={ni} />
+                              </div>
+                            )}
+                            {isBottom && (
+                              <>
+                                <div style={fld}>
+                                  <span style={flbl}>각주 단 수</span>
                                   <input type="number" min={1} max={4}
                                     value={fields.각주단 || 1}
                                     onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
-                                    style={{ width:52, padding:"5px 7px", fontSize:12,
-                                      border:`1px solid ${T.border}`, borderRadius:3,
-                                      background:T.bg, color:T.ink, textAlign:"center" }} />
+                                    style={ni} />
                                   {(fields.각주단 || 1) >= 2 && (
-                                    <span style={{ fontSize:10, color:T.muted, marginTop:2 }}>bigfoot 패키지</span>
+                                    <span style={{ fontSize:10, color:T.muted }}>bigfoot 패키지</span>
                                   )}
                                 </div>
-                              )}
-                              {/* 본문 시작 열: top/bottom 모드에서 total > body 일 때 */}
-                              {canIndent && (
-                                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                  <span style={{ fontSize:11, color:T.muted, fontWeight:500 }}>본문 시작 열</span>
-                                  <input type="number" min={1} max={Math.max(1, vgTotal - vgBody + 1)}
-                                    value={styleConfig.bodyColumnStart || 1}
-                                    onChange={e => {
-                                      setStyleConfig(s => {
-                                        const maxStart = Math.max(1, (s.variableGrid?.total || 5) - (s.variableGrid?.body || 4) + 1);
-                                        const v = Math.min(Math.max(1, parseInt(e.target.value) || 1), maxStart);
-                                        return { ...s, bodyColumnStart: v };
-                                      });
-                                    }}
-                                    style={{ width:52, padding:"5px 7px", fontSize:12,
-                                      border:`1px solid ${T.border}`, borderRadius:3,
-                                      background:T.bg, color:T.ink, textAlign:"center" }} />
-                                  <span style={{ fontSize:10, color:T.muted, marginTop:1 }}>왼쪽 여백 생성</span>
-                                </div>
-                              )}
-                            </div>
-                            {/* 하단 주석 설정: bottom 모드 전용 */}
-                            {isBottom && (
-                              <div style={{ marginTop:14, paddingTop:12,
-                                borderTop:`1px dashed ${T.border}` }}>
-                                <span style={{ fontSize:11, color:T.muted, fontWeight:500,
-                                  marginBottom:8, display:"block" }}>하단 주석 레이어</span>
-                                <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-start" }}>
-                                  {/* 하단 주석 단 수 */}
-                                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                                    <span style={{ fontSize:11, color:T.muted }}>단 수</span>
-                                    <input type="number" min={1} max={8}
-                                      value={styleConfig.bottomNoteFlowColumns || 2}
-                                      onChange={e => {
-                                        const v = Math.min(8, Math.max(1, parseInt(e.target.value) || 1));
-                                        setStyleConfig(s => ({ ...s, bottomNoteFlowColumns: v }));
-                                      }}
-                                      style={{ width:52, padding:"5px 7px", fontSize:12,
-                                        border:`1px solid ${T.border}`, borderRadius:3,
-                                        background:T.bg, color:T.ink, textAlign:"center" }} />
-                                  </div>
-                                  {/* 하단 주석 너비 */}
-                                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                                    <span style={{ fontSize:11, color:T.muted }}>너비</span>
-                                    <div style={{ display:"flex", gap:4 }}>
-                                      {[['full','판면 전체'],['body','본문 폭']].map(([val, label]) => {
-                                        const active = (styleConfig.bottomNoteWidth || 'full') === val;
-                                        return (
-                                          <button key={val}
-                                            onClick={() => setStyleConfig(s => ({ ...s, bottomNoteWidth: val }))}
-                                            style={{ padding:"4px 9px", fontSize:11, fontWeight: active?600:400,
-                                              border:`1px solid ${active ? T.ink : T.border}`,
-                                              borderRadius:3, background: active ? T.ink : "transparent",
-                                              color: active ? "#fff" : T.ink, cursor:"pointer",
-                                              transition:"all 150ms" }}>
-                                            {label}
-                                          </button>
-                                        );
-                                      })}
+                                <div style={{ ...fld, borderLeft:`1px solid ${T.border}`, paddingLeft:12 }}>
+                                  <span style={{ ...flbl, color:T.muted }}>수동 주석 블록</span>
+                                  <div style={{ display:"flex", gap:8, marginTop:2, flexWrap:"wrap" }}>
+                                    <div style={fld}>
+                                      <span style={{ fontSize:10, color:T.muted }}>단 수</span>
+                                      <input type="number" min={1} max={8}
+                                        value={styleConfig.bottomNoteFlowColumns || 2}
+                                        onChange={e => setStyleConfig(s => ({ ...s, bottomNoteFlowColumns: Math.min(8, Math.max(1, parseInt(e.target.value)||1)) }))}
+                                        style={ni} />
+                                    </div>
+                                    <div style={fld}>
+                                      <span style={{ fontSize:10, color:T.muted }}>너비</span>
+                                      <div style={{ display:"flex", gap:4, marginTop:2 }}>
+                                        {[['full','전체'],['body','본문']].map(([val, lbl]) => {
+                                          const active = (styleConfig.bottomNoteWidth || 'full') === val;
+                                          return (
+                                            <button key={val}
+                                              onClick={() => setStyleConfig(s => ({ ...s, bottomNoteWidth: val }))}
+                                              style={{ padding:"3px 8px", fontSize:11, fontWeight: active?600:400,
+                                                border:`1px solid ${active ? T.ink : T.border}`,
+                                                borderRadius:3, background: active ? T.ink : "transparent",
+                                                color: active ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
+                                              {lbl}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
                                   </div>
+                                  <span style={{ fontSize:10, color:T.muted, marginTop:3 }}>%%NOTE%% 구분자 사용 시 적용</span>
                                 </div>
-                              </div>
+                              </>
                             )}
-                          </>
-                        );
-                      })()}
-                    </>
-                  )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:500,
