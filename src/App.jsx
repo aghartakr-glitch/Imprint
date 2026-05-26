@@ -3550,10 +3550,13 @@ export default function App() {
       return;
     }
 
+    // ── 인텐트 분류 (API 호출 전) ────────────────────────────────
+    const intent = classifyChatIntent(userMsg); // "question" | "modify" | "ambiguous"
+
     setRefineInput('');
     setRefineLoading(true);
     setStreamingText('');
-    setRefineHistory(h => [...h, { role: 'user', content: userMsg }]);
+    setRefineHistory(h => [...h, { role: 'user', content: userMsg, intent }]);
 
     // ── 현재 LaTeX 수치 스냅샷 (수정 전) ─────────────────────────
     const cmdMap = extractLatexCommandMap(latex);
@@ -3568,6 +3571,41 @@ export default function App() {
       cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
     ].filter(Boolean).join('\n');
 
+    // ── 레퍼런스 컨텍스트 (question 모드에서 답변 근거로 사용) ──────
+    const refCtx = p ? [
+      `선택된 레퍼런스: "${p.title || p.t}" (${p.designer || '-'})`,
+      `장르: ${(p.g||[]).join(', ')}`,
+      `판형: ${p.f.w}×${p.f.h}mm`,
+      `레이아웃: ${p.layout_type || '-'}`,
+      p.why_font   ? `서체 이유: ${p.why_font}` : null,
+      p.why_margin ? `여백 이유: ${p.why_margin}` : null,
+      p.why_tracking ? `자간 이유: ${p.why_tracking}` : null,
+    ].filter(Boolean).join('\n') : '(레퍼런스 정보 없음)';
+
+    // ── 인텐트별 출력 규칙 ────────────────────────────────────────
+    const outputRules = intent === 'question'
+      ? `출력 규칙 (질문 모드):
+1. 한국어로 질문에 답변한다.
+2. 현재 수치, 선택된 레퍼런스, 조판 설계 이유를 근거로 설명한다.
+3. <latex_update> 태그를 절대 출력하지 않는다 — 코드를 수정하지 않는다.
+4. 수정을 원한다면 어떻게 요청하면 되는지 짧게 안내해도 된다.`
+      : intent === 'modify'
+      ? `출력 규칙 (수정 모드):
+1. 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
+2. 반드시 <latex_update> 태그 안에 수정된 전체 LaTeX(.sty 내용)를 출력한다.
+   — 수정이 완전히 불가한 경우에만 생략하고 이유를 설명한다.
+3. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX만 넣는다.
+4. LaTeX 출력 후 아래 형식으로 변경 내역을 보고한다:
+   【변경】항목명: 이전값 → 이후값
+   【유지】판형(${p.f.w}×${p.f.h}mm), 본문 정렬(${runMeta?.selectedAlignment||'justified'}), 선택 레퍼런스
+5. 핵심 스타일(판형·정렬·레퍼런스)은 절대 변경하지 않는다.`
+      : /* ambiguous */
+      `출력 규칙:
+1. 먼저 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
+2. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
+3. 수정이 없으면 <latex_update> 태그를 출력하지 않고 대화만 한다.
+4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX 코드만 넣는다.`;
+
     // ── 시스템 프롬프트 ───────────────────────────────────────────
     const systemPrompt = `너는 Imprint 조판 시스템의 스타일 어시스턴트다. 한국어로 자연스럽게 대화한다.
 
@@ -3575,6 +3613,9 @@ export default function App() {
 ${cmdMapStr || '(수치 추출 실패 — LaTeX 직접 참고)'}
 판형: ${p.f.w}×${p.f.h}mm (절대 불변)
 본문 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
+
+레퍼런스 정보:
+${refCtx}
 
 수치 없는 자연어 변환 기준:
 "조금/약간" = ±10%,  "좀/더" = ±15%,  "크게/많이" = ±25%,  "훨씬/아주" = ±35%
@@ -3590,14 +3631,10 @@ ${cmdMap.footnoteSize
 - 여백 → \\geometry 의 top/bottom/inner/outer 만 수정
 - 쪽번호 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead
 
-출력 규칙:
-1. 먼저 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
-2. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
-3. 수정이 없으면 <latex_update> 태그를 출력하지 않고 대화만 한다.
-4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX 코드만 넣는다.
+${outputRules}
 
 현재 LaTeX:
-${compressedLatex}`;
+${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : ''}${compressedLatex}`;
 
     // ── 멀티턴 대화 히스토리 구성 ────────────────────────────────
     // assistant 메시지는 chatContent(자연어 부분)만 전달 — LaTeX 코드 제외
