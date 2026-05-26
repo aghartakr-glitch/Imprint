@@ -2484,6 +2484,7 @@ export default function App() {
         '\\AtBeginDocument{\\fontsize{' + adjustedBodySize + 'pt}{' + adjustedBodyLead + 'pt}\\selectfont}',
         '',
         '% footnotes — v29: preamble fixed, no dead code (item 4)',
+        '\\feetbelowfloat', // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         '\\renewcommand{\\footnoterule}{}',
         '\\renewcommand{\\thefootnote}{\\arabic{footnote}}',
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
