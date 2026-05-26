@@ -3126,13 +3126,22 @@ export default function App() {
                       return content ? `\\footnote{${latexEscFn(stripWrappingQuotes(content))}}` : '';
                     });
                     // bodyColumnStart 적용: 왼쪽 indent 계산
+                    // \leftskip/\rightskip 그룹 사용 — memoir에서 \footnote과 adjustwidth 충돌 방지
                     const _bcsB = Math.max(1, bcs);
                     const _leftIndB = (_bcsB > 1 && grid.unitW > 0)
                       ? Math.round((_bcsB - 1) * (grid.unitW + grid.gap) * 10) / 10
                       : 0;
-                    const rightIndentBottomBody = Math.max(0, textW - grid.bodyW - _leftIndB).toFixed(1);
-                    const bottomLayout = (_leftIndB > 0 || parseFloat(rightIndentBottomBody) > 0)
-                      ? [`\\begin{adjustwidth}{${_leftIndB.toFixed(1)}mm}{${rightIndentBottomBody}mm}`, bottomBody.trim(), `\\end{adjustwidth}`].join('\n')
+                    const _rightIndB = Math.max(0, textW - grid.bodyW - _leftIndB);
+                    const _needsIndent = _leftIndB > 0 || _rightIndB > 0;
+                    const bottomLayout = _needsIndent
+                      ? [
+                          `\\begingroup`,
+                          _leftIndB > 0  ? `\\setlength{\\leftskip}{${_leftIndB.toFixed(1)}mm}` : null,
+                          _rightIndB > 0 ? `\\setlength{\\rightskip}{${_rightIndB.toFixed(1)}mm}` : null,
+                          `\\noindent`,
+                          bottomBody.trim(),
+                          `\\par\\endgroup`,
+                        ].filter(Boolean).join('\n')
                       : bottomBody.trim();
                     finalBodyContent = gridComment + '\n' + bottomLayout;
                     // bottom 처리 완료 — plines 조립 생략
