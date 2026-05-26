@@ -3162,15 +3162,38 @@ export default function App() {
                   // 결과: 주석이 마커 단락과 같은 수직 위치에 배치됨
                   // 단락 구분자: \par 명령 OR 빈 줄(\n\n) — Claude 출력 방식 무관하게 처리
                   const rawParaParts = bodyLatex.trim().split(/(\\par\b|\n{2,})/);
-                  const paraChunks = [];
+                  const _rawChunks = [];
                   for (let pi = 0; pi < rawParaParts.length; pi += 2) {
                     const txt = rawParaParts[pi] || '';
                     const sep = rawParaParts[pi + 1] || '';
                     // \par 명령은 그대로 보존, 빈 줄은 \par로 정규화
                     const parCmd = sep.startsWith('\\par') ? sep : (sep.trim() === '' && sep.includes('\n') ? '\\par' : sep);
                     const full = txt + parCmd;
-                    if (full.trim()) paraChunks.push(full);
+                    if (full.trim()) _rawChunks.push(full);
                   }
+                  // TeX 그룹 경계 보정: {\bodyf ... \par} 처럼 그룹이 \par 분리선에 걸리면
+                  // \end{multicols} 앞에서 그룹이 열린 채로 끊겨 LaTeX 오류 발생
+                  // → 브레이스 불균형인 청크는 다음 청크와 합쳐 완전한 그룹 단위로 만듦
+                  const _countOpen = (s) => {
+                    let d = 0;
+                    for (let i = 0; i < s.length; i++) {
+                      if (s[i] === '\\') { i++; continue; } // \{ \} 이스케이프 건너뜀
+                      if (s[i] === '{') d++;
+                      else if (s[i] === '}') d--;
+                    }
+                    return d; // 양수=열기 초과, 음수=닫기 초과
+                  };
+                  const paraChunks = [];
+                  let _pending = '';
+                  for (const _rc of _rawChunks) {
+                    _pending += (_pending ? '\n' : '') + _rc;
+                    if (_countOpen(_pending) === 0) {
+                      paraChunks.push(_pending);
+                      _pending = '';
+                    }
+                    // 불균형이면 계속 합침
+                  }
+                  if (_pending.trim()) paraChunks.push(_pending);
 
                   const bodyLines = [];
                   const notesEmitted2 = new Set();
