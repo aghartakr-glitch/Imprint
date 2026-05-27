@@ -2507,6 +2507,8 @@ export default function App() {
           'inner=' + corrections.margins.안 + 'mm,outer=' + corrections.margins.밖 + 'mm,' +
           'includehead=true,includefoot=false]{geometry}',
         colPackages.trim(),
+        // 수직 면주 \rotatebox 사용 시 graphicx 필요
+        (styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') ? '\\usepackage{graphicx}' : '',
         '',
         fontBlock,
         '',
