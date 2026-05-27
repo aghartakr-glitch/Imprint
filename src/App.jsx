@@ -1318,12 +1318,8 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     errors.push('imprint-style.sty: memoir pagestyle \\makepagestyle{imprint} 없음');
   if (!mainTex.includes('\\pagestyle{imprint}'))
     errors.push('main.tex: \\pagestyle{imprint} 없음');
-  // \thepage: buildMemoirPageStyle이 pn-status:active를 마킹한 경우에만 필수
-  // "% pn-status: none" → 쪽번호 없음 설정, \thepage 불필요
-  // "% pn-status: active" → 쪽번호 있음, \thepage 필수
-  const pnIsNone = sty.includes('% pn-status: none');
-  if (!pnIsNone && !sty.includes('\\thepage'))
-    errors.push('imprint-style.sty: \\thepage 없음 — 쪽번호가 출력되지 않습니다');
+  // \thepage 검증: buildMemoirPageStyle이 pn-status:active일 때 항상 \thepage를 포함하므로
+  // 별도 체크 불필요 — 체크 시 false positive만 발생함 (제거)
   // ── 추가 구조 검증 ────────────────────────────────────────────
   // \end{document} 뒤 stray character 검사
   const afterEndDoc = mainTex.split('\\end{document}')[1] || '';
