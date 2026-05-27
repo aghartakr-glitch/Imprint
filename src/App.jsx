@@ -4163,59 +4163,32 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
                     <label style={{ fontSize:11, fontWeight:500, color:T.muted }}>면주</label>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      {/* 자동/직접 토글 */}
-                      <div style={{ display:"flex", gap:3 }}>
-                        {[['자동', true], ['직접 입력', false]].map(([lbl, val]) => {
-                          const active = (styleConfig.rhAuto !== false) === val;
-                          return (
-                            <button key={lbl}
-                              onClick={() => setStyleConfig(s => ({ ...s, rhAuto: val }))}
-                              style={{ padding:"3px 9px", fontSize:11, cursor:"pointer",
-                                border:`1px solid ${active ? T.ink : T.border}`, borderRadius:3,
-                                background: active ? T.ink : 'transparent',
-                                color: active ? '#fff' : T.muted }}>
-                              {lbl}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {/* 위치 드롭다운 */}
-                      <select value={styleConfig.rhPos || '상단-외측'}
-                        onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
-                        style={{ padding:"3px 6px", fontSize:11,
-                          border:`1px solid ${T.border}`, borderRadius:3,
-                          background:T.bg, color:T.ink, cursor:"pointer" }}>
-                        <option value="상단-외측">상단 · 외측</option>
-                        <option value="상단-내측">상단 · 내측</option>
-                        <option value="상단-중앙">상단 · 중앙</option>
-                        <option value="하단-외측">하단 · 외측</option>
-                        <option value="하단-내측">하단 · 내측</option>
-                        <option value="하단-중앙">하단 · 중앙</option>
-                        <option value="외측-수직">외측 여백 (세로)</option>
-                        <option value="내측-수직">내측 여백 (세로)</option>
-                      </select>
-                    </div>
-                  </div>
-                  {/* 자동: 미리보기 / 직접: textarea */}
-                  {(styleConfig.rhAuto !== false) ? (
-                    <div style={{ padding:"8px 11px", fontSize:12, color:T.muted,
-                      background:T.surface, border:`1px solid ${T.border}`, borderRadius:3,
-                      lineHeight:1.5, minHeight:34 }}>
-                      {(fields.제목 || '').trim().slice(0,40) || <span style={{ fontStyle:"italic" }}>제목을 입력하면 자동으로 채워집니다</span>}
-                    </div>
-                  ) : (
-                    <textarea value={fields["면주"]} rows={1}
-                      placeholder="면주 텍스트를 직접 입력하세요"
-                      onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
-                      style={{ width:"100%", padding:"9px 11px", fontSize:13,
+                    {/* 위치 드롭다운 */}
+                    <select value={styleConfig.rhPos || '상단-외측'}
+                      onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
+                      style={{ padding:"3px 6px", fontSize:11,
                         border:`1px solid ${T.border}`, borderRadius:3,
-                        background:T.bg, color:T.ink, lineHeight:1.6,
-                        transition:"border 150ms" }}
-                      onFocus={e => e.target.style.borderColor = T.ink}
-                      onBlur={e => e.target.style.borderColor = T.border}
-                    />
-                  )}
+                        background:T.bg, color:T.ink, cursor:"pointer" }}>
+                      <option value="상단-외측">상단 · 외측</option>
+                      <option value="상단-내측">상단 · 내측</option>
+                      <option value="상단-중앙">상단 · 중앙</option>
+                      <option value="하단-외측">하단 · 외측</option>
+                      <option value="하단-내측">하단 · 내측</option>
+                      <option value="하단-중앙">하단 · 중앙</option>
+                      <option value="외측-수직">외측 여백 (세로)</option>
+                      <option value="내측-수직">내측 여백 (세로)</option>
+                    </select>
+                  </div>
+                  <textarea value={fields["면주"]} rows={1}
+                    placeholder="면주 텍스트 입력 (비우면 면주 없음)"
+                    onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
+                    style={{ width:"100%", padding:"9px 11px", fontSize:13,
+                      border:`1px solid ${T.border}`, borderRadius:3,
+                      background:T.bg, color:T.ink, lineHeight:1.6,
+                      transition:"border 150ms" }}
+                    onFocus={e => e.target.style.borderColor = T.ink}
+                    onBlur={e => e.target.style.borderColor = T.border}
+                  />
                 </div>
               </>
             ) : (
