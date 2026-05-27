@@ -2034,7 +2034,7 @@ export default function App() {
       // 장르 다양성 확인 로그
       const _genreDistrib = {};
       _diverseRanked.slice(0, 16).forEach(r => {
-        const g = (r.p.g||['기타'])[0];
+        const g = r.p.g || '기타';
         _genreDistrib[g] = (_genreDistrib[g] || 0) + 1;
       });
       pushLog('kw', '후보 추출', 'done',
