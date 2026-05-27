@@ -4376,8 +4376,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                           </div>
                         </div>
 
-                        {/* 행 3: 본문 단 */}
-                        <div style={row}>
+                        {/* 행 3: 본문 단 — isSide일 때 btc는 현재 경로에서 미적용 */}
+                        <div style={{ ...row, opacity: isSide ? 0.38 : 1, pointerEvents: isSide ? 'none' : 'auto' }}>
                           <span style={rowLbl}>본문 단</span>
                           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                             <div style={fld}>
