@@ -1131,7 +1131,7 @@ function wrapVariableLayout({
 // memoir page style 생성 (fancyhdr 대체)
 // pnPos: 쪽번호 위치 "상단-외측"|"하단-내측"|"하단-중앙"|"없음" 등
 // rhPos: 면주 위치 "상단-외측"|...|"하단-중앙"|"외측-수직"|"내측-수직" (pnPos와 독립)
-function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
+function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPos }) {
   const pPos = (pnPos || '하단-외측').replace(/\s/g, '');
   const rPos = (rhPos  || '상단-외측').replace(/\s/g, '');
   const pnNone = pPos === '없음' || pPos === '-' || pPos === '';
