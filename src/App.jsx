@@ -1880,8 +1880,15 @@ export default function App() {
       const raw = (data.content||[]).map(x=>x.text||'').join('');
       const parsed = JSON.parse(raw.replace(/^[^{]*/,'').replace(/[^}]*$/,''));
       const idx = parseInt(parsed.i);
-      if (!isNaN(idx) && DB[idx]) return { i: idx, structured: parsed };
-    } catch(e) {}
+      // 반드시 pool 내에 존재하는 index여야 함 (AI가 list 위치를 index로 혼동하는 방지)
+      const poolIds = new Set(pool.map(r => r.i));
+      if (!isNaN(idx) && DB[idx] && poolIds.has(idx)) return { i: idx, structured: parsed };
+      // pool에 없는 index 반환 시 → pool[0]의 idx 사용 (가장 높은 점수 항목)
+      if (pool.length > 0) {
+        const fallback = pool[0];
+        return { i: fallback.i, structured: { ...parsed, i: fallback.i, reference_reason: '(index보정)' + (parsed.reference_reason||'') } };
+      }
+    } catch(e) { /* semanticRerank 오류 → null 반환으로 키워드 결과 사용 */ }
     return null;
   }
 
