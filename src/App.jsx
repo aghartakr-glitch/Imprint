@@ -2707,17 +2707,34 @@ export default function App() {
         `% 크기: ${p.footnote || '-'} / 정렬: ${p.align_note || '-'}`,
         `\\feetbelowfloat`, // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         `\\renewcommand{\\footnoterule}{}`,
-        `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
-        `\\makeatletter`,
-        `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
-        `\\makeatother`,
         `\\newcommand{\\notef}{${(() => {
           const noteFontIsSerif = p.pn_font === '명조';
           return noteFontIsSerif
             ? `\\rmfamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`
             : `\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`;
         })()}}`,
+        // 각주 N단: fields.각주단 >= 2이면 bigfoot(sty 내 \RequirePackage), 아니면 1단
+        (() => {
+          const fnCols = parseInt(fields.각주단 || '1', 10);
+          if (fnCols >= 2) {
+            return [
+              `% 각주 ${fnCols}단 설정 (bigfoot)`,
+              `\\RequirePackage{bigfoot}`,
+              `\\DeclareNewFootnote{A}[arabic]`,
+              `\\footnotelayout{c}[${fnCols}]`,
+              `\\let\\footnote\\footnoteA`,
+              `\\let\\footnotemark\\footnoteAmark`,
+              `\\let\\footnotetext\\footnoteAtext`,
+            ].join('\n');
+          }
+          return [
+            `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
+            `\\makeatletter`,
+            `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
+            `\\makeatother`,
+          ].join('\n');
+        })(),
         ``,
         `% ── 면주 / 쪽번호 (memoir pagestyle) ─────────────────────────`,
         `% 쪽번호: ${p.pn || '하단-외측'} / 면주: ${styleConfig.rhPos || '상단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'}`,
