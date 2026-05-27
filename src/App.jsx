@@ -2520,7 +2520,6 @@ export default function App() {
         '% footnotes — v29: preamble fixed, no dead code (item 4)',
         '\\feetbelowfloat', // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         '\\renewcommand{\\footnoterule}{}',
-        '\\renewcommand{\\thefootnote}{\\arabic{footnote}}',
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
         `\\newcommand{\\notef}{${p.pn_font === '명조' ? '\\rmfamily' : '\\sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
@@ -2528,9 +2527,9 @@ export default function App() {
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
           if (fnCols >= 2) {
-            // memoir의 \feetbelowfloat/\footnoterule 재정의를 bigfoot보다 먼저 선언해야 충돌 없음.
-            // bigfoot: \footnotelayout{c}[N] → manyfoot 기반 N단 각주
-            // Overleaf에서 bigfoot 패키지가 없으면 컴파일 오류 → 수동 설치 필요
+            // bigfoot(manyfoot 기반): \footnotelayout{c}[N] → N단 각주
+            // \thefootnote 재정의는 bigfoot 로드 후 하면 충돌 → bigfoot 기본(arabic) 사용
+            // memoir \feetbelowfloat + \footnoterule 은 bigfoot과 독립적으로 작동
             return [
               '% 각주 ' + fnCols + '단 설정 (bigfoot)',
               '\\usepackage{bigfoot}',
@@ -2541,8 +2540,9 @@ export default function App() {
               '\\let\\footnotetext\\footnoteAtext',
             ].join('\n');
           }
-          // 1단: 기존 방식
+          // 1단: 기존 방식 + \thefootnote arabic 유지
           return [
+            '\\renewcommand{\\thefootnote}{\\arabic{footnote}}',
             '\\makeatletter',
             '\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}',
             '\\makeatother',
