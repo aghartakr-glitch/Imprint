@@ -2737,7 +2737,7 @@ export default function App() {
               `\\RequirePackage{bigfoot}`,
               `\\DeclareNewFootnote{A}[arabic]`,
               // \footnotelayout은 preamble에서 실행 불가 → AtBeginDocument로 지연
-              `\\AtBeginDocument{\\footnotelayout{c}[${fnCols}]}`,
+              `\\footnotelayout{c}`,  // manyfoot: c = 2단 컬럼 레이아웃
               `\\let\\footnote\\footnoteA`,
               `\\let\\footnotemark\\footnoteAmark`,
               `\\let\\footnotetext\\footnoteAtext`,
