@@ -4359,7 +4359,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         <div style={row}>
                           <span style={rowLbl}>주석</span>
                           <div style={{ display:"flex", gap:4, flexWrap:"wrap", paddingTop:1 }}>
-                            {[['right','오른쪽'],['left','왼쪽'],['top','본문 위'],['bottom','하단']].map(([val, label]) => (
+                            {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => (
                               <button key={val}
                                 onClick={() => setStyleConfig(s => {
                                   const isNewSide = val === 'right' || val === 'left';
