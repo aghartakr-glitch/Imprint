@@ -2009,7 +2009,7 @@ export default function App() {
         const result = [];
         for (const r of ranked) {
           const lt = r.p.layout_type || 'unknown';
-          const g0 = (r.p.g || ['기타'])[0];
+          const g0 = r.p.g || '기타';
           if ((layoutCount[lt] || 0) >= 3) continue; // layout_type 당 최대 3개
           if (!h && (genreCount[g0] || 0) >= 4) continue; // 자동 모드: genre당 최대 4개
           layoutCount[lt] = (layoutCount[lt] || 0) + 1;
