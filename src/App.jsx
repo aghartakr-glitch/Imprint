@@ -2528,19 +2528,17 @@ export default function App() {
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
           if (fnCols >= 2) {
-            // memoir + XeLaTeX 환경에서 bigfoot은 footnote 재정의 충돌 발생.
-            // 대신 multicol을 써서 각주 영역 자체를 N단으로 감쌈.
-            // \begin{multicols}{N} 내부에서 \footnote → 각 열에 균등 배분.
+            // memoir의 \feetbelowfloat/\footnoterule 재정의를 bigfoot보다 먼저 선언해야 충돌 없음.
+            // bigfoot: \footnotelayout{c}[N] → manyfoot 기반 N단 각주
+            // Overleaf에서 bigfoot 패키지가 없으면 컴파일 오류 → 수동 설치 필요
             return [
-              '% 각주 ' + fnCols + '단 설정 (multicol 방식)',
-              '\\usepackage{multicol}',
-              '\\makeatletter',
-              '\\let\\orig@footnotetext\\@footnotetext',
-              '\\renewcommand\\@footnotetext[1]{%',
-              '  \\orig@footnotetext{#1}%',
-              '}',
-              '\\makeatother',
-              '% NOTE: 각주 다단은 본문을 \\begin{multicols}{' + fnCols + '} 안에서 작성할 때 적용됩니다',
+              '% 각주 ' + fnCols + '단 설정 (bigfoot)',
+              '\\usepackage{bigfoot}',
+              '\\DeclareNewFootnote{A}[arabic]',
+              '\\footnotelayout{c}[' + fnCols + ']',
+              '\\let\\footnote\\footnoteA',
+              '\\let\\footnotemark\\footnoteAmark',
+              '\\let\\footnotetext\\footnoteAtext',
             ].join('\n');
           }
           // 1단: 기존 방식
