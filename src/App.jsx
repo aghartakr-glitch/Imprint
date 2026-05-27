@@ -2595,6 +2595,8 @@ export default function App() {
         `\\RequirePackage{needspace}`,
         styColPkgs || null,
         alignResult.alignment === 'ragged' ? `\\RequirePackage{ragged2e}` : null,
+        // 수직 면주 \rotatebox 사용 시 graphicx 필요 (sty 안에서 호출되므로 sty에서 로드)
+        (styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') ? `\\RequirePackage{graphicx}` : null,
         ``,
         `% ── 판형 / 여백 ───────────────────────────────────────────────`,
         `% ${p.f.w}×${p.f.h}mm — ${p.why_dim || ''}`,
