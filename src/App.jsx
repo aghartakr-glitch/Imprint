@@ -2537,7 +2537,7 @@ export default function App() {
               '% 각주 ' + fnCols + '단 설정 (bigfoot)',
               '\\usepackage{bigfoot}',
               '\\DeclareNewFootnote{A}[arabic]',
-              '\\footnotelayout{c}[' + fnCols + ']',
+              '\\AtBeginDocument{\\footnotelayout{c}[' + fnCols + ']}',
               '\\let\\footnote\\footnoteA',
               '\\let\\footnotemark\\footnoteAmark',
               '\\let\\footnotetext\\footnoteAtext',
