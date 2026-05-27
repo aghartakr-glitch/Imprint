@@ -1825,14 +1825,14 @@ export default function App() {
       // 여기서 최종 풀 구성: 내용 상위 8 + 다른 layout_type 4 + 다른 genre 4 = max 16
       const byContent = ranked.slice(0, 8);
       const usedLayouts = new Set(byContent.map(r=>r.p.layout_type));
-      const usedGenres = new Set(byContent.map(r=>(r.p.g||['기타'])[0]));
+      const usedGenres = new Set(byContent.map(r=>r.p.g||'기타'));
 
       // 레이아웃 다양성: top 8 이후에서 다른 layout_type
       const byLayout = ranked.slice(8).filter(r => !usedLayouts.has(r.p.layout_type)).slice(0, 4);
 
       // 장르 다양성: 다른 장르 항목 추가 (hint 없을 때 특히 중요)
       const byGenre = ranked.filter(r => {
-        const g0 = (r.p.g||['기타'])[0];
+        const g0 = r.p.g || '기타';
         return !usedGenres.has(g0) && !byContent.find(c=>c.i===r.i) && !byLayout.find(l=>l.i===r.i);
       }).slice(0, 4);
 
