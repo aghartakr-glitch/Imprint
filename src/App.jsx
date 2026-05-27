@@ -2542,7 +2542,7 @@ export default function App() {
               '% 각주 ' + fnCols + '단 설정 (bigfoot)',
               '\\usepackage{bigfoot}',
               '\\DeclareNewFootnote{A}[arabic]',
-              '\\AtBeginDocument{\\footnotelayout{c}[' + fnCols + ']}',
+              '\\footnotelayout{c}',  // manyfoot: c = 2단 컬럼 레이아웃
               '\\let\\footnote\\footnoteA',
               '\\let\\footnotemark\\footnoteAmark',
               '\\let\\footnotetext\\footnoteAtext',
