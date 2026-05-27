@@ -1176,9 +1176,13 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
       const rhLeft  = `{\\smash{\\llap{\\rotatebox{-90}{\\runningheadf\\imprintrunninghead}\\kern3mm}}}`;
       // rhVertPos 결정: auto이면 pnPos 기준으로 반대편 슬롯 선택
       //   쪽번호가 상단에 있으면 면주를 하단 슬롯(footer)으로, 아니면 상단 슬롯(header)으로
+      // center이면 슬롯 배치 없이 건너뜀 → styContent에서 eso-pic으로 처리
       const resolvedVertPos = (rhVertPos === 'auto')
         ? (pPos.startsWith('상단') ? 'bottom' : 'top')
         : (rhVertPos || 'top');
+      if (resolvedVertPos === 'center') {
+        // eso-pic 배치는 styContent에서 별도 처리 — 여기서는 슬롯 미배치
+      } else {
       const vertTarget = (resolvedVertPos === 'bottom') ? footSlots : headSlots;
       if (isVertOuter) {
         vertTarget.odd[2]  = rhRight; // 홀수: 오른쪽=외측
