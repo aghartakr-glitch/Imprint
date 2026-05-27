@@ -4180,6 +4180,25 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       <option value="내측-수직">내측 여백 (세로)</option>
                     </select>
                   </div>
+                  {/* 수직 면주 선택 시: 상단/하단 위치 sub-option */}
+                  {(styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') && (
+                    <div style={{ display:"flex", gap:4, marginBottom:6 }}>
+                      <span style={{ fontSize:10, color:T.muted, paddingTop:4, marginRight:2 }}>세로 위치</span>
+                      {[['top','상단'],['bottom','하단']].map(([val, lbl]) => {
+                        const active = (styleConfig.rhVertPos || 'top') === val;
+                        return (
+                          <button key={val}
+                            onClick={() => setStyleConfig(s => ({ ...s, rhVertPos: val }))}
+                            style={{ padding:"3px 9px", fontSize:11, fontWeight: active?600:400,
+                              border:`1px solid ${active ? T.ink : T.border}`,
+                              borderRadius:3, background: active ? T.ink : "transparent",
+                              color: active ? "#fff" : T.ink, cursor:"pointer" }}>
+                            {lbl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <textarea value={fields["면주"]} rows={1}
                     placeholder="면주 텍스트 입력 (비우면 면주 없음)"
                     onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
