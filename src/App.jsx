@@ -4456,7 +4456,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             {/* %%NOTE%% 수동 블록 — 하단 전용 */}
                             <div style={{ ...row, marginTop:8 }}>
                               <span style={{ ...rowLbl, fontSize:10, paddingTop:14, lineHeight:1.4 }}>
-                                %%NOTE%%<br/>블록
+                                하단<br/>주석 블록
                               </span>
                               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                                 <div style={fld}>
