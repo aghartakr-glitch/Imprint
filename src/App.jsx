@@ -4443,38 +4443,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                 )}
                               </div>
                             </div>
-                            {/* ── 구분선 ── */}
-                            <div style={{ borderTop:`1px solid ${T.border}`, margin:"10px 0 0 0", opacity:0.5 }} />
-                            {/* ── 주석 블록 (본문 %%NOTE%%[...] 마커로 삽입되는 별도 영역) ── */}
-                            <div style={{ ...row, marginTop:8 }}>
-                              <span style={{ ...rowLbl, fontSize:10, paddingTop:14, lineHeight:1.4 }}>
-                                주석<br/>블록
-                              </span>
-                              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                                <div style={fld}>
-                                  <span style={fieldLbl}>단 수</span>
-                                  <input type="number" min={1} max={8}
-                                    value={styleConfig.bottomNoteFlowColumns || 2}
-                                    onChange={e => setStyleConfig(s => ({ ...s, bottomNoteFlowColumns: Math.min(8, Math.max(1, parseInt(e.target.value)||1)) }))}
-                                    style={ni} />
-                                </div>
-                                <div style={fld}>
-                                  <span style={fieldLbl}>너비</span>
-                                  <div style={{ display:"flex", gap:4, marginTop:1 }}>
-                                    {[['full','전체'],['body','본문']].map(([val, lbl]) => {
-                                      const active = (styleConfig.bottomNoteWidth || 'full') === val;
-                                      return (
-                                        <button key={val}
-                                          onClick={() => setStyleConfig(s => ({ ...s, bottomNoteWidth: val }))}
-                                          style={{ ...posBtn(active), padding:"4px 8px" }}>
-                                          {lbl}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
                           </>
                         )}
 
