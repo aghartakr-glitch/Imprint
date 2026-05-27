@@ -2726,6 +2726,7 @@ export default function App() {
           pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!effectiveRH(),
           rhPos: styleConfig.rhPos || '상단-외측',
+          rhVertPos: styleConfig.rhVertPos || 'top',
         }),
         ``,
         `% ── 대화문 / 인용문 환경 ──────────────────────────────────────`,
