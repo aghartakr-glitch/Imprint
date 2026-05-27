@@ -2130,9 +2130,9 @@ export default function App() {
       const minLead = Math.round(bodySize * TYPO_BASE.leadingRatio(bodySize) * 10) / 10;
       const bodyLead = (dbLead && dbLead / bodySize >= 1.3) ? dbLead : minLead;
       const hasFootnote = p.footnote && p.footnote !== '-';
-      const fnSize = hasFootnote ? parseFloat(p.footnote.replace('pt','')) : 8;
+      let fnSize = hasFootnote ? parseFloat(p.footnote.replace('pt','')) : 8;
       // 각주는 본문보다 작으므로 행간 비율 더 크게
-      const fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
+      let fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
       // 면주 크기: 판형 높이 기준으로 자동 산출
       const pnAutoSize = TYPO_BASE.runningHeadSize(p.f.h);
       // ── 서체 선택 (v1.2: 가용 5개 폰트군 완전 매핑) ───────────────
