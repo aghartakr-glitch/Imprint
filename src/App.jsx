@@ -1514,12 +1514,8 @@ export default function App() {
     extraDirective: '',
   });
 
-  // ── 유효 면주 텍스트 (자동=제목 / 수동=직접 입력) ─────────────
-  // rhAuto: true → fields.제목 첫 40자 / false → fields.면주
+  // ── 유효 면주 텍스트 — 항상 사용자 직접 입력값 사용 ─────────────
   function effectiveRH() {
-    if (styleConfig.rhAuto !== false) {
-      return (fields.제목 || '').trim().slice(0, 40);
-    }
     return (fields.면주 || '').trim();
   }
 
