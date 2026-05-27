@@ -4427,8 +4427,9 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         )}
                         {isBottom && (
                           <>
-                            <div style={row}>
-                              <span style={rowLbl}>각주 단</span>
+                            {/* ── 각주 (번호 달린 전통 각주 / 텍스트 입력 탭 "각주" 칸) ── */}
+                            <div style={{ ...row }}>
+                              <span style={{ ...rowLbl, lineHeight:1.2 }}>각주</span>
                               <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"flex-end" }}>
                                 <div style={fld}>
                                   <span style={fieldLbl}>단 수</span>
@@ -4442,10 +4443,12 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                 )}
                               </div>
                             </div>
-                            {/* %%NOTE%% 수동 블록 — 하단 전용 */}
+                            {/* ── 구분선 ── */}
+                            <div style={{ borderTop:`1px solid ${T.border}`, margin:"10px 0 0 0", opacity:0.5 }} />
+                            {/* ── 주석 블록 (본문 %%NOTE%%[...] 마커로 삽입되는 별도 영역) ── */}
                             <div style={{ ...row, marginTop:8 }}>
                               <span style={{ ...rowLbl, fontSize:10, paddingTop:14, lineHeight:1.4 }}>
-                                하단<br/>주석 블록
+                                주석<br/>블록
                               </span>
                               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                                 <div style={fld}>
