@@ -4449,7 +4449,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                     style={ni} />
                                 </div>
                                 {(fields.각주단 || 1) >= 2 && (
-                                  <span style={{ fontSize:10, color:T.muted, paddingBottom:4 }}>bigfoot 패키지 필요</span>
+                                  <span style={{ fontSize:10, color:T.muted, paddingBottom:4 }}>※ Overleaf에서 bigfoot 패키지 설치 필요</span>
                                 )}
                               </div>
                             </div>
