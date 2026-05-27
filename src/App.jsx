@@ -1174,8 +1174,12 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
       // \rotatebox{90}: 반시계 90° → 텍스트 하단→상단 방향
       const rhRight = `{\\smash{\\rlap{\\kern3mm\\rotatebox{90}{\\runningheadf\\imprintrunninghead}}}}`;
       const rhLeft  = `{\\smash{\\llap{\\rotatebox{-90}{\\runningheadf\\imprintrunninghead}\\kern3mm}}}`;
-      // rhVertPos: 'bottom'이면 푸터 슬롯에 배치 (페이지 하단 여백), 기본은 헤더 슬롯 (상단 여백)
-      const vertTarget = (rhVertPos === 'bottom') ? footSlots : headSlots;
+      // rhVertPos 결정: auto이면 pnPos 기준으로 반대편 슬롯 선택
+      //   쪽번호가 상단에 있으면 면주를 하단 슬롯(footer)으로, 아니면 상단 슬롯(header)으로
+      const resolvedVertPos = (rhVertPos === 'auto')
+        ? (pPos.startsWith('상단') ? 'bottom' : 'top')
+        : (rhVertPos || 'top');
+      const vertTarget = (resolvedVertPos === 'bottom') ? footSlots : headSlots;
       if (isVertOuter) {
         vertTarget.odd[2]  = rhRight; // 홀수: 오른쪽=외측
         vertTarget.even[0] = rhLeft;  // 짝수: 왼쪽=외측
