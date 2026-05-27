@@ -1191,6 +1191,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
         vertTarget.odd[0]  = rhLeft;  // 홀수: 왼쪽=내측
         vertTarget.even[2] = rhRight; // 짝수: 오른쪽=내측
       }
+      } // end if resolvedVertPos !== 'center'
     } else {
       // 수평 6위치: 기존 슬롯 기반 배치
       const rs = placementSlots(rhCmd, rPos);
