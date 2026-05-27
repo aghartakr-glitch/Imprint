@@ -1168,18 +1168,20 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
     const isVertOuter = rPos === '외측-수직';
     const isVertInner = rPos === '내측-수직';
     if (isVertOuter || isVertInner) {
-      // \smash: 수직 공간 0으로 만들어 헤더 높이에 영향 없게 함
+      // \smash: 수직 공간 0으로 만들어 헤더/푸터 높이에 영향 없게 함
       // \rlap: 오른쪽으로 zero-width overflow (외측 여백으로 침범)
       // \llap: 왼쪽으로 zero-width overflow (내측/외측 여백으로 침범)
-      // \rotatebox{90}: 반시계 90° → 텍스트 하단→상단 방향 (일반 세로 면주)
+      // \rotatebox{90}: 반시계 90° → 텍스트 하단→상단 방향
       const rhRight = `{\\smash{\\rlap{\\kern3mm\\rotatebox{90}{\\runningheadf\\imprintrunninghead}}}}`;
       const rhLeft  = `{\\smash{\\llap{\\rotatebox{-90}{\\runningheadf\\imprintrunninghead}\\kern3mm}}}`;
+      // rhVertPos: 'bottom'이면 푸터 슬롯에 배치 (페이지 하단 여백), 기본은 헤더 슬롯 (상단 여백)
+      const vertTarget = (rhVertPos === 'bottom') ? footSlots : headSlots;
       if (isVertOuter) {
-        headSlots.odd[2]  = rhRight; // 홀수: 오른쪽=외측
-        headSlots.even[0] = rhLeft;  // 짝수: 왼쪽=외측
+        vertTarget.odd[2]  = rhRight; // 홀수: 오른쪽=외측
+        vertTarget.even[0] = rhLeft;  // 짝수: 왼쪽=외측
       } else {
-        headSlots.odd[0]  = rhLeft;  // 홀수: 왼쪽=내측
-        headSlots.even[2] = rhRight; // 짝수: 오른쪽=내측
+        vertTarget.odd[0]  = rhLeft;  // 홀수: 왼쪽=내측
+        vertTarget.even[2] = rhRight; // 짝수: 오른쪽=내측
       }
     } else {
       // 수평 6위치: 기존 슬롯 기반 배치
