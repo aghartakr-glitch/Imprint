@@ -2752,8 +2752,42 @@ export default function App() {
           pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!effectiveRH(),
           rhPos: styleConfig.rhPos || '상단-외측',
-          rhVertPos: styleConfig.rhVertPos || 'top',
+          rhVertPos: styleConfig.rhVertPos || 'auto',
         }),
+        // 수직 면주 중앙 배치: eso-pic 절대좌표 — 상단/하단은 위 buildMemoirPageStyle에서 처리
+        (() => {
+          const isVert = styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직';
+          const vPos = styleConfig.rhVertPos || 'auto';
+          const pnPos = (p.pn || '하단-외측');
+          const resolved = vPos === 'auto' ? (pnPos.startsWith('상단') ? 'bottom' : 'top') : vPos;
+          if (!isVert || resolved !== 'center' || !effectiveRH()) return null;
+
+          const pw   = p.f.w;  // paperWidth mm
+          const ph   = p.f.h;  // paperHeight mm
+          const outerMm = corrections.margins.밖;
+          const innerMm = corrections.margins.안;
+          const isOuter = styleConfig.rhPos === '외측-수직';
+          // 홀수(오른쪽=외측) / 짝수(왼쪽=외측) x 좌표 (mm, page 좌측 기준)
+          const oddX  = isOuter
+            ? (pw - outerMm / 2).toFixed(1)   // 외측-홀수: 오른쪽 여백 중앙
+            : (innerMm / 2).toFixed(1);        // 내측-홀수: 왼쪽 여백 중앙
+          const evenX = isOuter
+            ? (outerMm / 2).toFixed(1)         // 외측-짝수: 왼쪽 여백 중앙
+            : (pw - innerMm / 2).toFixed(1);   // 내측-짝수: 오른쪽 여백 중앙
+          const vertY = (ph / 2).toFixed(1);   // 세로 중앙 (page 하단 기준 mm)
+
+          return [
+            `% ── 수직 면주 세로 중앙 배치 (eso-pic 절대좌표) ─────────────`,
+            `\\RequirePackage{eso-pic}`,
+            `\\AddToShipoutPictureBG{%`,
+            `  \\setlength{\\unitlength}{1mm}%`,
+            `  \\ifodd\\c@page`,
+            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][c]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `  \\else`,
+            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][c]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `  \\fi}`,
+          ].join('\n');
+        })(),
         ``,
         `% ── 대화문 / 인용문 환경 ──────────────────────────────────────`,
         `% main.tex에서 \\begin{imprintdialogue}...\\end{imprintdialogue} 로 사용`,
