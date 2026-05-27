@@ -1204,6 +1204,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos }) {
 
   return [
     `% ── 면주 / 쪽번호 macro (memoir 전용) ────────────────────────`,
+    pnNone ? `% pn-status: none` : `% pn-status: active`,
     `\\newcommand{\\foliof}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
     `\\newcommand{\\runningheadf}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
     `\\newcommand{\\imprintrunninghead}{}`,
