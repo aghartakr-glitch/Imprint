@@ -4244,7 +4244,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   {(styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') && (
                     <div style={{ display:"flex", gap:4, marginBottom:6 }}>
                       <span style={{ fontSize:10, color:T.muted, paddingTop:4, marginRight:2 }}>세로 위치</span>
-                      {[['auto','자동'],['top','상단'],['bottom','하단']].map(([val, lbl]) => {
+                      {[['auto','자동'],['top','상단'],['center','중앙'],['bottom','하단']].map(([val, lbl]) => {
                         const active = (styleConfig.rhVertPos || 'auto') === val;
                         return (
                           <button key={val}
