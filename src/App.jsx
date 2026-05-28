@@ -4495,10 +4495,15 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                             <div style={fld}>
                               <span style={fieldLbl}>단 수</span>
-                              <input type="number" min={1} max={vgBody}
+                              <input type="number" min={1} max={isSide ? vgBody : vgTotal}
                                 value={styleConfig.bodyTextColumns || 1}
                                 onChange={e => setStyleConfig(s => ({
-                                  ...s, bodyTextColumns: Math.min(Math.max(1, parseInt(e.target.value)||1), s.variableGrid?.body || 1)
+                                  ...s, bodyTextColumns: (() => {
+                                    const _pos = s.notePosition || 'right';
+                                    const _side = _pos === 'left' || _pos === 'right';
+                                    const _maxCols = _side ? (s.variableGrid?.body || 1) : (s.variableGrid?.total || 1);
+                                    return Math.min(Math.max(1, parseInt(e.target.value)||1), _maxCols);
+                                  })()
                                 }))}
                                 style={ni} />
                             </div>
