@@ -1497,8 +1497,11 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
         errors.push(`가변단 오류: 본문 열(${vg.body}) 또는 주석 열(${vg.note})이 총 그리드(${vg.total})를 초과합니다`);
       const btc = Number(layoutConfig.bodyTextColumns || 1);
       const ntc = Number(layoutConfig.noteTextColumns || 1);
-      if (btc > vg.body)
-        errors.push(`layout: bodyTextColumns(${btc}) > bodyGridUnits(${vg.body})`);
+      // top/bottom 위치: 본문이 전체 판면 폭(vg.total)을 사용 → bodyTextColumns 상한은 vg.total
+      // left/right 위치: 본문이 vg.body 열만 사용 → bodyTextColumns 상한은 vg.body
+      const bodyMaxCols = isLR ? vg.body : vg.total;
+      if (btc > bodyMaxCols)
+        errors.push(`layout: bodyTextColumns(${btc}) > bodyGridUnits(${bodyMaxCols})`);
       if (ntc > vg.note)
         errors.push(`layout: noteTextColumns(${ntc}) > noteGridUnits(${vg.note})`);
     }
