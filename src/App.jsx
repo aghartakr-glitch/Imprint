@@ -3525,8 +3525,11 @@ export default function App() {
             // 마커가 여전히 없는 번호를 찾아 원본 앞 텍스트(anchor)로 위치 복원
             const _anchorSorted = _finalKeys.sort((a,b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +a - +b);
             for (const _n of _anchorSorted) {
-              // side column에서 처리된 번호는 anchor 복원도 스킵
-              if (useSideNoteFootnote && finalMainTex.includes(`\\textsuperscript{${_n}}`)) continue;
+              // side column 또는 bottom 경로에서 처리된 번호는 anchor 복원도 스킵
+              if (useSideNoteFootnote && (
+                finalMainTex.includes(`\\textsuperscript{${_n}}`) ||
+                _bottomProcessedFns.has(String(_n))
+              )) continue;
               const _fn = `\\footnote{${_fesc(_finalFnMap[_n])}}`;
               // 이미 주입됐으면 스킵
               if (finalMainTex.includes(_fn)) continue;
