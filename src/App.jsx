@@ -4438,10 +4438,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                   setStyleConfig(s => {
                                     const prev = s.variableGrid || { total:5, body:4, note:1 };
                                     const next = { ...prev, total: v };
+                                    // body는 total 초과 방지 (최소 clamp), note는 독립 유지
                                     if (next.body > v) next.body = v;
-                                    const _p = s.notePosition || 'right';
-                                    const _side = _p === 'left' || _p === 'right';
-                                    if (_side) next.note = Math.min(next.note, Math.max(1, v - next.body));
                                     return { ...s, variableGrid: next };
                                   });
                                 }}
