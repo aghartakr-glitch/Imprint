@@ -2563,7 +2563,7 @@ export default function App() {
               '% 각주 ' + fnCols + '단 설정 (bigfoot)',
               '\\usepackage{bigfoot}',
               '\\DeclareNewFootnote{A}[arabic]',
-              '\\footnotelayout{c}',  // manyfoot: c = 2단 컬럼 레이아웃
+              '\\footnotelayout{m}',  // manyfoot: m = multiple/minipage → 2개씩 나란히 배치 (2단)
               '\\let\\footnote\\footnoteA',
               '\\let\\footnotemark\\footnoteAmark',
               '\\let\\footnotetext\\footnoteAtext',
