@@ -3192,7 +3192,7 @@ export default function App() {
             const bcs = Number(styleConfig.bodyColumnStart || 1); // 본문 시작 열
             const bnfc = Number(styleConfig.bottomNoteFlowColumns || 1); // 하단 주석 단 수
             const bnw = styleConfig.bottomNoteWidth || 'full'; // 하단 주석 폭
-            const gridComment = `% [가변단 그리드] 총 ${vg.total}열 / 본문 ${vg.body}열(시작:${bcs})=${grid.bodyW}mm / 주석 ${vg.note}열=${grid.noteW}mm / 간격=${grid.gap}mm / 본문내부 ${btc}단 / 주석내부 ${ntc}단${notePosition==='bottom'&&bnfc>=2?' / 하단주석'+bnfc+'단('+bnw+')':''} / 판면너비=${textW}mm`;
+            const gridComment = `% [가변단 그리드] 총 ${vgEffective.total}열 / 본문 ${vgEffective.body}열(시작:${bcs})=${grid.bodyW}mm / 주석 ${vgEffective.note}열=${grid.noteW}mm / 간격=${grid.gap}mm / 본문내부 ${btc}단 / 주석내부 ${ntc}단${notePosition==='bottom'&&bnfc>=2?' / 하단주석'+bnfc+'단('+bnw+')':''} / 판면너비=${textW}mm`;
 
             // ── Method A: 전체 본문 + 단일 switchcolumn + 전체 주석 ─────────────
             // \switchcolumn을 한 번만 사용 (paragraph interleave 제거)
