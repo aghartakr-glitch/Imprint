@@ -4459,28 +4459,26 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                     const v = Math.max(1, parseInt(e.target.value) || 1);
                                     setStyleConfig(s => {
                                       const prev = s.variableGrid || { total:5, body:4, note:1 };
-                                      const next = { ...prev, body: Math.min(v, prev.total - 1) };
-                                      next.note = Math.min(next.note, Math.max(1, next.total - next.body));
-                                      return { ...s, variableGrid: next };
+                                      // 본문 열은 독립적으로 조정 — 주석 열 자동 변경 없음
+                                      return { ...s, variableGrid: { ...prev, body: Math.min(v, prev.total) } };
                                     });
                                   }}
-                                  style={{ ...ni, borderColor: overflow ? '#999' : T.border }} />
+                                  style={{ ...ni, borderColor: overflow ? '#e05' : T.border }} />
                               </div>
                               <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>+</div>
                               <div style={fld}>
-                                <span style={{ ...fieldLbl, color: overflow ? '#999' : T.muted }}>주석 열</span>
+                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>주석 열</span>
                                 <input type="number" min={1} max={vg.total - 1}
                                   value={vg.note || ''}
                                   onChange={e => {
                                     const v = Math.max(1, parseInt(e.target.value) || 1);
                                     setStyleConfig(s => {
                                       const prev = s.variableGrid || { total:5, body:4, note:1 };
-                                      const next = { ...prev, note: Math.min(v, prev.total - 1) };
-                                      next.body = Math.min(next.body, Math.max(1, next.total - next.note));
-                                      return { ...s, variableGrid: next };
+                                      // 주석 열은 독립적으로 조정 — 본문 열 자동 변경 없음
+                                      return { ...s, variableGrid: { ...prev, note: Math.min(v, prev.total - 1) } };
                                     });
                                   }}
-                                  style={{ ...ni, borderColor: overflow ? '#999' : T.border }} />
+                                  style={{ ...ni, borderColor: overflow ? '#e05' : T.border }} />
                               </div>
                             </>)}
 
