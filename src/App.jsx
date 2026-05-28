@@ -1180,18 +1180,9 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
       const resolvedVertPos = (rhVertPos === 'auto')
         ? (pPos.startsWith('상단') ? 'bottom' : 'top')
         : (rhVertPos || 'top');
-      if (resolvedVertPos === 'center') {
-        // eso-pic 배치는 styContent에서 별도 처리 — 여기서는 슬롯 미배치
-      } else {
-      const vertTarget = (resolvedVertPos === 'bottom') ? footSlots : headSlots;
-      if (isVertOuter) {
-        vertTarget.odd[2]  = rhRight; // 홀수: 오른쪽=외측
-        vertTarget.even[0] = rhLeft;  // 짝수: 왼쪽=외측
-      } else {
-        vertTarget.odd[0]  = rhLeft;  // 홀수: 왼쪽=내측
-        vertTarget.even[2] = rhRight; // 짝수: 오른쪽=내측
-      }
-      } // end if resolvedVertPos !== 'center'
+      // 수직 면주는 상/중/하 모든 위치에서 eso-pic 절대좌표로 처리
+      // → memoir 헤더/푸터 슬롯 미사용 (슬롯 경계에서 텍스트 잘림 방지)
+      // styContent의 eso-pic 블록이 resolvedVertPos에 따라 Y좌표·makebox 정렬을 결정
     } else {
       // 수평 6위치: 기존 슬롯 기반 배치
       const rs = placementSlots(rhCmd, rPos);
