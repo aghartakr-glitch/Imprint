@@ -4450,8 +4450,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             {isSide && (<>
                               <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>=</div>
                               <div style={fld}>
-                                <span style={{ ...fieldLbl, color: overflow ? '#999' : T.muted }}>본문 열</span>
-                                <input type="number" min={1} max={vg.total - 1}
+                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>본문 열</span>
+                                <input type="number" min={1} max={vg.total}
                                   value={vg.body || ''}
                                   onChange={e => {
                                     const v = Math.max(1, parseInt(e.target.value) || 1);
