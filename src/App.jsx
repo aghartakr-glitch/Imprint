@@ -1042,7 +1042,27 @@ function wrapVariableLayout({
     : 0;
 
   if (!hasNote) {
-    // 주석 없음: paracol로 본문 열 폭 보장
+    // 주석 없음 처리
+    // top/bottom: 본문을 bodyColumnStart 인덴트 + 전체 폭으로 직접 배치 (paracol 불필요)
+    if (pos === 'top' || pos === 'bottom') {
+      const _bcs = Math.max(1, Number(bodyColumnStart) || 1);
+      const _leftInd = (_bcs > 1 && unitW > 0)
+        ? Math.round((_bcs - 1) * (unitW + gap) * 10) / 10
+        : 0;
+      const _rightInd = Math.max(0, textW - bodyW - _leftInd);
+      if (_leftInd > 0 || _rightInd > 0) {
+        return [
+          `\\begingroup`,
+          _leftInd > 0  ? `\\setlength{\\leftskip}{${_leftInd.toFixed(1)}mm}` : null,
+          _rightInd > 0 ? `\\setlength{\\rightskip}{${_rightInd.toFixed(1)}mm}` : null,
+          `\\noindent`,
+          bodyLatex.trim(),
+          `\\par\\endgroup`,
+        ].filter(Boolean).join('\n');
+      }
+      return bodyLatex.trim();
+    }
+    // left/right: paracol로 본문 열 폭 보장
     // \setlength + \setcolumnwidth 반드시 \begin{paracol}보다 앞 (paracol이 begin 시점에 계산)
     const isLeft = pos === 'left';
     const col1 = isLeft ? noteW : bodyW;
