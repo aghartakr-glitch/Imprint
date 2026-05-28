@@ -3114,6 +3114,8 @@ export default function App() {
 
         // parseFootnoteMap 캐싱 — run() 내 여러 경로에서 동일 fields.각주 반복 파싱 방지
         const _cachedFnMap = hasFootnoteText ? parseFootnoteMap(fields.각주).fnMap : {};
+        // bottom 경로에서 처리된 각주 번호 추적 — fallback/anchor 중복 삽입 방지
+        const _bottomProcessedFns = new Set();
 
         if (hasFootnoteText && !useSideNoteFootnote) {
           // latexEscNote: 모듈 상수 사용
