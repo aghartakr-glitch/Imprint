@@ -2758,37 +2758,50 @@ export default function App() {
           rhPos: styleConfig.rhPos || '상단-외측',
           rhVertPos: styleConfig.rhVertPos || 'auto',
         }),
-        // 수직 면주 중앙 배치: eso-pic 절대좌표 — 상단/하단은 위 buildMemoirPageStyle에서 처리
+        // 수직 면주 배치: eso-pic 절대좌표 — 상/중/하 모든 위치
+        // \rotatebox{90} CCW → makebox 정렬: [r]=상단, [c]=중앙, [l]=하단
         (() => {
           const isVert = styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직';
+          if (!isVert || !effectiveRH()) return null;
+
           const vPos = styleConfig.rhVertPos || 'auto';
           const pnPos = (p.pn || '하단-외측');
           const resolved = vPos === 'auto' ? (pnPos.startsWith('상단') ? 'bottom' : 'top') : vPos;
-          if (!isVert || resolved !== 'center' || !effectiveRH()) return null;
 
-          const pw   = p.f.w;  // paperWidth mm
-          const ph   = p.f.h;  // paperHeight mm
+          const pw      = p.f.w;   // paperWidth mm
+          const ph      = p.f.h;   // paperHeight mm
+          const topMm   = corrections.margins.상;
+          const botMm   = corrections.margins.하;
           const outerMm = corrections.margins.밖;
           const innerMm = corrections.margins.안;
           const isOuter = styleConfig.rhPos === '외측-수직';
-          // 홀수(오른쪽=외측) / 짝수(왼쪽=외측) x 좌표 (mm, page 좌측 기준)
+
+          // X 좌표: 홀수/짝수 여백 중앙 (page 좌측 기준 mm)
           const oddX  = isOuter
             ? (pw - outerMm / 2).toFixed(1)   // 외측-홀수: 오른쪽 여백 중앙
             : (innerMm / 2).toFixed(1);        // 내측-홀수: 왼쪽 여백 중앙
           const evenX = isOuter
             ? (outerMm / 2).toFixed(1)         // 외측-짝수: 왼쪽 여백 중앙
             : (pw - innerMm / 2).toFixed(1);   // 내측-짝수: 오른쪽 여백 중앙
-          const vertY = (ph / 2).toFixed(1);   // 세로 중앙 (page 하단 기준 mm)
+
+          // Y 좌표 (page 하단 기준 mm) + makebox 정렬
+          // \rotatebox{90} 후: [r]=텍스트 아래 앵커→세로 상단, [l]=텍스트 위 앵커→세로 하단
+          const vertY  = resolved === 'top'    ? (ph - topMm).toFixed(1)
+                       : resolved === 'bottom' ? botMm.toFixed(1)
+                       :                         (ph / 2).toFixed(1);
+          const align  = resolved === 'top'    ? 'r'
+                       : resolved === 'bottom' ? 'l'
+                       :                         'c';
 
           return [
-            `% ── 수직 면주 세로 중앙 배치 (eso-pic 절대좌표) ─────────────`,
+            `% ── 수직 면주 배치 (eso-pic 절대좌표, 위치: ${resolved}) ──────`,
             `\\RequirePackage{eso-pic}`,
             `\\AddToShipoutPictureBG{%`,
             `  \\setlength{\\unitlength}{1mm}%`,
             `  \\ifodd\\c@page`,
-            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][c]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
             `  \\else`,
-            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][c]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
             `  \\fi}`,
           ].join('\n');
         })(),
