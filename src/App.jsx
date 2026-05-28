@@ -3265,14 +3265,41 @@ export default function App() {
                     });
                     // top 처리 완료 — plines 조립 생략
                   } else if (notePosition === 'bottom') {
-                    // \ImpFN{N} → \footnote{내용} 인라인 치환
-                    // LaTeX \footnote이 각 마커가 있는 페이지 하단에 배치를 보장
-                    // (기존 adjustwidth noteBlock 방식은 모든 주석을 문서 끝에 몰아 미주처럼 출력)
+                    // \ImpFN{N} 처리 전략:
+                    // - btc=1 (단일단 본문): \footnote{내용} 인라인 치환 — 마커 위치 페이지 하단 배치
+                    // - btc≥2 (multicols 본문): \footnotemark[N] + \footnotetext[N]{} 분리
+                    //   memoir+multicols에서 \footnote{}는 본문에 각주가 렌더링 안 되는 버그 있음
+                    //   분리 방식은 \end{multicols} 이후 페이지 하단에 안정적으로 배치됨
+                    const footnotePairs = []; // [{ n, content }] — btc≥2일 때 수집
                     let bottomBody = wrappedBody;
-                    bottomBody = bottomBody.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
-                      const content = fnMap[n];
-                      return content ? `\\footnote{${latexEscFn(stripWrappingQuotes(content))}}` : '';
-                    });
+                    if (btc >= 2) {
+                      // multicols 내부: \ImpFN{N} → \footnotemark[N] (마크만)
+                      // \end{multicols} 뒤에 \footnotetext[N]{} 추가
+                      bottomBody = bottomBody.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
+                        const content = fnMap[n];
+                        if (content) {
+                          footnotePairs.push({ n, content: latexEscFn(stripWrappingQuotes(content)) });
+                          return `\\footnotemark[${n}]`;
+                        }
+                        return '';
+                      });
+                      if (footnotePairs.length > 0) {
+                        // \end{multicols} 뒤에 \footnotetext 블록 삽입
+                        const ftexts = footnotePairs
+                          .map(({ n, content }) => `\\footnotetext[${n}]{${content}}`)
+                          .join('\n');
+                        bottomBody = bottomBody.replace(
+                          /(\\end\{multicols\})/,
+                          `$1\n${ftexts}`
+                        );
+                      }
+                    } else {
+                      // 단일단 본문: 직접 \footnote{} 치환 (마커 위치 페이지 하단)
+                      bottomBody = bottomBody.replace(/\\ImpFN\{(\d+)\}/g, (_, n) => {
+                        const content = fnMap[n];
+                        return content ? `\\footnote{${latexEscFn(stripWrappingQuotes(content))}}` : '';
+                      });
+                    }
                     // bodyColumnStart 적용: 왼쪽 indent 계산
                     // \leftskip/\rightskip 그룹 사용 — memoir에서 \footnote과 adjustwidth 충돌 방지
                     const _bcsB = Math.max(1, bcs);
