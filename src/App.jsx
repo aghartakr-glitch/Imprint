@@ -2812,7 +2812,11 @@ export default function App() {
             : (pw - innerMm / 2).toFixed(1);   // 내측-짝수: 오른쪽 여백 중앙
 
           // Y 좌표 (page 하단 기준 mm) + makebox 정렬
-          // \rotatebox{90} 후: [r]=텍스트 아래 앵커→세로 상단, [l]=텍스트 위 앵커→세로 하단
+          // \rotatebox{90} = CCW 90°: 기본 레퍼런스 포인트는 텍스트 하단에 있어 위로 확장
+          // → top 위치에서 텍스트가 페이지 상단 밖으로 나가는 잘림 방지:
+          //   \raisebox{-\height}로 텍스트를 아래 방향으로 전환 (레퍼런스=텍스트 상단)
+          // center는 \raisebox{-0.5\height}로 중앙 정렬
+          // bottom은 위로 확장이 올바른 방향 — raisebox 없음
           const vertY  = resolved === 'top'    ? (ph - topMm).toFixed(1)
                        : resolved === 'bottom' ? botMm.toFixed(1)
                        :                         (ph / 2).toFixed(1);
@@ -2820,15 +2824,21 @@ export default function App() {
                        : resolved === 'bottom' ? 'l'
                        :                         'c';
 
+          // 위치별 raisebox 래핑
+          const _rhBase = `\\rotatebox{90}{\\imprintrunninghead}`;
+          const _rhWrap = resolved === 'top'    ? `\\raisebox{-\\height}{${_rhBase}}`
+                        : resolved === 'center' ? `\\raisebox{-0.5\\height}{${_rhBase}}`
+                        :                          _rhBase;
+
           return [
             `% ── 수직 면주 배치 (eso-pic 절대좌표, 위치: ${resolved}) ──────`,
             `\\RequirePackage{eso-pic}`,
             `\\AddToShipoutPictureBG{%`,
             `  \\setlength{\\unitlength}{1mm}%`,
             `  \\ifodd\\c@page`,
-            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf${_rhWrap}}}}%`,
             `  \\else`,
-            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf${_rhWrap}}}}%`,
             `  \\fi}`,
           ].join('\n');
         })(),
