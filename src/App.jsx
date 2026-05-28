@@ -2697,8 +2697,12 @@ export default function App() {
         (() => {
           if (colMode !== 'variable') return null;
           const vg = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
-          const vg2 = calcVariableGrid(vg, textW, columnGapMm);
-          if (vg2.noteG <= 0) return null;
+          // bottom/top 모드: 본문이 전체 판면 사용 → vgEffective 적용
+          const _styNotePos = styleConfig.notePosition || 'right';
+          const _styIsTopBot = _styNotePos === 'top' || _styNotePos === 'bottom';
+          const vgSty = _styIsTopBot ? { ...vg, body: vg.total } : vg;
+          const vg2 = calcVariableGrid(vgSty, textW, columnGapMm);
+          if (vg2.noteG <= 0 && !_styIsTopBot) return null;
           const { bodyW: bMm, noteW: nMm, gap } = vg2;
           const btc = Number(styleConfig.bodyTextColumns || 1);
           const ntc = Number(styleConfig.noteTextColumns || 1);
