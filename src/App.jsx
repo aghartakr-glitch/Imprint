@@ -4378,37 +4378,67 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     return (
                       <div style={{ marginTop:8 }}>
 
-                        {/* 행 1: 그리드 — 전체/본문/주석/간격 */}
+                        {/* 행 1: 그리드 — 전체 / (주석이 옆일 때만: 본문 + 주석) / 간격 */}
                         <div style={row}>
                           <span style={rowLbl}>그리드</span>
-                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                            {[
-                              { key:'total', label:'전체' },
-                              { key:'body',  label:'본문' },
-                              { key:'note',  label: isSide ? '주석' : '보조' },
-                            ].map(({ key, label }) => (
-                              <div key={key} style={fld}>
-                                <span style={{ ...fieldLbl, color: overflow && key !== 'total' ? '#999' : T.muted }}>
-                                  {label}
-                                </span>
-                                <input type="number" min={1} max={key === 'total' ? 20 : vg.total}
-                                  value={vg[key] || ''}
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"flex-end" }}>
+                            {/* 전체 열 */}
+                            <div style={fld}>
+                              <span style={fieldLbl}>전체 열</span>
+                              <input type="number" min={1} max={20}
+                                value={vg.total || ''}
+                                onChange={e => {
+                                  const v = Math.max(1, parseInt(e.target.value) || 1);
+                                  setStyleConfig(s => {
+                                    const prev = s.variableGrid || { total:5, body:4, note:1 };
+                                    const next = { ...prev, total: v };
+                                    if (next.body > v) next.body = v;
+                                    const _p = s.notePosition || 'right';
+                                    const _side = _p === 'left' || _p === 'right';
+                                    if (_side) next.note = Math.min(next.note, Math.max(1, v - next.body));
+                                    return { ...s, variableGrid: next };
+                                  });
+                                }}
+                                style={ni} />
+                            </div>
+
+                            {/* 주석이 좌/우일 때만: 본문 + 주석 */}
+                            {isSide && (<>
+                              <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>=</div>
+                              <div style={fld}>
+                                <span style={{ ...fieldLbl, color: overflow ? '#999' : T.muted }}>본문 열</span>
+                                <input type="number" min={1} max={vg.total - 1}
+                                  value={vg.body || ''}
                                   onChange={e => {
                                     const v = Math.max(1, parseInt(e.target.value) || 1);
                                     setStyleConfig(s => {
                                       const prev = s.variableGrid || { total:5, body:4, note:1 };
-                                      const next = { ...prev, [key]: v };
-                                      if (key !== 'total') next[key] = Math.min(v, next.total);
-                                      const _p = s.notePosition || 'right';
-                                      const _side = _p === 'left' || _p === 'right';
-                                      if (_side && (key === 'note' || key === 'body'))
-                                        next.note = Math.min(next.note, Math.max(1, next.total - next.body));
+                                      const next = { ...prev, body: Math.min(v, prev.total - 1) };
+                                      next.note = Math.min(next.note, Math.max(1, next.total - next.body));
                                       return { ...s, variableGrid: next };
                                     });
                                   }}
-                                  style={{ ...ni, borderColor: overflow && key !== 'total' ? '#999' : T.border }} />
+                                  style={{ ...ni, borderColor: overflow ? '#999' : T.border }} />
                               </div>
-                            ))}
+                              <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>+</div>
+                              <div style={fld}>
+                                <span style={{ ...fieldLbl, color: overflow ? '#999' : T.muted }}>주석 열</span>
+                                <input type="number" min={1} max={vg.total - 1}
+                                  value={vg.note || ''}
+                                  onChange={e => {
+                                    const v = Math.max(1, parseInt(e.target.value) || 1);
+                                    setStyleConfig(s => {
+                                      const prev = s.variableGrid || { total:5, body:4, note:1 };
+                                      const next = { ...prev, note: Math.min(v, prev.total - 1) };
+                                      next.body = Math.min(next.body, Math.max(1, next.total - next.note));
+                                      return { ...s, variableGrid: next };
+                                    });
+                                  }}
+                                  style={{ ...ni, borderColor: overflow ? '#999' : T.border }} />
+                              </div>
+                            </>)}
+
+                            {/* 열 간격 */}
                             <div style={fld}>
                               <span style={fieldLbl}>간격 mm</span>
                               <input type="number" min={2} max={20} step={1}
@@ -4420,11 +4450,23 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             </div>
                           </div>
                         </div>
-                        {overflow && (
-                          <div style={{ fontSize:11, color:'#999', marginTop:3, paddingLeft:56 }}>
-                            본문 {vg.body} + 주석 {vg.note} = {vg.body+vg.note} › 전체 {vg.total}
-                          </div>
-                        )}
+
+                        {/* 관계식 힌트: 전체 N열 ÷ 본문 M단 = K열/단 */}
+                        {(() => {
+                          const bodyCols = isSide ? vg.body : vg.total;
+                          const bodyColsLabel = isSide ? vg.body : vg.total;
+                          const bCols = styleConfig.bodyTextColumns || 1;
+                          const perCol = bCols > 1 ? (bodyCols / bCols).toFixed(1) : null;
+                          return (
+                            <div style={{ fontSize:11, color:T.muted, marginTop:4, paddingLeft:56, lineHeight:1.5 }}>
+                              {isSide
+                                ? `본문 ${vg.body}열 + 주석 ${vg.note}열 = 전체 ${vg.total}열`
+                                : `본문 ${vg.total}열 전체 사용`}
+                              {perCol && ` · ${bodyCols}열 ÷ ${bCols}단 = ${perCol}열/단`}
+                              {overflow && <span style={{ color:'#e05' }}>  ⚠ {vg.body}+{vg.note}={vg.body+vg.note} › {vg.total}</span>}
+                            </div>
+                          );
+                        })()}
 
                         {/* 행 2: 주석 위치 */}
                         <div style={row}>
