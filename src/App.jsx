@@ -4503,7 +4503,10 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                                   const safeNote = isNewSide
                                     ? Math.min(_vg.note, Math.max(1, _vg.total - _vg.body))
                                     : _vg.note;
-                                  return { ...s, notePosition: val, variableGrid: { ..._vg, note: safeNote } };
+                                  // top/bottom으로 전환 시 body = total로 리셋
+                                  // (이전 side 모드의 좁은 body 값이 남아 본문이 극히 좁아지는 버그 방지)
+                                  const safeBody = isNewSide ? _vg.body : _vg.total;
+                                  return { ...s, notePosition: val, variableGrid: { ..._vg, body: safeBody, note: safeNote } };
                                 })}
                                 style={posBtn(pos === val)}>
                                 {label}
