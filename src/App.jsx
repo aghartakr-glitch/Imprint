@@ -2559,11 +2559,13 @@ export default function App() {
             // bigfoot(manyfoot 기반): \footnotelayout{c}[N] → N단 각주
             // \thefootnote 재정의는 bigfoot 로드 후 하면 충돌 → bigfoot 기본(arabic) 사용
             // memoir \feetbelowfloat + \footnoterule 은 bigfoot과 독립적으로 작동
+            const fbFrac = (0.94 / fnCols).toFixed(2); // 2단: 0.47, 3단: 0.31
             return [
               '% 각주 ' + fnCols + '단 설정 (bigfoot)',
               '\\usepackage{bigfoot}',
               '\\DeclareNewFootnote{A}[arabic]',
               '\\footnotelayout{m}',  // manyfoot: m = multiple/minipage → 2개씩 나란히 배치 (2단)
+              `\\setlength{\\FBwidth}{${fbFrac}\\textwidth}`, // 각 각주 minipage 폭 = textwidth/N
               '\\let\\footnote\\footnoteA',
               '\\let\\footnotemark\\footnoteAmark',
               '\\let\\footnotetext\\footnoteAtext',
