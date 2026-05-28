@@ -3172,8 +3172,11 @@ export default function App() {
           const vg   = styleConfig.variableGrid || { total: 2, body: 1, note: 1 };
           // columnGapMm 우선순위: styleConfig > p.c.간격(DB 기본값) > 8mm 하드코딩
           const columnGapMm = Number(styleConfig.columnGapMm ?? p.c?.간격 ?? 8);
-          const grid = calcVariableGrid(vg, textW, columnGapMm);
           const notePosition = styleConfig.notePosition || 'right';
+          // top/bottom 위치: 본문이 전체 폭 사용 → body = total로 보정 (side 모드 잔여값 방지)
+          const isTopBottom = notePosition === 'top' || notePosition === 'bottom';
+          const vgEffective = isTopBottom ? { ...vg, body: vg.total } : vg;
+          const grid = calcVariableGrid(vgEffective, textW, columnGapMm);
           const btc = Number(styleConfig.bodyTextColumns || 1); // 본문 내부 단 수
 
           if (grid.noteG > 0) {
