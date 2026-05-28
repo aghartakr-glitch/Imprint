@@ -3502,11 +3502,10 @@ export default function App() {
             for (const _n of _sorted) {
               // 이미 처리된 번호는 스킵:
               // - side column: \textsuperscript{N} 존재
-              // - bottom multicols: \footnotemark[N] 또는 \footnotetext[N] 존재
+              // - bottom 경로(btc≥1): _bottomProcessedFns에 등록됨
               if (useSideNoteFootnote && (
                 finalMainTex.includes(`\\textsuperscript{${_n}}`) ||
-                finalMainTex.includes(`\\footnotemark[${_n}]`) ||
-                finalMainTex.includes(`\\footnotetext[${_n}]`)
+                _bottomProcessedFns.has(String(_n))
               )) continue;
               const _fn = `\\footnote{${_fesc(_finalFnMap[_n])}}`;
               // \ImpFN{N} 형태 (preReplaceFnMarkers 삽입 후 Claude가 보존한 경우)
