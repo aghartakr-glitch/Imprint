@@ -3518,13 +3518,22 @@ export default function App() {
             // 큰 번호 먼저 처리 (10 → 1 순서로 해야 [1]이 [10]의 일부를 잘못 치환하지 않음)
             const _sorted = _finalKeys.sort((a, b) => (isNaN(+a)||isNaN(+b)) ? a.localeCompare(b) : +b - +a);
             for (const _n of _sorted) {
-              // side column에서 이미 처리된 번호는 \footnote{} 삽입 스킵 (중복 방지)
-              if (useSideNoteFootnote && finalMainTex.includes(`\\textsuperscript{${_n}}`)) continue;
+              // 이미 처리된 번호는 스킵:
+              // - side column: \textsuperscript{N} 존재
+              // - bottom multicols: \footnotemark[N] 또는 \footnotetext[N] 존재
+              if (useSideNoteFootnote && (
+                finalMainTex.includes(`\\textsuperscript{${_n}}`) ||
+                finalMainTex.includes(`\\footnotemark[${_n}]`) ||
+                finalMainTex.includes(`\\footnotetext[${_n}]`)
+              )) continue;
               const _fn = `\\footnote{${_fesc(_finalFnMap[_n])}}`;
               // \ImpFN{N} 형태 (preReplaceFnMarkers 삽입 후 Claude가 보존한 경우)
               finalMainTex = finalMainTex.replace(new RegExp('\\\\ImpFN\\{' + _n + '\\}', 'g'), _fn);
-              // [N] 형태 (Claude가 원본 마커를 그대로 출력한 경우)
-              finalMainTex = finalMainTex.replace(new RegExp('\\[' + _n + '\\]', 'g'), _fn);
+              // [N] 형태 — \footnotemark[N] / \footnotetext[N] 안의 [N]은 건드리지 않음
+              finalMainTex = finalMainTex.replace(
+                new RegExp('(?<!\\\\(?:footnotemark|footnotetext))\\[' + _n + '\\]', 'g'),
+                _fn
+              );
               // ¹²³ 위첨자 — NUM_TO_SUP 모듈 상수 사용
               if (NUM_TO_SUP[_n]) finalMainTex = finalMainTex.split(NUM_TO_SUP[_n]).join(_fn);
               // ①②③ 원문자 — NUM_TO_CIRC 모듈 상수 사용
