@@ -2556,19 +2556,15 @@ export default function App() {
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
           if (fnCols >= 2) {
-            // bigfoot(manyfoot 기반): \footnotelayout{c}[N] → N단 각주
-            // \thefootnote 재정의는 bigfoot 로드 후 하면 충돌 → bigfoot 기본(arabic) 사용
-            // memoir \feetbelowfloat + \footnoterule 은 bigfoot과 독립적으로 작동
+            // memoir 내장 다단 각주: \twocolumnfootnotes / \threecolumnfootnotes
+            // bigfoot/manyfoot 불필요 — \footnote{} 직접 사용, memoir가 레이아웃 처리
+            // \footnotelayout 은 footmisc 전용 포매팅 훅, 단 수와 무관 → 사용 금지
+            const memoirCmd = fnCols >= 3 ? '\\threecolumnfootnotes' : '\\twocolumnfootnotes';
             return [
-              '% 각주 ' + fnCols + '단 설정 (bigfoot + manyfoot c[N])',
-              '% \\footnotelayout{c}[N]: column 모드 → multicols{N} 내부 사용',
-              '% AtBeginDocument 필요: 프리앰블에서 직접 호출하면 Missing \\begin{document} 오류 발생',
-              '\\usepackage{bigfoot}',
-              '\\DeclareNewFootnote{A}[arabic]',
-              `\\AtBeginDocument{\\footnotelayout{c}[${fnCols}]}`,
-              '\\let\\footnote\\footnoteA',
-              '\\let\\footnotemark\\footnoteAmark',
-              '\\let\\footnotetext\\footnoteAtext',
+              '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
+              '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
+              '% 추가 패키지 불필요 — memoir 문서 클래스에 기본 포함',
+              memoirCmd,
             ].join('\n');
           }
           // 1단: 기존 방식 + \thefootnote arabic 유지
