@@ -2755,16 +2755,13 @@ export default function App() {
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
           if (fnCols >= 2) {
+            // memoir 내장 다단 각주 명령 사용
+            const memoirCmd2 = fnCols >= 3 ? `\\threecolumnfootnotes` : `\\twocolumnfootnotes`;
             return [
-              `% 각주 ${fnCols}단 설정 (bigfoot + manyfoot c[N])`,
-              `% \\footnotelayout{c}[N]: column 모드 → multicols{N} 내부 사용`,
-              `% AtBeginDocument 필요: 프리앰블에서 직접 호출하면 Missing \\begin{document} 오류 발생`,
-              `\\RequirePackage{bigfoot}`,
-              `\\DeclareNewFootnote{A}[arabic]`,
-              `\\AtBeginDocument{\\footnotelayout{c}[${fnCols}]}`,
-              `\\let\\footnote\\footnoteA`,
-              `\\let\\footnotemark\\footnoteAmark`,
-              `\\let\\footnotetext\\footnoteAtext`,
+              `% 각주 ${fnCols}단 설정 (memoir 내장)`,
+              `% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용`,
+              `% bigfoot/manyfoot/footmisc 불필요`,
+              memoirCmd2,
             ].join('\n');
           }
           return [
