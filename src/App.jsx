@@ -2775,42 +2775,25 @@ export default function App() {
           if (fnCols >= 2) {
             // memoir 내장 다단 각주 명령 사용
             const memoirCmd2 = fnCols >= 3 ? `\\threecolumnfootnotes` : `\\twocolumnfootnotes`;
-            const fnLines2 = [
+            const _rigidCols2 = fnCols >= 3 ? `\\thr@@` : `\\tw@`;
+            // 각주 컨테이너 폭 제한: \imprintbodywidth 가 정의된 경우(= variable 가변단)에만 적용
+            // memoir 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
+            // \hsize = \imprintbodywidth 로 설정하면 \@@line이 본문 열 폭 크기 박스가 됨
+            // \@preamtwofmt(.45\hsize)도 자동으로 0.45×bodyW 로 추론
+            // \@ifundefined: \imprintbodywidth 없으면 no-op (variable 아닌 레이아웃 보호)
+            return [
               `% 각주 ${fnCols}단 설정 (memoir 내장)`,
               `% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용`,
-              `% bigfoot/manyfoot/footmisc 불필요`,
               memoirCmd2,
-            ];
-            // 가변단(body/note 분리) 모드: 각주 컨테이너를 본문 열 폭으로 제한
-            // memoir 각주 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
-            // 출력 루틴에서 \hsize = \textwidth → 각주 박스가 전체 폭으로 펼쳐짐
-            // 수정: \mp@footgroupv@r 내부에서 \hsize = bodyW 로 설정
-            //   → \@@line = bodyW 박스 / \@preamtwofmt(.45\hsize)도 자동 0.45×bodyW
-            if (colMode === 'variable' && styleConfig.variableGrid) {
-              const _fnNotePos2 = styleConfig.notePosition || 'right';
-              if (_fnNotePos2 === 'left' || _fnNotePos2 === 'right') {
-                const _fnVgRaw2 = styleConfig.variableGrid;
-                const _fnVg2 = (_fnVgRaw2.body + _fnVgRaw2.note) > _fnVgRaw2.total
-                  ? { ..._fnVgRaw2, note: Math.max(1, _fnVgRaw2.total - _fnVgRaw2.body) }
-                  : _fnVgRaw2;
-                const _fnGrid2 = calcVariableGrid(_fnVg2, textW, columnGapMm);
-                const _fnBodyW2 = _fnGrid2.bodyW;
-                if (_fnBodyW2 > 0) {
-                  const _rigidCols2 = fnCols >= 3 ? `\\thr@@` : `\\tw@`;
-                  fnLines2.push(
-                    `% 각주 컨테이너 폭 → 본문 열 폭(${_fnBodyW2}mm)`,
-                    `% \\mp@footgroupv@r: \\hsize=bodyW → \\@@line이 bodyW 크기 박스`,
-                    `\\makeatletter`,
-                    `\\renewcommand\\mp@footgroupv@r{{%`,
-                    `  \\hsize=${_fnBodyW2}mm\\linewidth=\\hsize`,
-                    `  \\foottextfont\\splittopskip=\\ht\\strutbox`,
-                    `  \\m@mrigidbalance{\\footins}{${_rigidCols2}}{\\splittopskip}}}`,
-                    `\\makeatother`
-                  );
-                }
-              }
-            }
-            return fnLines2.join('\n');
+              `\\makeatletter`,
+              `\\@ifundefined{imprintbodywidth}{}{%`,
+              `  \\renewcommand\\mp@footgroupv@r{{%`,
+              `    \\hsize\\imprintbodywidth\\linewidth\\hsize`,
+              `    \\foottextfont\\splittopskip\\ht\\strutbox`,
+              `    \\m@mrigidbalance{\\footins}{${_rigidCols2}}{\\splittopskip}}}%`,
+              `}`,
+              `\\makeatother`,
+            ].join('\n');
           }
           return [
             `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
