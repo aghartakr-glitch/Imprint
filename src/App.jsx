@@ -2600,8 +2600,8 @@ export default function App() {
               '    \\linewidth\\hsize',
               '    \\m@mrigidbalance{\\footinsv@r}{' + _rigidCols + '}{\\splittopskip}}}}%',
               '% Fix3: 각주 들여쓰기 제거 — \\noindent 명시',
+              '% \\@preamtwofmt는 컬럼 setup에서 이미 호출됨, 재호출 시 \\leavevmode가 \\noindent 무력화',
               '\\renewcommand' + (fnCols >= 3 ? '\\@threecolfootfmt' : '\\@twocolfootfmt') + '[1]{%',
-              '  ' + _preamCmd,
               '  \\noindent{\\footfootmark\\strut \\foottextfont #1\\strut\\par}\\allowbreak}%',
               '\\makeatother',
             ].join('\n');
