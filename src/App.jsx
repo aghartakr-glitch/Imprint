@@ -4341,8 +4341,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
-                    <label style={{ display:"block", fontSize:11, fontWeight:500,
-                      color:T.muted, marginBottom:5 }}>
+                    <label style={{ display:"block", fontSize:11, fontWeight:600,
+                      color:T.ink, marginBottom:5 }}>
                       {label}
                     </label>
                     <textarea value={fields[key]} rows={rows} placeholder={placeholder}
