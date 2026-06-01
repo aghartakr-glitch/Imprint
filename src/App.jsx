@@ -2807,7 +2807,9 @@ export default function App() {
             // ⚠ .sty 파일은 @가 catcode 11(letter)이므로 \makeatletter/\makeatother 불필요
             //   (포함 시 \makeatother가 @ catcode를 12로 바꿔 이후 \c@page 등 파괴)
             const _preamCmd2 = fnCols >= 3 ? `\\@preamthreefmt` : `\\@preamtwofmt`;
-            const _preamRatio2 = fnCols >= 3 ? `3/10` : `9/20`;
+            const _preamFormula2 = fnCols >= 3
+              ? `(\\textwidth-\\imprintnotewidth-\\columnsep*3)/3`
+              : `(\\textwidth-\\imprintnotewidth-\\columnsep*2)/2`;
             return [
               `% 각주 ${fnCols}단 설정 (memoir 내장)`,
               `% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용`,
@@ -2815,11 +2817,12 @@ export default function App() {
               `\\@ifundefined{imprintnotewidth}{}{%`,
               `  \\ifdim\\imprintnotewidth>0pt`,
               `    % Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭을 절댓값으로`,
-              `    % (multicols 안에서 \\hsize가 컬럼폭으로 바뀌어 상대값 불가)`,
+              `    % gutter = \\columnsep (본문 단간격과 동일)`,
               `    \\renewcommand${_preamCmd2}{%`,
-              `      \\hsize\\dimexpr(\\textwidth-\\imprintnotewidth-\\columnsep)*${_preamRatio2}\\relax`,
+              `      \\hsize\\dimexpr${_preamFormula2}\\relax`,
               `      \\parindent=\\z@`,
-              `      \\tolerance=5000\\relax`,
+              `      \\tolerance=9999\\relax`,
+              `      \\emergencystretch=2em`,
               `      \\raggedright`,
               `      \\leavevmode}%`,
               `    % Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭`,
