@@ -4826,7 +4826,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   </button>
                 </div>
 
-                {/* 핵심 파라미터 칩 — 판형·본문·단·서체·정렬 */}
+                {/* 스펙 칩 — 전체 동일 스타일 */}
                 <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:10 }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
@@ -4841,6 +4841,12 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     })()],
                     ["서체", pkg.ty.분류?.split(' ')[0] || null],
                     ["정렬", pkg.align_body?.replace(' 정렬','') || null],
+                    ["여백", `${pkg.m.상}/${pkg.m.하} · ${pkg.m.안}/${pkg.m.밖}`],
+                    ["면주", pkg.running !== '-' ? pkg.running : null],
+                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
+                    ["쪽번호", pkg.pn || null],
+                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
+                    ["자간", (() => { const v = String(pkg.b.자간); return v && v !== '0' ? v : null; })()],
                   ].filter(([,v]) => v).map(([label, value]) => (
                     <div key={label} style={{
                       display:"inline-flex", alignItems:"center", gap:4,
@@ -4849,30 +4855,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     }}>
                       <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
                       <span style={{ fontSize:11, fontWeight:600, color:T.ink,
-                        fontFamily:T.mono }}>{value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 부가 파라미터 칩 — 여백·각주·면주·쪽번호 */}
-                <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:5 }}>
-                  {[
-                    ["여백", `${pkg.m.상}/${pkg.m.하} · ${pkg.m.안}/${pkg.m.밖}`],
-                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
-                    ["면주", pkg.running !== '-' ? pkg.running : null],
-                    ["쪽번호", pkg.pn || null],
-                    // 자간: 0이면 숨김
-                    ["자간", (() => { const v = String(pkg.b.자간); return v && v !== '0' ? v : null; })()],
-                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
-                  ].filter(([,v]) => v).map(([label, value]) => (
-                    <div key={label} style={{
-                      display:"inline-flex", alignItems:"center", gap:4,
-                      padding:"3px 7px", borderRadius:3,
-                      border:`1px solid ${T.border}`, background:T.bg,
-                      opacity:0.75,
-                    }}>
-                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
-                      <span style={{ fontSize:10, fontWeight:500, color:T.ink,
                         fontFamily:T.mono }}>{value}</span>
                     </div>
                   ))}
