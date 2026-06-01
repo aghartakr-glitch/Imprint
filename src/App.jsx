@@ -4802,80 +4802,82 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
               {/* ── 선택된 패키지 카드 ── */}
-              <div style={{ padding:"20px 24px", borderBottom:`1px solid ${T.border}`,
+              <div style={{ padding:"18px 24px 16px", borderBottom:`1px solid ${T.border}`,
                 background:T.surface, flexShrink:0 }}>
 
-                <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
-                  선택된 스타일 패키지
-                </div>
-
+                {/* 패키지명 + 복사 버튼 */}
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
                   <div>
-                    <div style={{ fontSize:15, fontWeight:600, color:T.ink, lineHeight:1.3, marginBottom:4 }}>
+                    <div style={{ fontSize:15, fontWeight:600, color:T.ink, lineHeight:1.3, marginBottom:3 }}>
                       {pkg.t}
                     </div>
-                    <div style={{ fontSize:12, color:T.muted }}>
+                    <div style={{ fontSize:11, color:T.muted }}>
                       {pkg.g} · {pkg.pub_type}
                       {pkg.designer && pkg.designer !== '-' &&
                         <span style={{ color:T.ink }}> · {pkg.designer}</span>}
                     </div>
                   </div>
                   <button onClick={copy}
-                    style={{ padding:"7px 14px", fontSize:12, fontWeight:500, whiteSpace:"nowrap",
+                    style={{ padding:"6px 12px", fontSize:11, fontWeight:500, whiteSpace:"nowrap",
                       border:`1px solid ${T.border}`, borderRadius:3,
                       background:copied ? T.ink : T.surface,
-                      color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
+                      color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms",
+                      flexShrink:0 }}>
                     {copied ? "복사됨 ✓" : "전체 복사"}
                   </button>
                 </div>
 
-                {/* 스펙 칩 카드 */}
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12 }}>
+                {/* 핵심 파라미터 칩 — 판형·본문·단·서체·정렬 */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:10 }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
                     ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
-                    ["자간", `${pkg.b.자간}`],
                     ["단", (() => {
-                      // layout_type에서 본문 단 수 파싱 (예: "본문 2단 + 주석 4단" → "본문 2단")
                       const lt = pkg.layout_type || '';
                       const bodyM = lt.match(/본문\s*(\d+)[단열]/);
                       const noteM = lt.match(/주석\s*(\d+)[단열]/);
                       if (bodyM && noteM) return `본문 ${bodyM[1]}단 + 주석 ${noteM[1]}단`;
                       if (bodyM) return `본문 ${bodyM[1]}단`;
-                      return pkg.c.구성; // fallback: DB 원본 값
+                      return pkg.c.구성;
                     })()],
-                    ["서체", pkg.ty.분류?.split(' ')[0] || "—"],
-                    ["정렬", pkg.align_body?.replace(' 정렬','') || "—"],
-                    ["여백", `상${pkg.m.상}·하${pkg.m.하}·안${pkg.m.안}·밖${pkg.m.밖}`],
-                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
-                    ["면주", pkg.running !== '-' ? pkg.running : null],
-                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
-                    ["쪽번호", pkg.pn || null],
+                    ["서체", pkg.ty.분류?.split(' ')[0] || null],
+                    ["정렬", pkg.align_body?.replace(' 정렬','') || null],
                   ].filter(([,v]) => v).map(([label, value]) => (
                     <div key={label} style={{
-                      display:"inline-flex", alignItems:"center", gap:5,
-                      padding:"4px 9px", borderRadius:3,
+                      display:"inline-flex", alignItems:"center", gap:4,
+                      padding:"4px 8px", borderRadius:3,
                       border:`1px solid ${T.border}`, background:T.bg,
                     }}>
-                      <span style={{ fontSize:11, fontWeight:500, color:T.muted }}>{label}</span>
+                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
                       <span style={{ fontSize:11, fontWeight:600, color:T.ink,
                         fontFamily:T.mono }}>{value}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* 텍스트 프로파일 */}
-                {textProfile && (
-                  <div style={{ marginTop:10, fontSize:11, color:T.muted,
-                    fontFamily:T.mono, lineHeight:1.5 }}>
-                    분석: {[
-                      ["genre","장르"], ["topic","주제"], ["textForm","형식"],
-                      ["pubType","출판형태"], ["tone","어조"], ["density","밀도"]
-                    ].map(([k, label]) =>
-                      textProfile[k] ? `${label}=${textProfile[k]}` : ""
-                    ).filter(Boolean).join("  ·  ")}
-                  </div>
-                )}
+                {/* 부가 파라미터 칩 — 여백·각주·면주·쪽번호 */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:5 }}>
+                  {[
+                    ["여백", `${pkg.m.상}/${pkg.m.하} · ${pkg.m.안}/${pkg.m.밖}`],
+                    ["각주", pkg.footnote !== '-' ? pkg.footnote : null],
+                    ["면주", pkg.running !== '-' ? pkg.running : null],
+                    ["쪽번호", pkg.pn || null],
+                    // 자간: 0이면 숨김
+                    ["자간", (() => { const v = String(pkg.b.자간); return v && v !== '0' ? v : null; })()],
+                    ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
+                  ].filter(([,v]) => v).map(([label, value]) => (
+                    <div key={label} style={{
+                      display:"inline-flex", alignItems:"center", gap:4,
+                      padding:"3px 7px", borderRadius:3,
+                      border:`1px solid ${T.border}`, background:T.bg,
+                      opacity:0.75,
+                    }}>
+                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
+                      <span style={{ fontSize:10, fontWeight:500, color:T.ink,
+                        fontFamily:T.mono }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* ── 출력 탭 ── */}
