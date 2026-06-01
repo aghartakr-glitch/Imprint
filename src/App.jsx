@@ -2798,9 +2798,11 @@ export default function App() {
               `% bigfoot/manyfoot/footmisc 불필요`,
               memoirCmd2,
             ];
-            // 가변단(body/note 분리) 모드: 각주 폭을 본문 열 폭으로 제한
-            // memoir 기본 \@preamtwofmt = \hsize .45\hsize (= 전체 판면 폭 기준)
-            // → \renewcommand 으로 본문 열 폭 기준 고정값으로 교체
+            // 가변단(body/note 분리) 모드: 각주 컨테이너를 본문 열 폭으로 제한
+            // memoir 각주 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
+            // 출력 루틴에서 \hsize = \textwidth → 각주 박스가 전체 폭으로 펼쳐짐
+            // 수정: \mp@footgroupv@r 내부에서 \hsize = bodyW 로 설정
+            //   → \@@line = bodyW 박스 / \@preamtwofmt(.45\hsize)도 자동 0.45×bodyW
             if (colMode === 'variable' && styleConfig.variableGrid) {
               const _fnNotePos2 = styleConfig.notePosition || 'right';
               if (_fnNotePos2 === 'left' || _fnNotePos2 === 'right') {
@@ -2811,19 +2813,15 @@ export default function App() {
                 const _fnGrid2 = calcVariableGrid(_fnVg2, textW, columnGapMm);
                 const _fnBodyW2 = _fnGrid2.bodyW;
                 if (_fnBodyW2 > 0) {
-                  // 각 각주 단 폭: (본문 열 폭 - 단간격×(fnCols-1)) / fnCols
-                  const _fnSubColW2 = fnCols >= 3
-                    ? Math.round((_fnBodyW2 - 2 * columnGapMm) / 3 * 10) / 10
-                    : Math.round((_fnBodyW2 - columnGapMm) / 2 * 10) / 10;
-                  const _preamCmd2 = fnCols >= 3 ? `\\@preamthreefmt` : `\\@preamtwofmt`;
+                  const _rigidCols2 = fnCols >= 3 ? `\\thr@@` : `\\tw@`;
                   fnLines2.push(
-                    `% 각주 폭 → 본문 열 폭(${_fnBodyW2}mm) 기준, 각 단=${_fnSubColW2}mm`,
+                    `% 각주 컨테이너 폭 → 본문 열 폭(${_fnBodyW2}mm)`,
+                    `% \\mp@footgroupv@r: \\hsize=bodyW → \\@@line이 bodyW 크기 박스`,
                     `\\makeatletter`,
-                    `\\renewcommand{${_preamCmd2}}{%`,
-                    `  \\hsize=${_fnSubColW2}mm\\relax`,
-                    `  \\parindent=\\z@`,
-                    `  \\tolerance=5000\\relax`,
-                    `  \\leavevmode}`,
+                    `\\renewcommand\\mp@footgroupv@r{{%`,
+                    `  \\hsize=${_fnBodyW2}mm\\linewidth=\\hsize`,
+                    `  \\foottextfont\\splittopskip=\\ht\\strutbox`,
+                    `  \\m@mrigidbalance{\\footins}{${_rigidCols2}}{\\splittopskip}}}`,
                     `\\makeatother`
                   );
                 }
