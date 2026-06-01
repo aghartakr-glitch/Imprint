@@ -2567,8 +2567,14 @@ export default function App() {
             //   = 판면너비 - 주석열폭 - 단간격 = 실제 본문 열 폭
             //   (body=12/total=12 오버플로우 상황에서도 올바른 본문 폭 산출)
             // \@ifundefined + \ifdim 이중 가드: variable 아닌 레이아웃 보호
+            // 각주 컬럼 폭: (본문열폭 - gutter) / N
+            // 본문열폭 = textwidth - notewidth - columnsep
+            // gutter = columnsep (본문 단간격과 동일하게)
+            // 2단: (body - columnsep) / 2,  3단: (body - 2*columnsep) / 3
             const _preamCmd = fnCols >= 3 ? '\\@preamthreefmt' : '\\@preamtwofmt';
-            const _preamRatio = fnCols >= 3 ? '3/10' : '9/20';
+            const _preamFormula = fnCols >= 3
+              ? '(\\textwidth-\\imprintnotewidth-\\columnsep*3)/3'
+              : '(\\textwidth-\\imprintnotewidth-\\columnsep*2)/2';
             return [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
@@ -2577,11 +2583,12 @@ export default function App() {
               '\\@ifundefined{imprintnotewidth}{}{%',
               '  \\ifdim\\imprintnotewidth>0pt',
               '    % Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭을 절댓값으로',
-              '    % (multicols 안에서 \\hsize가 컬럼폭으로 바뀌어 상대값 불가)',
+              '    % gutter = \\columnsep (본문 단간격과 동일)',
               '    \\renewcommand' + _preamCmd + '{%',
-              '      \\hsize\\dimexpr(\\textwidth-\\imprintnotewidth-\\columnsep)*' + _preamRatio + '\\relax',
+              '      \\hsize\\dimexpr' + _preamFormula + '\\relax',
               '      \\parindent=\\z@',
-              '      \\tolerance=5000\\relax',
+              '      \\tolerance=9999\\relax',
+              '      \\emergencystretch=2em',
               '      \\raggedright',
               '      \\leavevmode}%',
               '    % Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭',
