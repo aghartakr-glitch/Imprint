@@ -2784,13 +2784,12 @@ export default function App() {
             // memoir 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
             // \hsize = \textwidth - \imprintnotewidth - \columnsep 로 설정
             //   = 판면너비 - 주석열폭 - 단간격 = 실제 본문 열 폭
-            //   (body=12/total=12 오버플로우 상황에서도 올바른 본문 폭 산출)
-            // \@ifundefined + \ifdim 이중 가드: variable 아닌 레이아웃 보호
+            // ⚠ .sty 파일은 @가 catcode 11(letter)이므로 \makeatletter/\makeatother 불필요
+            //   (포함 시 \makeatother가 @ catcode를 12로 바꿔 이후 \c@page 등 파괴)
             return [
               `% 각주 ${fnCols}단 설정 (memoir 내장)`,
               `% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용`,
               memoirCmd2,
-              `\\makeatletter`,
               `\\@ifundefined{imprintnotewidth}{}{%`,
               `  \\ifdim\\imprintnotewidth>0pt`,
               `    \\renewcommand\\mp@footgroupv@r{{%`,
@@ -2800,7 +2799,6 @@ export default function App() {
               `      \\m@mrigidbalance{\\footins}{${_rigidCols2}}{\\splittopskip}}}%`,
               `  \\fi`,
               `}`,
-              `\\makeatother`,
             ].join('\n');
           }
           return [
