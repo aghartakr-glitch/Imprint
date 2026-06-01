@@ -2840,7 +2840,7 @@ export default function App() {
               `    % Fix3: 각주 들여쓰기 제거 — \\noindent 명시`,
               `    \\renewcommand${fnCols >= 3 ? `\\@threecolfootfmt` : `\\@twocolfootfmt`}[1]{%`,
               `      ${_preamCmd2}`,
-              `      \\noindent{\\footfootmark\\strut \\foottextfont ##1\\strut\\par}\\allowbreak}%`,
+              `      \\noindent{\\footfootmark\\strut \\foottextfont #1\\strut\\par}\\allowbreak}%`,
               `  \\fi`,
               `}`,
             ].join('\n');
