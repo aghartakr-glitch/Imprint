@@ -4424,8 +4424,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   </select>
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:500,
-                    color:T.muted, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:11, fontWeight:600,
+                    color:T.ink, marginBottom:6 }}>
                     단 구성
                   </label>
                   {/* 1행: 모드 선택 */}
