@@ -2829,7 +2829,9 @@ export default function App() {
           return [
             `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
             `\\makeatletter`,
-            `\\renewcommand\\@makefntext[1]{\\noindent\\makebox[1.2em][r]{\\@thefnmark}\\,#1}`,
+            `\\renewcommand\\@makefntext[1]{%`,
+            `  \\parindent\\z@\\hangindent1.5em\\relax`,
+            `  \\noindent\\makebox[1.5em][r]{\\@thefnmark}\\,#1}`,
             `\\makeatother`,
           ].join('\n');
         })(),
