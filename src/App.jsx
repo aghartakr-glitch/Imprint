@@ -2572,39 +2572,37 @@ export default function App() {
             // gutter = columnsep (본문 단간격과 동일하게)
             // 2단: (body - columnsep) / 2,  3단: (body - 2*columnsep) / 3
             const _preamCmd = fnCols >= 3 ? '\\@preamthreefmt' : '\\@preamtwofmt';
+            // 각주 단 폭 = (textwidth - columnsep*(N-1)) / N
+            // → 본문 multicols{N}의 단 폭과 동일하게 맞춤 (imprintnotewidth 불사용)
+            // 면주는 eso-pic으로 margin에 배치 — textwidth를 소비하지 않음
             const _preamFormula = fnCols >= 3
-              ? '(\\textwidth-\\imprintnotewidth-\\columnsep*3)/3'
-              : '(\\textwidth-\\imprintnotewidth-\\columnsep*2)/2';
+              ? '(\\textwidth-\\columnsep*2)/3'
+              : '(\\textwidth-\\columnsep)/2';
             return [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
               memoirCmd,
               '\\makeatletter',
-              '\\@ifundefined{imprintnotewidth}{}{%',
-              '  \\ifdim\\imprintnotewidth>0pt',
-              '    % Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭을 절댓값으로',
-              '    % gutter = \\columnsep (본문 단간격과 동일)',
-              '    \\renewcommand' + _preamCmd + '{%',
-              '      \\hsize\\dimexpr' + _preamFormula + '\\relax',
-              '      \\parindent=\\z@',
-              '      \\tolerance=9999\\relax',
-              '      \\emergencystretch=2em',
-              '      \\raggedright',
-              '      \\leavevmode}%',
-              '    % Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭',
-              '    % \\AtBeginDocument: 모든 패키지 로드 후 최종 적용',
-              '    \\AtBeginDocument{%',
-              '      \\def\\@footgroupv@r{{%',
-              '        \\foottextfontv@r \\splittopskip=\\ht\\strutbox',
-              '        \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax',
-              '        \\linewidth\\hsize',
-              '        \\m@mrigidbalance{\\footinsv@r}{' + _rigidCols + '}{\\splittopskip}}}}%',
-              '    % Fix3: 각주 들여쓰기 제거 — \\noindent 명시',
-              '    \\renewcommand' + (fnCols >= 3 ? '\\@threecolfootfmt' : '\\@twocolfootfmt') + '[1]{%',
-              '      ' + _preamCmd,
-              '      \\noindent{\\footfootmark\\strut \\foottextfont #1\\strut\\par}\\allowbreak}%',
-              '  \\fi',
-              '}',
+              '% Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭 = 본문 단 폭',
+              '\\renewcommand' + _preamCmd + '{%',
+              '  \\hsize\\dimexpr' + _preamFormula + '\\relax',
+              '  \\parindent=\\z@',
+              '  \\tolerance=9999\\relax',
+              '  \\emergencystretch=2em',
+              '  \\raggedright',
+              '  \\leavevmode}%',
+              '% Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭 = \\textwidth',
+              '% \\AtBeginDocument: 모든 패키지 로드 후 최종 적용',
+              '\\AtBeginDocument{%',
+              '  \\def\\@footgroupv@r{{%',
+              '    \\foottextfontv@r \\splittopskip=\\ht\\strutbox',
+              '    \\hsize\\textwidth',
+              '    \\linewidth\\hsize',
+              '    \\m@mrigidbalance{\\footinsv@r}{' + _rigidCols + '}{\\splittopskip}}}}%',
+              '% Fix3: 각주 들여쓰기 제거 — \\noindent 명시',
+              '\\renewcommand' + (fnCols >= 3 ? '\\@threecolfootfmt' : '\\@twocolfootfmt') + '[1]{%',
+              '  ' + _preamCmd,
+              '  \\noindent{\\footfootmark\\strut \\foottextfont #1\\strut\\par}\\allowbreak}%',
               '\\makeatother',
             ].join('\n');
           }
