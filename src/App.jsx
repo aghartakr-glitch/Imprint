@@ -2560,12 +2560,44 @@ export default function App() {
             // bigfoot/manyfoot 불필요 — \footnote{} 직접 사용, memoir가 레이아웃 처리
             // \footnotelayout 은 footmisc 전용 포매팅 훅, 단 수와 무관 → 사용 금지
             const memoirCmd = fnCols >= 3 ? '\\threecolumnfootnotes' : '\\twocolumnfootnotes';
-            return [
+            const fnLines = [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
               '% 추가 패키지 불필요 — memoir 문서 클래스에 기본 포함',
               memoirCmd,
-            ].join('\n');
+            ];
+            // 가변단(body/note 분리) 모드: 각주 폭을 본문 열 폭으로 제한
+            // memoir 기본 \@preamtwofmt = \hsize .45\hsize (= 전체 판면 폭 기준)
+            // → \renewcommand 으로 본문 열 폭 기준 고정값으로 교체
+            if (colMode === 'variable' && styleConfig.variableGrid) {
+              const _fnNotePos = styleConfig.notePosition || 'right';
+              if (_fnNotePos === 'left' || _fnNotePos === 'right') {
+                const _fnVgRaw = styleConfig.variableGrid;
+                const _fnVg = (_fnVgRaw.body + _fnVgRaw.note) > _fnVgRaw.total
+                  ? { ..._fnVgRaw, note: Math.max(1, _fnVgRaw.total - _fnVgRaw.body) }
+                  : _fnVgRaw;
+                const _fnGrid = calcVariableGrid(_fnVg, textW, columnGapMm);
+                const _fnBodyW = _fnGrid.bodyW;
+                if (_fnBodyW > 0) {
+                  // 각 각주 단 폭: (본문 열 폭 - 단간격×(fnCols-1)) / fnCols
+                  const _fnSubColW = fnCols >= 3
+                    ? Math.round((_fnBodyW - 2 * columnGapMm) / 3 * 10) / 10
+                    : Math.round((_fnBodyW - columnGapMm) / 2 * 10) / 10;
+                  const _preamCmd = fnCols >= 3 ? '\\@preamthreefmt' : '\\@preamtwofmt';
+                  fnLines.push(
+                    '% 각주 폭 → 본문 열 폭(' + _fnBodyW + 'mm) 기준, 각 단=' + _fnSubColW + 'mm',
+                    '\\makeatletter',
+                    '\\renewcommand{' + _preamCmd + '}{%',
+                    '  \\hsize=' + _fnSubColW + 'mm\\relax',
+                    '  \\parindent=\\z@',
+                    '  \\tolerance=5000\\relax',
+                    '  \\leavevmode}',
+                    '\\makeatother'
+                  );
+                }
+              }
+            }
+            return fnLines.join('\n');
           }
           // 1단: 기존 방식 + \thefootnote arabic 유지
           return [
