@@ -2574,7 +2574,7 @@ export default function App() {
               '\\makeatletter',
               '\\@ifundefined{imprintnotewidth}{}{%',
               '  \\ifdim\\imprintnotewidth>0pt',
-              '    \\renewcommand\\mp@footgroupv@r{{%',
+              '    \\renewcommand\\@twocol@footgroupv@r{{%',
               '      \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax',
               '      \\linewidth\\hsize',
               '      \\foottextfont\\splittopskip\\ht\\strutbox',
