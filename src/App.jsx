@@ -4359,7 +4359,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 {/* 면주 */}
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
-                    <label style={{ fontSize:11, fontWeight:500, color:T.muted }}>면주</label>
+                    <label style={{ fontSize:11, fontWeight:600, color:T.ink }}>면주</label>
                     {/* 위치 드롭다운 */}
                     <select value={styleConfig.rhPos || '상단-외측'}
                       onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
