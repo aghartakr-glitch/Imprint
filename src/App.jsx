@@ -2837,6 +2837,10 @@ export default function App() {
               `        \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax`,
               `        \\linewidth\\hsize`,
               `        \\m@mrigidbalance{\\footinsv@r}{${_rigidCols2}}{\\splittopskip}}}}%`,
+              `    % Fix3: 각주 들여쓰기 제거 — \\noindent 명시`,
+              `    \\renewcommand${fnCols >= 3 ? `\\@threecolfootfmt` : `\\@twocolfootfmt`}[1]{%`,
+              `      ${_preamCmd2}`,
+              `      \\noindent{\\footfootmark\\strut \\foottextfont ##1\\strut\\par}\\allowbreak}%`,
               `  \\fi`,
               `}`,
             ].join('\n');
