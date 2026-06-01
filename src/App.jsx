@@ -2560,42 +2560,25 @@ export default function App() {
             // bigfoot/manyfoot 불필요 — \footnote{} 직접 사용, memoir가 레이아웃 처리
             // \footnotelayout 은 footmisc 전용 포매팅 훅, 단 수와 무관 → 사용 금지
             const memoirCmd = fnCols >= 3 ? '\\threecolumnfootnotes' : '\\twocolumnfootnotes';
-            const fnLines = [
+            const _rigidCols = fnCols >= 3 ? '\\thr@@' : '\\tw@';
+            // 각주 컨테이너 폭 제한: \imprintbodywidth 가 정의된 경우(= variable 가변단)에만 적용
+            // memoir 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
+            // \hsize = \imprintbodywidth 로 설정하면 \@@line이 본문 열 폭 크기 박스가 됨
+            // \@preamtwofmt(.45\hsize)도 자동으로 0.45×bodyW 로 추론
+            // \@ifundefined: \imprintbodywidth 없으면 no-op (variable 아닌 레이아웃 보호)
+            return [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
-              '% 추가 패키지 불필요 — memoir 문서 클래스에 기본 포함',
               memoirCmd,
-            ];
-            // 가변단(body/note 분리) 모드: 각주 컨테이너를 본문 열 폭으로 제한
-            // memoir 각주 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
-            // 출력 루틴에서 \hsize = \textwidth → 각주 박스가 전체 폭으로 펼쳐짐
-            // 수정: \mp@footgroupv@r 내부에서 \hsize = bodyW 로 설정
-            //   → \@@line = bodyW 박스 / \@preamtwofmt(.45\hsize)도 자동 0.45×bodyW
-            if (colMode === 'variable' && styleConfig.variableGrid) {
-              const _fnNotePos = styleConfig.notePosition || 'right';
-              if (_fnNotePos === 'left' || _fnNotePos === 'right') {
-                const _fnVgRaw = styleConfig.variableGrid;
-                const _fnVg = (_fnVgRaw.body + _fnVgRaw.note) > _fnVgRaw.total
-                  ? { ..._fnVgRaw, note: Math.max(1, _fnVgRaw.total - _fnVgRaw.body) }
-                  : _fnVgRaw;
-                const _fnGrid = calcVariableGrid(_fnVg, textW, columnGapMm);
-                const _fnBodyW = _fnGrid.bodyW;
-                if (_fnBodyW > 0) {
-                  const _rigidCols = fnCols >= 3 ? '\\thr@@' : '\\tw@';
-                  fnLines.push(
-                    '% 각주 컨테이너 폭 → 본문 열 폭(' + _fnBodyW + 'mm)',
-                    '% \\mp@footgroupv@r: \\hsize=bodyW → \\@@line이 bodyW 크기 박스',
-                    '\\makeatletter',
-                    '\\renewcommand\\mp@footgroupv@r{{%',
-                    '  \\hsize=' + _fnBodyW + 'mm\\linewidth=\\hsize',
-                    '  \\foottextfont\\splittopskip=\\ht\\strutbox',
-                    '  \\m@mrigidbalance{\\footins}{' + _rigidCols + '}{\\splittopskip}}}',
-                    '\\makeatother'
-                  );
-                }
-              }
-            }
-            return fnLines.join('\n');
+              '\\makeatletter',
+              '\\@ifundefined{imprintbodywidth}{}{%',
+              '  \\renewcommand\\mp@footgroupv@r{{%',
+              '    \\hsize\\imprintbodywidth\\linewidth\\hsize',
+              '    \\foottextfont\\splittopskip\\ht\\strutbox',
+              '    \\m@mrigidbalance{\\footins}{' + _rigidCols + '}{\\splittopskip}}}%',
+              '}',
+              '\\makeatother',
+            ].join('\n');
           }
           // 1단: 기존 방식 + \thefootnote arabic 유지
           return [
