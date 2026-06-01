@@ -4410,8 +4410,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             ) : (
               <>
                 <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:500,
-                    color:T.muted, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:11, fontWeight:600,
+                    color:T.ink, marginBottom:6 }}>
                     장르 / 출판 형태 직접 지정
                   </label>
                   <select value={hint} onChange={e => setHint(e.target.value)}
