@@ -2561,21 +2561,25 @@ export default function App() {
             // \footnotelayout 은 footmisc 전용 포매팅 훅, 단 수와 무관 → 사용 금지
             const memoirCmd = fnCols >= 3 ? '\\threecolumnfootnotes' : '\\twocolumnfootnotes';
             const _rigidCols = fnCols >= 3 ? '\\thr@@' : '\\tw@';
-            // 각주 컨테이너 폭 제한: \imprintbodywidth 가 정의된 경우(= variable 가변단)에만 적용
+            // 각주 컨테이너 폭 제한: \imprintnotewidth 가 정의 + 0pt 초과일 때만 적용
             // memoir 흐름: \mp@footgroupv@r → \m@mrigidbalance → \@@line = \hbox to \hsize
-            // \hsize = \imprintbodywidth 로 설정하면 \@@line이 본문 열 폭 크기 박스가 됨
-            // \@preamtwofmt(.45\hsize)도 자동으로 0.45×bodyW 로 추론
-            // \@ifundefined: \imprintbodywidth 없으면 no-op (variable 아닌 레이아웃 보호)
+            // \hsize = \textwidth - \imprintnotewidth - \columnsep 로 설정
+            //   = 판면너비 - 주석열폭 - 단간격 = 실제 본문 열 폭
+            //   (body=12/total=12 오버플로우 상황에서도 올바른 본문 폭 산출)
+            // \@ifundefined + \ifdim 이중 가드: variable 아닌 레이아웃 보호
             return [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
               memoirCmd,
               '\\makeatletter',
-              '\\@ifundefined{imprintbodywidth}{}{%',
-              '  \\renewcommand\\mp@footgroupv@r{{%',
-              '    \\hsize\\imprintbodywidth\\linewidth\\hsize',
-              '    \\foottextfont\\splittopskip\\ht\\strutbox',
-              '    \\m@mrigidbalance{\\footins}{' + _rigidCols + '}{\\splittopskip}}}%',
+              '\\@ifundefined{imprintnotewidth}{}{%',
+              '  \\ifdim\\imprintnotewidth>0pt',
+              '    \\renewcommand\\mp@footgroupv@r{{%',
+              '      \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax',
+              '      \\linewidth\\hsize',
+              '      \\foottextfont\\splittopskip\\ht\\strutbox',
+              '      \\m@mrigidbalance{\\footins}{' + _rigidCols + '}{\\splittopskip}}}%',
+              '  \\fi',
               '}',
               '\\makeatother',
             ].join('\n');
