@@ -2567,6 +2567,8 @@ export default function App() {
             //   = 판면너비 - 주석열폭 - 단간격 = 실제 본문 열 폭
             //   (body=12/total=12 오버플로우 상황에서도 올바른 본문 폭 산출)
             // \@ifundefined + \ifdim 이중 가드: variable 아닌 레이아웃 보호
+            const _preamCmd = fnCols >= 3 ? '\\@preamthreefmt' : '\\@preamtwofmt';
+            const _preamRatio = fnCols >= 3 ? '3/10' : '9/20';
             return [
               '% 각주 ' + fnCols + '단 설정 (memoir 내장)',
               '% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용',
@@ -2574,13 +2576,22 @@ export default function App() {
               '\\makeatletter',
               '\\@ifundefined{imprintnotewidth}{}{%',
               '  \\ifdim\\imprintnotewidth>0pt',
-              '    % \\@footgroupv@r: 출력 루틴이 실제 호출하는 명령 (\\let로 복사됨)',
-              '    % \\footinsv@r: \\twocolumnfootnotes가 사용하는 insert 레지스터',
-              '    \\renewcommand\\@footgroupv@r{{%',
-              '      \\foottextfontv@r \\splittopskip=\\ht\\strutbox',
-              '      \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax',
-              '      \\linewidth\\hsize',
-              '      \\m@mrigidbalance{\\footinsv@r}{' + _rigidCols + '}{\\splittopskip}}}%',
+              '    % Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭을 절댓값으로',
+              '    % (multicols 안에서 \\hsize가 컬럼폭으로 바뀌어 상대값 불가)',
+              '    \\renewcommand' + _preamCmd + '{%',
+              '      \\hsize\\dimexpr(\\textwidth-\\imprintnotewidth-\\columnsep)*' + _preamRatio + '\\relax',
+              '      \\parindent=\\z@',
+              '      \\tolerance=5000\\relax',
+              '      \\raggedright',
+              '      \\leavevmode}%',
+              '    % Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭',
+              '    % \\AtBeginDocument: 모든 패키지 로드 후 최종 적용',
+              '    \\AtBeginDocument{%',
+              '      \\def\\@footgroupv@r{{%',
+              '        \\foottextfontv@r \\splittopskip=\\ht\\strutbox',
+              '        \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax',
+              '        \\linewidth\\hsize',
+              '        \\m@mrigidbalance{\\footinsv@r}{' + _rigidCols + '}{\\splittopskip}}}}%',
               '  \\fi',
               '}',
               '\\makeatother',
