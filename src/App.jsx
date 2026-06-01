@@ -2792,7 +2792,7 @@ export default function App() {
               memoirCmd2,
               `\\@ifundefined{imprintnotewidth}{}{%`,
               `  \\ifdim\\imprintnotewidth>0pt`,
-              `    \\renewcommand\\mp@footgroupv@r{{%`,
+              `    \\renewcommand\\@twocol@footgroupv@r{{%`,
               `      \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax`,
               `      \\linewidth\\hsize`,
               `      \\foottextfont\\splittopskip\\ht\\strutbox`,
