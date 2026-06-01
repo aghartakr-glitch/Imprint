@@ -2799,19 +2799,30 @@ export default function App() {
             //   = 판면너비 - 주석열폭 - 단간격 = 실제 본문 열 폭
             // ⚠ .sty 파일은 @가 catcode 11(letter)이므로 \makeatletter/\makeatother 불필요
             //   (포함 시 \makeatother가 @ catcode를 12로 바꿔 이후 \c@page 등 파괴)
+            const _preamCmd2 = fnCols >= 3 ? `\\@preamthreefmt` : `\\@preamtwofmt`;
+            const _preamRatio2 = fnCols >= 3 ? `3/10` : `9/20`;
             return [
               `% 각주 ${fnCols}단 설정 (memoir 내장)`,
               `% memoir \\twocolumnfootnotes / \\threecolumnfootnotes 사용`,
               memoirCmd2,
               `\\@ifundefined{imprintnotewidth}{}{%`,
               `  \\ifdim\\imprintnotewidth>0pt`,
-              `    % \\@footgroupv@r: 출력 루틴이 실제 호출하는 명령 (\\let로 복사됨)`,
-              `    % \\footinsv@r: \\twocolumnfootnotes가 사용하는 insert 레지스터`,
-              `    \\renewcommand\\@footgroupv@r{{%`,
-              `      \\foottextfontv@r \\splittopskip=\\ht\\strutbox`,
-              `      \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax`,
-              `      \\linewidth\\hsize`,
-              `      \\m@mrigidbalance{\\footinsv@r}{${_rigidCols2}}{\\splittopskip}}}%`,
+              `    % Fix1: \\@preamtwofmt — INSERT 시점 개별 컬럼 폭을 절댓값으로`,
+              `    % (multicols 안에서 \\hsize가 컬럼폭으로 바뀌어 상대값 불가)`,
+              `    \\renewcommand${_preamCmd2}{%`,
+              `      \\hsize\\dimexpr(\\textwidth-\\imprintnotewidth-\\columnsep)*${_preamRatio2}\\relax`,
+              `      \\parindent=\\z@`,
+              `      \\tolerance=5000\\relax`,
+              `      \\raggedright`,
+              `      \\leavevmode}%`,
+              `    % Fix2: \\@footgroupv@r — OUTPUT 시점 컨테이너 폭`,
+              `    % \\AtBeginDocument: 모든 패키지 로드 후 최종 적용`,
+              `    \\AtBeginDocument{%`,
+              `      \\def\\@footgroupv@r{{%`,
+              `        \\foottextfontv@r \\splittopskip=\\ht\\strutbox`,
+              `        \\hsize\\dimexpr\\textwidth-\\imprintnotewidth-\\columnsep\\relax`,
+              `        \\linewidth\\hsize`,
+              `        \\m@mrigidbalance{\\footinsv@r}{${_rigidCols2}}{\\splittopskip}}}}%`,
               `  \\fi`,
               `}`,
             ].join('\n');
