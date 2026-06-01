@@ -4902,13 +4902,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
 
                 {/* 작업 의도 */}
                 {tab === "intent" && (
-                  <div style={{ padding:"24px" }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:T.ink, marginBottom:16 }}>
-                      이 스타일을 선택한 이유
-                    </div>
-
+                  <div style={{ padding:"20px 24px" }}>
                     {(() => {
-                      // structuredReason이 없으면 pkg.why_* 필드로 fallback
                       const reason = structuredReason || (pkg ? {
                         reference_reason: pkg.summary || null,
                         content_match: null,
@@ -4917,7 +4912,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         margin_reason: pkg.why_margin || null,
                       } : null);
                       return reason ? (
-                      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                      <div style={{ display:"flex", flexDirection:"column" }}>
                         {[
                           ["레퍼런스 선정", reason.reference_reason],
                           ["내용 매칭", reason.content_match],
@@ -4925,52 +4920,34 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                           ["서체 선택", reason.typography_reason || pkg?.why_font],
                           ["여백 설계", reason.margin_reason || pkg?.why_margin],
                           ["자간 설정", pkg?.why_tracking],
-                        ].filter(([,v]) => v).map(([label, value]) => (
-                          <div key={label} style={{ padding:"14px 16px", background:T.surface,
-                            borderRadius:3, border:`1px solid ${T.border}` }}>
-                            <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:5 }}>
+                        ].filter(([,v]) => v).map(([label, value], idx, arr) => (
+                          <div key={label} style={{
+                            padding:"14px 0",
+                            borderBottom: idx < arr.length - 1 ? `1px solid ${T.border}` : "none",
+                          }}>
+                            <div style={{
+                              fontSize:9, fontWeight:700, color:T.muted,
+                              textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6,
+                            }}>
                               {label}
                             </div>
-                            <div style={{ fontSize:13, color:T.ink, lineHeight:1.7 }}>{value}</div>
+                            <div style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{value}</div>
                           </div>
                         ))}
 
-                        {/* 원본 레퍼런스 정보 */}
-                        <div style={{ padding:"14px 16px", background:T.surface,
-                          borderRadius:3, border:`1px solid ${T.border}` }}>
-                          <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
-                            레퍼런스 원본 정보
-                          </div>
-                          <div style={{ fontSize:13, color:T.muted, lineHeight:1.8 }}>
-                            {pkg.summary}
-                          </div>
-                          {pkg.why_font && (
-                            <div style={{ marginTop:8, fontSize:12, color:T.muted, lineHeight:1.7 }}>
-                              <strong style={{ color:T.ink }}>서체 선택 이유:</strong> {pkg.why_font}
-                            </div>
-                          )}
-                          {pkg.why_margin && (
-                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
-                              <strong style={{ color:T.ink }}>여백 의도:</strong> {pkg.why_margin}
-                            </div>
-                          )}
-                          {pkg.why_tracking && (
-                            <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
-                              <strong style={{ color:T.ink }}>자간 설정:</strong> {pkg.why_tracking}
-                            </div>
-                          )}
-                        </div>
-
                         {/* 탈락 패키지 */}
                         {structuredReason?.rejected?.length > 0 && (
-                          <div style={{ padding:"14px 16px", background:T.surface,
-                            borderRadius:3, border:`1px solid ${T.border}` }}>
-                            <div style={{ fontSize:11, fontWeight:500, color:T.muted, marginBottom:8 }}>
-                              검토 후 제외된 패키지
+                          <div style={{ paddingTop:14, marginTop:4, borderTop:`1px solid ${T.border}` }}>
+                            <div style={{
+                              fontSize:9, fontWeight:700, color:T.muted,
+                              textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8,
+                            }}>
+                              검토 후 제외
                             </div>
                             {structuredReason.rejected.map((r, i) => (
                               <div key={i} style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
-                                <strong style={{ color:T.ink }}>{DB[r.i]?.t?.slice(0,20)}</strong> — {r.reason}
+                                <span style={{ color:T.ink, fontWeight:600 }}>{DB[r.i]?.t?.slice(0,20)}</span>
+                                {" — "}{r.reason}
                               </div>
                             ))}
                           </div>
