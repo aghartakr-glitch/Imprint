@@ -2527,14 +2527,17 @@ export default function App() {
 
       const isMultiColLayout = numCols >= 2 || (bodyUnits && noteUnits);
 
+      const _fw = (styleConfig.paperW && parseFloat(styleConfig.paperW) > 0) ? parseFloat(styleConfig.paperW) : p.f.w;
+      const _fh = (styleConfig.paperH && parseFloat(styleConfig.paperH) > 0) ? parseFloat(styleConfig.paperH) : p.f.h;
+
       const preamble = [
         '\\documentclass[' + p.b.크기 + 'pt]{memoir}',
         '% memoir stock size — must match paperwidth/height or Overleaf defaults to letter',
-        '\\setstocksize{' + p.f.h + 'mm}{' + p.f.w + 'mm}',
+        '\\setstocksize{' + _fh + 'mm}{' + _fw + 'mm}',
         '\\settrimmedsize{\\stockheight}{\\stockwidth}{*}',
         '\\usepackage{kotex}',
         '\\usepackage{fontspec}',
-        '\\usepackage[paperwidth=' + p.f.w + 'mm,paperheight=' + p.f.h + 'mm,' +
+        '\\usepackage[paperwidth=' + _fw + 'mm,paperheight=' + _fh + 'mm,' +
           'top=' + corrections.margins.상 + 'mm,bottom=' + corrections.margins.하 + 'mm,' +
           'inner=' + corrections.margins.안 + 'mm,outer=' + corrections.margins.밖 + 'mm,' +
           'includehead=true,includefoot=false]{geometry}',
