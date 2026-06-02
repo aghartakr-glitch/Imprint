@@ -3954,22 +3954,34 @@ export default function App() {
     if (paperDir) {
       const currW = parseFloat(styleConfig.paperW) || p.f.w;
       const currH = parseFloat(styleConfig.paperH) || p.f.h;
-      const idx = PAPER_SIZES.findIndex(([w, h]) => Math.abs(w - currW) <= 6 && Math.abs(h - currH) <= 12);
-      const base = idx !== -1 ? idx : PAPER_SIZES.findIndex(([w]) => w >= currW);
-      const targetIdx = paperDir === 'larger'
-        ? Math.min((base !== -1 ? base : 3) + 1, PAPER_SIZES.length - 1)
-        : Math.max((base !== -1 ? base : 3) - 1, 0);
-      const [newW, newH] = PAPER_SIZES[targetIdx];
+      // ±10mm 단순 조정 (비율 유지)
+      const step = 10;
+      const newW = paperDir === 'larger' ? currW + step : Math.max(80, currW - step);
+      const newH = Math.round(newW * (currH / currW));
+
+      // styleConfig 업데이트 (다음 재생성에 반영)
       setStyleConfig(s => ({ ...s, paperW: String(newW), paperH: String(newH) }));
+
+      // latex(main.tex)의 \setstocksize 즉시 패치
+      const newLatex = latex
+        .replace(/\\setstocksize\{[\d.]+mm\}\{[\d.]+mm\}/, `\\setstocksize{${newH}mm}{${newW}mm}`);
+      if (newLatex !== latex) setLatex(newLatex);
+
+      // styCode의 geometry paperwidth/paperheight 즉시 패치
+      const newSty = styCode
+        .replace(/(paperwidth\s*=\s*)[\d.]+mm/, `$1${newW}mm`)
+        .replace(/(paperheight\s*=\s*)[\d.]+mm/, `$1${newH}mm`);
+      if (newSty !== styCode) setStyCode(newSty);
+
       setRefineInput('');
       setRefineHistory(h => [...h,
         { role: 'user', content: userMsg },
         {
           role: 'assistant',
-          chatContent: `판형을 ${newW}×${newH}mm로 조정했습니다 (현재 ${currW}×${currH}mm). [조판 스타일 생성하기]를 눌러 적용하세요.`,
+          chatContent: `판형을 ${newW}×${newH}mm로 조정했습니다 (기존 ${currW}×${currH}mm). main.tex과 sty 모두 반영됐습니다.`,
           content: '',
           changes: `- 판형: ${currW}×${currH}mm → ${newW}×${newH}mm`,
-          codeChanged: false,
+          codeChanged: true,
         }
       ]);
       return;
