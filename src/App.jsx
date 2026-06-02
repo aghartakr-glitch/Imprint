@@ -2903,22 +2903,15 @@ export default function App() {
                         : resolved === 'center' ? `\\raisebox{-0.5\\height}{${_rhBase}}`
                         :                          _rhBase;
 
-          // shipout 컨텍스트에서 \fontsize 호출이 불안정하므로
-          // \usebox + \savebox 패턴으로 면주 박스를 미리 만들어 재사용
           return [
             `% ── 수직 면주 배치 (eso-pic 절대좌표, 위치: ${resolved}) ──────`,
             `\\RequirePackage{eso-pic}`,
-            `\\newsavebox{\\imprintRHbox}`,
-            `\\AtBeginDocument{%`,
-            `  \\sbox{\\imprintRHbox}{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}`,
-            `\\AddEveryShipout{%`,
-            `  \\sbox{\\imprintRHbox}{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}`,
             `\\AddToShipoutPictureBG{%`,
             `  \\setlength{\\unitlength}{1mm}%`,
             `  \\ifodd\\c@page`,
-            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\usebox{\\imprintRHbox}}}}%`,
+            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
             `  \\else`,
-            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\usebox{\\imprintRHbox}}}}%`,
+            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
             `  \\fi}`,
           ].join('\n');
         })(),
