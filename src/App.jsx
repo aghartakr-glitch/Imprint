@@ -1535,8 +1535,9 @@ export default function App() {
     extraDirective: '',
   });
 
-  // ── 유효 면주 텍스트 — 항상 사용자 직접 입력값 사용 ─────────────
+  // ── 유효 면주 텍스트 — rhAuto=true이면 제목에서 자동 추출 ──────
   function effectiveRH() {
+    if (styleConfig.rhAuto) return (fields.제목 || '').trim();
     return (fields.면주 || '').trim();
   }
 
