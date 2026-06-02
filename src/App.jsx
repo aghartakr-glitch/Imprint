@@ -3814,6 +3814,19 @@ export default function App() {
       .trim();
   }
 
+  // ── 판형 크기 사다리 (W×H mm) ────────────────────────────────
+  const PAPER_SIZES = [
+    [105, 148], [120, 188], [128, 188], [138, 210],
+    [148, 210], [152, 225], [170, 240], [180, 258], [210, 297],
+  ];
+  function detectPaperSizeRequest(msg) {
+    const larger = /판형.{0,10}(넓게|크게|널널|더\s*크|키워|확장|늘려)|더\s*(넓|크|널).{0,6}판형/;
+    const smaller = /판형.{0,10}(좁게|작게|줄여|더\s*작|축소|좁혀)|더\s*(좁|작).{0,6}판형/;
+    if (larger.test(msg)) return 'larger';
+    if (smaller.test(msg)) return 'smaller';
+    return null;
+  }
+
   // ── 구조적 변경 요청 감지 ──────────────────────────────────────
   // 리파인 채팅으로 처리 불가한 요청을 UI로 유도
   const STRUCTURAL_PATTERNS = [
@@ -3822,7 +3835,6 @@ export default function App() {
     { re: /주석\s*위치|주석을?\s*(오른쪽|왼쪽|상단|하단|우측|좌측)/, label: '주석 위치', path: '왼쪽 패널 → 단 구성 → 주석 위치' },
     { re: /총\s*그리드|본문\s*열|주석\s*열|가변단|고정단/, label: '단 구성 그리드', path: '왼쪽 패널 → 단 구성' },
     { re: /각주\s*단\s*수|각주\s*\d+\s*단|주석\s*하단.*\d+\s*단|하단.*각주.*\d+\s*단/, label: '각주 단 수', path: '왼쪽 패널 → 단 구성 → 각주 단 수' },
-    { re: /판형|용지\s*크기|paperwidth|paperheight/, label: '판형', path: '왼쪽 패널 → 스타일 지시 → 판형' },
   ];
   function detectStructuralRequest(msg) {
     for (const { re, label, path } of STRUCTURAL_PATTERNS) {
