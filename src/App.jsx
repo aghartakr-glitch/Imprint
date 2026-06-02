@@ -1533,6 +1533,8 @@ export default function App() {
     rhVertPos: 'auto',        // 수직 면주 세로 위치: 'auto'=쪽번호 반대편 | 'top'=상단 | 'bottom'=하단
     rhAuto: true,             // true=제목에서 자동 추출 / false=직접 입력(fields.면주)
     extraDirective: '',
+    paperW: '',               // 판형 너비 override (mm), 빈값=DB 사용
+    paperH: '',               // 판형 높이 override (mm), 빈값=DB 사용
   });
 
   // ── 유효 면주 텍스트 — rhAuto=true이면 제목에서 자동 추출 ──────
