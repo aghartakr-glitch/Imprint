@@ -2969,9 +2969,10 @@ export default function App() {
         `% widowpenalty:10000 clubpenalty:10000 tolerance:400 headheight:${pnAutoSize+6}pt (set)`;
 
       // main.tex 헤더 (\usepackage{imprint-style} 사용)
+      // _fw/_fh: 판형 override 반영 (styleConfig.paperW/H 우선, 없으면 DB 값)
       const mainTexHeader =
         `\\documentclass[${p.b.크기}pt]{memoir}\n` +
-        `\\setstocksize{${p.f.h}mm}{${p.f.w}mm}\n` +
+        `\\setstocksize{${_fh}mm}{${_fw}mm}\n` +
         `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}\n` +
         `\\usepackage{kotex}\n` +
         `\\usepackage{imprint-style}\n\n` +
