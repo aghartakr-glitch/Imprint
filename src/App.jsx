@@ -3823,7 +3823,7 @@ export default function App() {
     { re: /주석\s*위치|주석을?\s*(오른쪽|왼쪽|상단|하단|우측|좌측)/, label: '주석 위치', path: '왼쪽 패널 → 단 구성 → 주석 위치' },
     { re: /총\s*그리드|본문\s*열|주석\s*열|가변단|고정단/, label: '단 구성 그리드', path: '왼쪽 패널 → 단 구성' },
     { re: /각주\s*단\s*수|각주\s*\d+\s*단|주석\s*하단.*\d+\s*단|하단.*각주.*\d+\s*단/, label: '각주 단 수', path: '왼쪽 패널 → 단 구성 → 각주 단 수' },
-    { re: /판형|용지\s*크기|paperwidth|paperheight/, label: '판형', path: '(판형은 DB 스타일에 고정됩니다)' },
+    { re: /판형|용지\s*크기|paperwidth|paperheight/, label: '판형', path: '왼쪽 패널 → 스타일 지시 → 판형' },
   ];
   function detectStructuralRequest(msg) {
     for (const { re, label, path } of STRUCTURAL_PATTERNS) {
