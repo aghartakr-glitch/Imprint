@@ -4412,11 +4412,12 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:T.ink }}>면주</label>
                     {/* 위치 드롭다운 */}
-                    <select value={styleConfig.rhPos || '상단-외측'}
+                    <select value={styleConfig.rhPos || '자동'}
                       onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
                       style={{ padding:"3px 6px", fontSize:11,
                         border:`1px solid ${T.border}`, borderRadius:3,
                         background:T.bg, color:T.ink, cursor:"pointer" }}>
+                      <option value="자동">자동 (DB 기반)</option>
                       <option value="상단-외측">상단 · 외측</option>
                       <option value="상단-내측">상단 · 내측</option>
                       <option value="상단-중앙">상단 · 중앙</option>
