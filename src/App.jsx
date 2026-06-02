@@ -4711,21 +4711,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     );
                   })()}
                 </div>
-                <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:500,
-                    color:T.muted, marginBottom:5 }}>
-                    추가 지시
-                  </label>
-                  <textarea rows={3} value={styleConfig.extraDirective || ''}
-                    onChange={e => setStyleConfig(s => ({ ...s, extraDirective: e.target.value }))}
-                    placeholder="예: 여백을 넓게, 각주 없이, 제목 중앙 정렬"
-                    style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                      border:`1px solid ${T.border}`, borderRadius:3,
-                      background:T.bg, color:T.ink, lineHeight:1.6 }}
-                    onFocus={e => e.target.style.borderColor = T.ink}
-                    onBlur={e => e.target.style.borderColor = T.border}
-                  />
-                </div>
               </>
             )}
           </div>
