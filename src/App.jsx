@@ -2903,15 +2903,16 @@ export default function App() {
                         : resolved === 'center' ? `\\raisebox{-0.5\\height}{${_rhBase}}`
                         :                          _rhBase;
 
+          const _rhContent = `\\runningheadf${_rhWrap}`;
           return [
             `% ── 수직 면주 배치 (eso-pic 절대좌표, 위치: ${resolved}) ──────`,
             `\\RequirePackage{eso-pic}`,
             `\\AddToShipoutPictureBG{%`,
             `  \\setlength{\\unitlength}{1mm}%`,
             `  \\ifodd\\c@page`,
-            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{${_rhContent}}}}%`,
             `  \\else`,
-            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{\\runningheadf\\rotatebox{90}{\\imprintrunninghead}}}}%`,
+            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{${_rhContent}}}}%`,
             `  \\fi}`,
           ].join('\n');
         })(),
