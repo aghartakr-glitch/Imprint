@@ -2842,12 +2842,20 @@ export default function App() {
         })(),
         ``,
         `% ── 면주 / 쪽번호 (memoir pagestyle) ─────────────────────────`,
-        `% 쪽번호: ${p.pn || '하단-외측'} / 면주: ${styleConfig.rhPos || '상단-외측'} / 크기: ${p.pn_size || pnAutoSize + 'pt'}`,
+        `% 쪽번호: ${p.pn || '하단-외측'} / 면주: ${styleConfig.rhPos || '자동'} / 크기: ${p.pn_size || pnAutoSize + 'pt'}`,
         buildMemoirPageStyle({
           pnPos: p.pn || '하단-외측',
           pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
           hasRunningHead: !!effectiveRH(),
-          rhPos: styleConfig.rhPos || '상단-외측',
+          rhPos: (() => {
+            const rp = styleConfig.rhPos || '자동';
+            if (rp !== '자동') return rp;
+            // 자동: pn 위치 반대편에 면주 배치
+            const pn = (p.pn || '하단-외측').toLowerCase();
+            if (pn.includes('하단')) return '상단-외측';
+            if (pn.includes('상단')) return '하단-외측';
+            return '상단-외측';
+          })(),
           rhVertPos: styleConfig.rhVertPos || 'auto',
         }),
         // 수직 면주 배치: eso-pic 절대좌표 — 상/중/하 모든 위치
