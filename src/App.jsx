@@ -4365,34 +4365,21 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:T.ink }}>면주</label>
-                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                      {/* 자동/직접 토글 */}
-                      <button
-                        onClick={() => setStyleConfig(s => ({ ...s, rhAuto: !s.rhAuto }))}
-                        style={{ padding:"2px 8px", fontSize:10, fontWeight:500,
-                          border:`1px solid ${styleConfig.rhAuto ? T.ink : T.border}`,
-                          borderRadius:3,
-                          background: styleConfig.rhAuto ? T.ink : "transparent",
-                          color: styleConfig.rhAuto ? "#fff" : T.muted,
-                          cursor:"pointer" }}>
-                        자동
-                      </button>
-                      {/* 위치 드롭다운 */}
-                      <select value={styleConfig.rhPos || '상단-외측'}
-                        onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
-                        style={{ padding:"3px 6px", fontSize:11,
-                          border:`1px solid ${T.border}`, borderRadius:3,
-                          background:T.bg, color:T.ink, cursor:"pointer" }}>
-                        <option value="상단-외측">상단 · 외측</option>
-                        <option value="상단-내측">상단 · 내측</option>
-                        <option value="상단-중앙">상단 · 중앙</option>
-                        <option value="하단-외측">하단 · 외측</option>
-                        <option value="하단-내측">하단 · 내측</option>
-                        <option value="하단-중앙">하단 · 중앙</option>
-                        <option value="외측-수직">외측 여백 (세로)</option>
-                        <option value="내측-수직">내측 여백 (세로)</option>
-                      </select>
-                    </div>
+                    {/* 위치 드롭다운 */}
+                    <select value={styleConfig.rhPos || '상단-외측'}
+                      onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
+                      style={{ padding:"3px 6px", fontSize:11,
+                        border:`1px solid ${T.border}`, borderRadius:3,
+                        background:T.bg, color:T.ink, cursor:"pointer" }}>
+                      <option value="상단-외측">상단 · 외측</option>
+                      <option value="상단-내측">상단 · 내측</option>
+                      <option value="상단-중앙">상단 · 중앙</option>
+                      <option value="하단-외측">하단 · 외측</option>
+                      <option value="하단-내측">하단 · 내측</option>
+                      <option value="하단-중앙">하단 · 중앙</option>
+                      <option value="외측-수직">외측 여백 (세로)</option>
+                      <option value="내측-수직">내측 여백 (세로)</option>
+                    </select>
                   </div>
                   {/* 수직 면주 선택 시: 상단/하단 위치 sub-option */}
                   {(styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') && (
