@@ -1529,7 +1529,7 @@ export default function App() {
     bottomNoteFlowColumns: 2, // 하단 주석 단 수 (notePosition==='bottom' 일 때)
     bottomNoteWidth: 'full',  // 'full'=판면 전체 폭 | 'body'=본문 폭에 맞춤
     bodyNoteSplit: null,      // null=auto, {body:N, note:M} (legacy)
-    rhPos: '상단-외측',       // 면주 위치: '상단-외측'|...|'외측-수직'|'내측-수직'
+    rhPos: '자동',            // 면주 위치: '자동'=DB 패키지 기반 도출 | '상단-외측'|...|'외측-수직'|'내측-수직'
     rhVertPos: 'auto',        // 수직 면주 세로 위치: 'auto'=쪽번호 반대편 | 'top'=상단 | 'bottom'=하단
     rhAuto: true,             // true=제목에서 자동 추출 / false=직접 입력(fields.면주)
     extraDirective: '',
