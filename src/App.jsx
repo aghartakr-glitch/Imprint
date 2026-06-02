@@ -3814,6 +3814,15 @@ export default function App() {
       .trim();
   }
 
+  // ── 판형 미세조정 인터셉터 ───────────────────────────────────────
+  // 판형은 \setstocksize(main.tex) + \geometry(sty) 두 곳을 동시에 바꿔야 하므로
+  // Claude Refine에 맡기지 않고 클라이언트에서 직접 두 state를 업데이트한다
+  function detectPaperSizeRequest(msg) {
+    if (/판형.{0,15}(넓게|크게|널널|더\s*크|키워|확장|늘려)|더\s*(넓|크|널).{0,8}판형/.test(msg)) return 'larger';
+    if (/판형.{0,15}(좁게|작게|줄여|더\s*작|축소|좁혀)|더\s*(좁|작).{0,8}판형/.test(msg)) return 'smaller';
+    return null;
+  }
+
   // ── 구조적 변경 요청 감지 ──────────────────────────────────────
   // 리파인 채팅으로 처리 불가한 요청을 UI로 유도
   const STRUCTURAL_PATTERNS = [
