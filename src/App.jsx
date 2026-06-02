@@ -2868,8 +2868,8 @@ export default function App() {
           const pnPos = (p.pn || '하단-외측');
           const resolved = vPos === 'auto' ? (pnPos.startsWith('상단') ? 'bottom' : 'top') : vPos;
 
-          const pw      = p.f.w;   // paperWidth mm
-          const ph      = p.f.h;   // paperHeight mm
+          const pw      = _fw;   // paperWidth mm  (_fw: override 반영)
+          const ph      = _fh;   // paperHeight mm (_fh: setstocksize와 동일)
           const topMm   = corrections.margins.상;
           const botMm   = corrections.margins.하;
           const outerMm = corrections.margins.밖;
