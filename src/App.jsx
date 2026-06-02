@@ -3814,19 +3814,6 @@ export default function App() {
       .trim();
   }
 
-  // ── 판형 크기 사다리 (W×H mm) ────────────────────────────────
-  const PAPER_SIZES = [
-    [105, 148], [120, 188], [128, 188], [138, 210],
-    [148, 210], [152, 225], [170, 240], [180, 258], [210, 297],
-  ];
-  function detectPaperSizeRequest(msg) {
-    const larger = /판형.{0,10}(넓게|크게|널널|더\s*크|키워|확장|늘려)|더\s*(넓|크|널).{0,6}판형/;
-    const smaller = /판형.{0,10}(좁게|작게|줄여|더\s*작|축소|좁혀)|더\s*(좁|작).{0,6}판형/;
-    if (larger.test(msg)) return 'larger';
-    if (smaller.test(msg)) return 'smaller';
-    return null;
-  }
-
   // ── 구조적 변경 요청 감지 ──────────────────────────────────────
   // 리파인 채팅으로 처리 불가한 요청을 UI로 유도
   const STRUCTURAL_PATTERNS = [
