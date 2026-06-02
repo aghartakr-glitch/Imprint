@@ -4400,19 +4400,14 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       })}
                     </div>
                   )}
-                  <textarea
-                    value={styleConfig.rhAuto ? (fields.제목 || '') : fields["면주"]}
-                    rows={1}
-                    placeholder={styleConfig.rhAuto ? "제목 입력 시 자동 반영" : "면주 텍스트 입력 (비우면 면주 없음)"}
-                    readOnly={styleConfig.rhAuto}
-                    onChange={e => !styleConfig.rhAuto && setFields(f => ({ ...f, 면주: e.target.value }))}
+                  <textarea value={fields["면주"]} rows={1}
+                    placeholder="면주 텍스트 입력 (비우면 면주 없음)"
+                    onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
                     style={{ width:"100%", padding:"9px 11px", fontSize:13,
                       border:`1px solid ${T.border}`, borderRadius:3,
-                      background: styleConfig.rhAuto ? T.bg : T.bg,
-                      color: styleConfig.rhAuto ? T.muted : T.ink,
-                      lineHeight:1.6, transition:"border 150ms",
-                      cursor: styleConfig.rhAuto ? "default" : "text" }}
-                    onFocus={e => { if (!styleConfig.rhAuto) e.target.style.borderColor = T.ink; }}
+                      background:T.bg, color:T.ink, lineHeight:1.6,
+                      transition:"border 150ms" }}
+                    onFocus={e => e.target.style.borderColor = T.ink}
                     onBlur={e => e.target.style.borderColor = T.border}
                   />
                 </div>
