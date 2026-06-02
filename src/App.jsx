@@ -4414,67 +4414,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
               </>
             ) : (
               <>
-                {/* ── 판형 재정의 ── */}
-                <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:600,
-                    color:T.ink, marginBottom:6 }}>판형</label>
-                  {/* 프리셋 */}
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:8 }}>
-                    {[
-                      ['128×188', 128, 188],
-                      ['138×210', 138, 210],
-                      ['148×210', 148, 210],
-                      ['152×225', 152, 225],
-                      ['170×240', 170, 240],
-                      ['210×297', 210, 297],
-                    ].map(([label, w, h]) => {
-                      const active = String(styleConfig.paperW) === String(w) && String(styleConfig.paperH) === String(h);
-                      return (
-                        <button key={label}
-                          onClick={() => setStyleConfig(s => ({ ...s, paperW: String(w), paperH: String(h) }))}
-                          style={{ padding:"3px 8px", fontSize:11, fontWeight: active ? 600 : 400,
-                            border:`1px solid ${active ? T.ink : T.border}`,
-                            borderRadius:3, background: active ? T.ink : "transparent",
-                            color: active ? "#fff" : T.ink, cursor:"pointer",
-                            fontFamily: T.mono }}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                    {(styleConfig.paperW || styleConfig.paperH) && (
-                      <button onClick={() => setStyleConfig(s => ({ ...s, paperW: '', paperH: '' }))}
-                        style={{ padding:"3px 8px", fontSize:11, border:`1px solid ${T.border}`,
-                          borderRadius:3, background:"transparent", color:T.muted, cursor:"pointer" }}>
-                        초기화
-                      </button>
-                    )}
-                  </div>
-                  {/* 직접 입력 */}
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <input type="number" min={50} max={400}
-                      value={styleConfig.paperW}
-                      onChange={e => setStyleConfig(s => ({ ...s, paperW: e.target.value }))}
-                      placeholder="W"
-                      style={{ width:56, padding:"6px 8px", fontSize:12, fontFamily:T.mono,
-                        border:`1px solid ${T.border}`, borderRadius:3,
-                        background:T.bg, color:T.ink, textAlign:"center" }} />
-                    <span style={{ fontSize:11, color:T.muted }}>×</span>
-                    <input type="number" min={50} max={600}
-                      value={styleConfig.paperH}
-                      onChange={e => setStyleConfig(s => ({ ...s, paperH: e.target.value }))}
-                      placeholder="H"
-                      style={{ width:56, padding:"6px 8px", fontSize:12, fontFamily:T.mono,
-                        border:`1px solid ${T.border}`, borderRadius:3,
-                        background:T.bg, color:T.ink, textAlign:"center" }} />
-                    <span style={{ fontSize:11, color:T.muted }}>mm</span>
-                    {(styleConfig.paperW || styleConfig.paperH) && (
-                      <span style={{ fontSize:10, color:T.muted, fontFamily:T.mono }}>
-                        (DB: {pkg?.f?.w}×{pkg?.f?.h})
-                      </span>
-                    )}
-                  </div>
-                </div>
-
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:600,
                     color:T.ink, marginBottom:6 }}>
