@@ -1537,9 +1537,8 @@ export default function App() {
     paperH: '',               // 판형 높이 override (mm), 빈값=DB 사용
   });
 
-  // ── 유효 면주 텍스트 — rhAuto=true이면 제목에서 자동 추출 ──────
+  // ── 유효 면주 텍스트 ───────────────────────────────────────────
   function effectiveRH() {
-    if (styleConfig.rhAuto) return (fields.제목 || '').trim();
     return (fields.면주 || '').trim();
   }
 
