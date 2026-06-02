@@ -3953,6 +3953,32 @@ export default function App() {
       return;
     }
 
+    // ── 판형 크기 조정 인터셉터 ─────────────────────────────────
+    const paperDir = detectPaperSizeRequest(userMsg);
+    if (paperDir) {
+      const currW = parseFloat(styleConfig.paperW) || p.f.w;
+      const currH = parseFloat(styleConfig.paperH) || p.f.h;
+      const idx = PAPER_SIZES.findIndex(([w, h]) => Math.abs(w - currW) <= 6 && Math.abs(h - currH) <= 12);
+      const base = idx !== -1 ? idx : PAPER_SIZES.findIndex(([w]) => w >= currW);
+      const targetIdx = paperDir === 'larger'
+        ? Math.min((base !== -1 ? base : 3) + 1, PAPER_SIZES.length - 1)
+        : Math.max((base !== -1 ? base : 3) - 1, 0);
+      const [newW, newH] = PAPER_SIZES[targetIdx];
+      setStyleConfig(s => ({ ...s, paperW: String(newW), paperH: String(newH) }));
+      setRefineInput('');
+      setRefineHistory(h => [...h,
+        { role: 'user', content: userMsg },
+        {
+          role: 'assistant',
+          chatContent: `판형을 ${newW}×${newH}mm로 조정했습니다 (현재 ${currW}×${currH}mm). [조판 스타일 생성하기]를 눌러 적용하세요.`,
+          content: '',
+          changes: `- 판형: ${currW}×${currH}mm → ${newW}×${newH}mm`,
+          codeChanged: false,
+        }
+      ]);
+      return;
+    }
+
     // ── 인텐트 분류 (API 호출 전) ────────────────────────────────
     const intent = classifyChatIntent(userMsg); // "question" | "modify" | "ambiguous"
 
