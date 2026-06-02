@@ -533,7 +533,7 @@ async function generateRationale(p) {
     const res = await fetch('/anthropic/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 180,
+        model: 'claude-sonnet-4-6', max_tokens: 180,
         system: '편집 디자이너. 한국어 3문장. 핵심만.',
         messages: [{ role: 'user', content: prompt }]
       })
@@ -1240,11 +1240,20 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   ].join('\n');
 }
 
-function buildBodyContent({ title, subtitle, body, footnote, runningHead, preserveImpFnMarkers = false }) {
+function buildBodyContent({ title, subtitle, body, footnote, runningHead, preserveImpFnMarkers = false, alignTitle = '', alignSubtitle = '' }) {
   // preserveImpFnMarkers=true: body에 이미 \ImpFN{N} 삽입된 경우 (side-note fallback)
   // → \footnote 주입 없이 \ImpFN{N}만 보존하며 escape
   const { fnMap, superMap } = preserveImpFnMarkers ? { fnMap: {}, superMap: {} } : parseFootnoteMap(footnote);
   const esc = t => escapeLatex(sanitizeUnicodeForLatex(t || ''));
+  // 정렬 문자열 → LaTeX 명령
+  const toAlignCmd = (s) => {
+    if (!s) return '';
+    if (s.includes('중앙')) return '\\centering';
+    if (s.includes('우측') || s.includes('오른')) return '\\raggedleft';
+    return ''; // 좌측 = 기본값
+  };
+  const titleAlignCmd    = toAlignCmd(alignTitle);
+  const subtitleAlignCmd = toAlignCmd(alignSubtitle || alignTitle); // 소제목은 별도 필드 없으면 제목과 동일
   const lines = [];
   lines.push('% ============================================================');
   lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
@@ -1260,14 +1269,14 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   const t = esc(title);
   if (t) {
     lines.push('\\Needspace{6\\baselineskip}');
-    lines.push(`{\\hone ${t}\\par}`);
+    lines.push(`{\\hone${titleAlignCmd ? `\n${titleAlignCmd}` : ''} ${t}\\par}`);
     lines.push('\\vspace{20pt}');
     lines.push('');
   }
   const st = esc(subtitle);
   if (st) {
     lines.push('\\Needspace{4\\baselineskip}');
-    lines.push(`{\\htwo ${st}\\par}`);
+    lines.push(`{\\htwo${subtitleAlignCmd ? `\n${subtitleAlignCmd}` : ''} ${st}\\par}`);
     lines.push('\\vspace{16pt}');
     lines.push('');
   }
@@ -1790,7 +1799,7 @@ export default function App() {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 200,
+          model: 'claude-sonnet-4-6', max_tokens: 200,
           system: sysPrompt,
           messages: [{ role: 'user', content: '텍스트 분석→JSON: ' + schema + '\n텍스트:' + text.slice(0, 200) }]
         })
@@ -1879,7 +1888,7 @@ export default function App() {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey }, signal: ctrl.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 450,
+          model: 'claude-sonnet-4-6', max_tokens: 450,
           system: 'Return ONLY valid JSON, no other text.',
           messages: [{ role: 'user', content:
             '편집 디자인 레퍼런스 중 최적 1개를 선택하라.\n' +
@@ -2488,24 +2497,29 @@ export default function App() {
       // ── 다단 글자 크기 자동 보정 (v24) ──────────────────────────────
       // 단 수 많을수록 컬럼 폭 좁아지므로 글자 크기 축소 필요
       // 2~3단: -0.5pt / 4단 이상: -1pt (최소 7pt 유지)
-      let adjustedBodySize = bodySize;
-      if (numCols >= 4)      adjustedBodySize = Math.max(bodySize - 1.0, 7);
-      else if (numCols >= 2) adjustedBodySize = Math.max(bodySize - 0.5, 7);
+      let adjustedBodySize = Math.max(7, bodySize); // 0pt 방어: memoir/fontspec은 0pt 불허
+      if (numCols >= 4)      adjustedBodySize = Math.max(adjustedBodySize - 1.0, 7);
+      else if (numCols >= 2) adjustedBodySize = Math.max(adjustedBodySize - 0.5, 7);
       // 주석/각주 글자 크기는 본문 이하로 강제 (rule 1)
       if (fnSize > adjustedBodySize) {
         fnSize = adjustedBodySize;
         fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
       }
       // 보정된 글자 크기 기반 행간 재계산
-      const adjustedBodyLead = adjustedBodySize !== bodySize
+      const adjustedBodyLead = Math.max(11, adjustedBodySize !== bodySize
         ? Math.round(adjustedBodySize * TYPO_BASE.leadingRatio(adjustedBodySize) * 10) / 10
-        : bodyLead;
+        : bodyLead);
       setDisplayBodySize(adjustedBodySize);
 
-      // ── 위계별 글자 크기 + 행간 계산 (v25) ──────────────────────────
-      // 본문 크기 기반으로 제목/소제목/섹션 크기를 JS에서 결정
-      // → AI가 임의로 행간을 좁히는 문제 방지
+      // ── 위계별 글자 크기 + 행간 계산 ──────────────────────────────
+      // 본문 크기 기반 기본값 + DB subheading 값이 있으면 h2/h3에 반영
       const hs = TYPO_BASE.headingSizes(adjustedBodySize);
+      // DB의 subheading 크기가 유효하면 h2/h3에 반영 (h1은 항상 비례 계산)
+      const dbSh = parseFloat(p.subheading);
+      if (dbSh > 0 && dbSh < 40 && p.subheading !== '-') {
+        hs.h2 = dbSh;
+        hs.h3 = Math.round(dbSh * 0.85 * 2) / 2; // h3 = h2 × 0.85
+      }
       const h1Lead = Math.round(hs.h1 * TYPO_BASE.leadingRatio(hs.h1) * 10) / 10;
       const h2Lead = Math.round(hs.h2 * TYPO_BASE.leadingRatio(hs.h2) * 10) / 10;
       const h3Lead = Math.round(hs.h3 * TYPO_BASE.leadingRatio(hs.h3) * 10) / 10;
@@ -2530,7 +2544,7 @@ export default function App() {
       const _fh = (styleConfig.paperH && parseFloat(styleConfig.paperH) > 0) ? parseFloat(styleConfig.paperH) : p.f.h;
 
       const preamble = [
-        '\\documentclass[' + p.b.크기 + 'pt]{memoir}',
+        '\\documentclass[' + Math.max(9, p.b.크기) + 'pt]{memoir}',
         '% memoir stock size — must match paperwidth/height or Overleaf defaults to letter',
         '\\setstocksize{' + _fh + 'mm}{' + _fw + 'mm}',
         '\\settrimmedsize{\\stockheight}{\\stockwidth}{*}',
@@ -2890,29 +2904,29 @@ export default function App() {
           //   \raisebox{-\height}로 텍스트를 아래 방향으로 전환 (레퍼런스=텍스트 상단)
           // center는 \raisebox{-0.5\height}로 중앙 정렬
           // bottom은 위로 확장이 올바른 방향 — raisebox 없음
+          // Y 좌표 및 rotatebox 내부 makebox 정렬
+          // \rotatebox{90} = CCW 90°: put 기준점에서 텍스트가 위로 뻗음
+          // → 텍스트 시작점(top)이 put 기준: makebox[l] — Y = ph - topMm
+          // → 텍스트 끝점(bottom)이 put 기준: makebox[r] — Y = botMm
+          // → 텍스트 중앙이 put 기준: makebox[c] — Y = ph/2
+          // \smash 제거: picture 컨텍스트에서 \smash + \raisebox 조합이 불안정
           const vertY  = resolved === 'top'    ? (ph - topMm).toFixed(1)
                        : resolved === 'bottom' ? botMm.toFixed(1)
                        :                         (ph / 2).toFixed(1);
-          const align  = resolved === 'top'    ? 'r'
-                       : resolved === 'bottom' ? 'l'
-                       :                         'c';
+          // rotatebox 내부 makebox 정렬 (l=텍스트 시작→위, r=텍스트 끝→아래, c=중앙)
+          const innerAlign = resolved === 'top' ? 'l' : resolved === 'bottom' ? 'r' : 'c';
 
-          // 위치별 raisebox 래핑
-          const _rhBase = `\\rotatebox{90}{\\imprintrunninghead}`;
-          const _rhWrap = resolved === 'top'    ? `\\raisebox{-\\height}{${_rhBase}}`
-                        : resolved === 'center' ? `\\raisebox{-0.5\\height}{${_rhBase}}`
-                        :                          _rhBase;
-
-          const _rhContent = `\\runningheadf${_rhWrap}`;
+          // 최종 콘텐츠: \rotatebox 안에 \makebox → \raisebox 불필요
+          const _rhContent = `\\rotatebox{90}{\\makebox[0pt][${innerAlign}]{\\runningheadf\\imprintrunninghead}}`;
           return [
             `% ── 수직 면주 배치 (eso-pic 절대좌표, 위치: ${resolved}) ──────`,
             `\\RequirePackage{eso-pic}`,
             `\\AddToShipoutPictureBG{%`,
             `  \\setlength{\\unitlength}{1mm}%`,
             `  \\ifodd\\c@page`,
-            `    \\put(${oddX},${vertY}){\\smash{\\makebox[0pt][${align}]{${_rhContent}}}}%`,
+            `    \\put(${oddX},${vertY}){${_rhContent}}%`,
             `  \\else`,
-            `    \\put(${evenX},${vertY}){\\smash{\\makebox[0pt][${align}]{${_rhContent}}}}%`,
+            `    \\put(${evenX},${vertY}){${_rhContent}}%`,
             `  \\fi}`,
           ].join('\n');
         })(),
@@ -2963,7 +2977,7 @@ export default function App() {
       setStyCode(styContent);
 
       const preambleSummary =
-        `\\documentclass[${p.b.크기}pt]{memoir} % ${p.f.w}×${p.f.h}mm\n` +
+        `\\documentclass[${Math.max(9, p.b.크기)}pt]{memoir} % ${p.f.w}×${p.f.h}mm\n` +
         `\\geometry{top=${corrections.margins.상}mm,bottom=${corrections.margins.하}mm,inner=${corrections.margins.안}mm,outer=${corrections.margins.밖}mm,includehead=true}\n` +
         `% Fonts:${mainFont}(main) ${sansFont}(sans)${isMixedLayout?' mixed:heading=sans body=serif':''}\n` +
         `% \\hone \\htwo \\hthree defined (heading cmds — see HEADING TYPOGRAPHY below)\n` +
@@ -2972,7 +2986,7 @@ export default function App() {
       // main.tex 헤더 (\usepackage{imprint-style} 사용)
       // _fw/_fh: 판형 override 반영 (styleConfig.paperW/H 우선, 없으면 DB 값)
       const mainTexHeader =
-        `\\documentclass[${p.b.크기}pt]{memoir}\n` +
+        `\\documentclass[${Math.max(9, p.b.크기)}pt]{memoir}\n` +
         `\\setstocksize{${_fh}mm}{${_fw}mm}\n` +
         `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}\n` +
         `\\usepackage{kotex}\n` +
@@ -3081,7 +3095,7 @@ export default function App() {
           headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
           signal: ctrl.signal,
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: 16000,
             system: 'You are a XeLaTeX code generator. Output ONLY raw LaTeX code. No explanations, no comments in prose, no "Hmm", no "Actually", no thinking out loud. Your entire response must start with \\begin{document} and end with \\end{document}. Any character before \\begin{document} is forbidden.',
             messages: [{ role: 'user', content: latexPrompt }],
@@ -3169,6 +3183,8 @@ export default function App() {
             footnote: _willSideNote ? '' : (fields.각주 || ''),
             runningHead: effectiveRH(),
             preserveImpFnMarkers: _willSideNote,
+            alignTitle: chosen.p.align_title || '',
+            alignSubtitle: chosen.p.align_title || '',
           });
         } else {
           finalBodyContent = buildMissingBodyPlaceholder();
@@ -3530,7 +3546,7 @@ export default function App() {
           `% Compile: xelatex -interaction=nonstopmode main.tex`,
           `% Engine: XeLaTeX 필수 (\\XeTeXlinebreaklocale 사용) — pdfLaTeX 미지원`,
           ``,
-          `\\documentclass[${p.b.크기}pt]{memoir}`,
+          `\\documentclass[${Math.max(9, p.b.크기)}pt]{memoir}`,
           `\\setstocksize{${p.f.h}mm}{${p.f.w}mm}`,
           `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}`,
           ``,
@@ -3662,7 +3678,7 @@ export default function App() {
           id: _logId,
           created_at: new Date().toISOString(),
           version: 'SelectPaper_v30',
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
 
           input: {
             title: fields.제목 || '',
@@ -3938,6 +3954,14 @@ export default function App() {
 
   async function refine() {
     if (!refineInput.trim() || !latex) return;
+    if (!apiKey) {
+      setRefineHistory(h => [...h,
+        { role: 'user', content: refineInput.trim() },
+        { role: 'assistant', chatContent: 'API 키가 없습니다. 우상단 "API 연결" 버튼에서 키를 입력해주세요.', content: '', changes: '', codeChanged: false, isError: true },
+      ]);
+      setRefineInput('');
+      return;
+    }
     const p = DB[selIdx];
     const userMsg = refineInput.trim();
 
@@ -4021,7 +4045,7 @@ export default function App() {
     // ── 레퍼런스 컨텍스트 (question 모드에서 답변 근거로 사용) ──────
     const refCtx = p ? [
       `선택된 레퍼런스: "${p.title || p.t}" (${p.designer || '-'})`,
-      `장르: ${(p.g||[]).join(', ')}`,
+      `장르: ${Array.isArray(p.g) ? p.g.join(', ') : (p.g || '-')}`,
       `판형: ${p.f.w}×${p.f.h}mm`,
       `레이아웃: ${p.layout_type || '-'}`,
       p.why_font   ? `서체 이유: ${p.why_font}` : null,
@@ -4095,22 +4119,33 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       { role: 'user', content: userMsg },
     ];
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     try {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 12000,
+          model: 'claude-sonnet-4-6',
+          max_tokens: 6000,
           stream: true,
           system: systemPrompt,
           messages,
         }),
       });
 
+      console.log('[refine] fetch response:', res.status, res.statusText);
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(`API 오류 ${res.status}: ${errData.error?.message || res.statusText}`);
+        let errMsg = res.statusText;
+        try {
+          const errData = await res.json();
+          errMsg = errData.error?.message || errMsg;
+        } catch {
+          try { errMsg = await res.text(); } catch { /* 무시 */ }
+        }
+        console.error('[refine] API error:', res.status, errMsg);
+        throw new Error(`API 오류 ${res.status}: ${errMsg}`);
       }
 
       // ── SSE 스트리밍 파싱 ─────────────────────────────────────
@@ -4134,12 +4169,20 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
           try {
             const ev = JSON.parse(data);
             if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+            if (ev.type === 'error') throw new Error(ev.error?.message || 'API 스트림 오류');
               fullText += ev.delta.text;
-              // 실시간 표시: <latex_update> 태그 이후는 숨김
-              const displayText = fullText.replace(/<latex_update>[\s\S]*/i, '').trim();
-              setStreamingText(displayText);
+              // 실시간 표시: <latex_update> 태그 이전 자연어만 표시
+              // <latex_update> 감지되면 "LaTeX 수정 중…" 상태 표시
+              const hasLatexTag = /<latex_update>/i.test(fullText);
+              const hasClosingTag = /<\/latex_update>/i.test(fullText);
+              const naturalPart = fullText.replace(/<latex_update>[\s\S]*/i, '').trim();
+              if (hasLatexTag && !hasClosingTag) {
+                setStreamingText(naturalPart ? naturalPart + '\n\nLaTeX 수정 중…' : 'LaTeX 수정 중…');
+              } else {
+                setStreamingText(naturalPart);
+              }
             }
-          } catch { /* JSON 파싱 오류 무시 */ }
+          } catch (e) { console.error('[refine] JSON.parse failed:', e, 'raw line:', line); } // JSON 파싱 오류 무시 */ }
         }
       }
 
@@ -4241,6 +4284,17 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
 
     } catch (e) {
       setStreamingText('');
+      if (e.name === 'AbortError') {
+        setRefineHistory(h => [...h, {
+          role: 'assistant',
+          chatContent: '요청 시간이 초과됩니다. 다시 시도해주세요.',
+          content: '',
+          changes: '',
+          codeChanged: false,
+          isError: true,
+        }]);
+        return;
+      }
       setRefineHistory(h => [...h, {
         role: 'assistant',
         chatContent: `오류가 발생했습니다: ${e.message}`,
@@ -4251,6 +4305,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       }]);
     } finally {
       setRefineLoading(false);
+      clearTimeout(timeoutId);
     }
   }
 
