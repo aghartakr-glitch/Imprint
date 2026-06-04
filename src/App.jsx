@@ -661,6 +661,24 @@ function escapeLatex(s) {
     .replace(/\^/g, '\\textasciicircum{}');
 }
 
+// ── 주석 마커 검증: noteLatex의 \textsuperscript{N} ↔ bodyLatex의 \ImpFN{N} 쌍 확인 ──
+function extractNoteNumbers(noteLatex) {
+  return [...String(noteLatex || '').matchAll(/\\textsuperscript\{(\d+)\}/g)]
+    .map(m => m[1]);
+}
+
+function validateNoteMarkers(bodyLatex, noteLatex) {
+  const nums = extractNoteNumbers(noteLatex);
+  const missing = nums.filter(n =>
+    !new RegExp(`\\\\ImpFN\\{${n}\\}`).test(bodyLatex)
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `본문 마커 누락: ${missing.map(n => `\\ImpFN{${n}}`).join(', ')} — 주석에 번호가 있지만 본문에 대응 마커가 없습니다`
+    );
+  }
+}
+
 // escapeLatex + sanitize를 적용하되 \ImpFN{N} 마커는 손대지 않음
 // side-note fallback 경로: processedBody에 이미 \ImpFN{N}이 있으므로 escape 제외
 function escapeLatexPreservingImpFN(s) {
@@ -979,6 +997,8 @@ function calcVariableGrid(vg, textW, colGap) {
   const bodyG  = Math.max(1, (vg && Number(vg.body))  || 1);
   const noteG  = Math.max(0, (vg && Number(vg.note))  || 1);
   const gap    = typeof colGap === 'number' ? colGap : 8;
+  // 스펙 단순화 공식(spec: bodyW=(textW-gap)*body/total)과 다름 — 타이포그래피 모듈 그리드 방식이 정확함
+  // unitW × N + gap × (N−1) = textW → unitW = (textW − gap × (N−1)) / N
   // unitW: 단위 1개 너비
   const unitW = (textW - gap * (totalG - 1)) / totalG;
   // spanW: n개 단위가 차지하는 너비 (내부 gap 포함), 소수점 1자리 반올림
@@ -3370,6 +3390,15 @@ export default function App() {
                   const gapStr = `${actualGap.toFixed(1)}mm`;
                   const wrappedBody = wrapBodyTextColumns(bodyLatex.trim(), btc);
 
+                  // ── 주석 마커 사전 검증 ───────────────────────────────────────────
+                  try {
+                    validateNoteMarkers(wrappedBody || '', allNotesLatex || '');
+                  } catch (markerErr) {
+                    pushLog('latex', '주석 마커 검증', 'error', markerErr.message);
+                    setErr(markerErr.message);
+                    return;
+                  }
+
                   // top → adjustwidth + 주석 블록 위에 배치
                   // bottom → \ImpFN{N}을 \footnote{내용}으로 인라인 치환 (per-page 각주, 미주 방지)
                   if (notePosition === 'top') {
@@ -3710,6 +3739,16 @@ export default function App() {
           files: {
             mainTexHash: simpleHash(finalMainTex || ''),
             styHash: simpleHash(finalStyContent || ''),
+          },
+          layoutConfigSnapshot: {
+            mode: styleConfig.columnMode || 'auto',
+            totalGridUnits: styleConfig.variableGrid?.total || 1,
+            bodyGridUnits: styleConfig.variableGrid?.body || 1,
+            noteGridUnits: styleConfig.variableGrid?.note || 0,
+            bodyTextColumns: styleConfig.bodyTextColumns || 1,
+            noteTextColumns: styleConfig.noteTextColumns || 1,
+            notePosition: styleConfig.notePosition || 'right',
+            columnGapMm: styleConfig.columnGapMm || 8,
           },
         }]);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
@@ -5328,29 +5367,79 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 {/* 최종 파일 */}
                 {tab === "final" && latex && (
                   <div style={{ padding:"20px 24px" }}>
-                    {/* 검증 체크리스트 */}
+                    {/* 검증 패널 */}
                     {(() => {
-                      const { errors: ve, warnings: vw } = validateLatexExport({ mainTex: latex, sty: styCode || '' });
-                      const checks = [
-                        { ok: true, label: 'main.tex 생성됨' },
-                        { ok: !!styCode, label: 'imprint-style.sty 생성됨' },
-                        { ok: true, label: 'XeLaTeX 필수 (% !TeX program = XeLaTeX 포함)' },
-                        { ok: (latex.match(/\\documentclass/g)||[]).length === 1, label: '\\documentclass 1회' },
-                        { ok: (latex.match(/\\begin\{document\}/g)||[]).length === 1, label: '\\begin{document} 1회' },
-                        { ok: (latex.match(/\\end\{document\}/g)||[]).length === 1, label: '\\end{document} 1회' },
-                        { ok: vw.length === 0, label: vw.length > 0 ? '⚠ document body에 본문 내용 없음' : 'document body에 본문 있음', warn: vw.length > 0 },
+                      const { errors: ve, warnings: vw } = validateLatexExport({ mainTex: latex, sty: styCode || '', layoutConfig: styleConfig });
+                      const hasParacol = /\\begin\{paracol\}/.test(latex);
+                      const switchCount = (latex.match(/\\switchcolumn(?!\*)/g) || []).length;
+                      const noteNums = [...latex.matchAll(/\\textsuperscript\{(\d+)\}/g)].map(m => m[1]);
+                      const allMarkersPresent = noteNums.length === 0 || noteNums.every(n => latex.includes(`\\ImpFN{${n}}`));
+                      const hasPageNum = /\\thepage/.test(latex) || /\\pagestyle\{imprint\}/.test(latex);
+                      const hasRevLog = revisionLog.length > 0;
+
+                      const groups = [
+                        {
+                          label: '파일 구조',
+                          items: [
+                            { ok: true, label: 'main.tex 생성됨' },
+                            { ok: !!styCode, label: 'imprint-style.sty 생성됨' },
+                            { ok: (latex.match(/\\documentclass/g)||[]).length === 1, label: '\\documentclass 1회' },
+                            { ok: (latex.match(/\\begin\{document\}/g)||[]).length === 1, label: '\\begin{document} 1회' },
+                            { ok: (latex.match(/\\end\{document\}/g)||[]).length === 1, label: '\\end{document} 1회' },
+                          ]
+                        },
+                        {
+                          label: '레이아웃',
+                          items: [
+                            { ok: !hasParacol || switchCount >= 1, label: hasParacol ? `가변 그리드 적용됨 (switchcolumn ${switchCount}회)` : '전체 폭 레이아웃' },
+                            { ok: allMarkersPresent, warn: noteNums.length > 0 && !allMarkersPresent, label: noteNums.length === 0 ? '주석 없음' : allMarkersPresent ? `주석 마커 연결됨 (${noteNums.length}개)` : `주석 마커 불일치 (${noteNums.length}개)` },
+                            { ok: hasPageNum, label: '쪽번호 생성됨' },
+                          ]
+                        },
+                        {
+                          label: '검증 오류',
+                          items: ve.length === 0
+                            ? [{ ok: true, label: '오류 없음' }]
+                            : ve.map(e => ({ ok: false, label: e })),
+                        },
+                        {
+                          label: '경고',
+                          items: vw.length === 0
+                            ? [{ ok: true, label: '경고 없음' }]
+                            : vw.map(w => ({ ok: true, warn: true, label: w })),
+                        },
+                        {
+                          label: '수정 기록',
+                          items: [
+                            { ok: hasRevLog, label: hasRevLog ? `수정 기록 저장됨 (Revision ${revisionLog.length - 1}까지)` : '수정 기록 없음 (스타일 재생성 후 생성됨)' },
+                          ]
+                        },
                       ];
+
                       return (
-                        <div style={{ marginBottom:14, padding:"10px 14px", background:T.bg,
+                        <div style={{ marginBottom:14, padding:"12px 16px", background:T.bg,
                           borderRadius:3, border:`1px solid ${T.border}`, fontSize:12 }}>
-                          <div style={{ fontWeight:600, color:T.ink, marginBottom:6 }}>LaTeX 검증</div>
-                          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px" }}>
-                            {checks.map((c,i) => (
-                              <span key={i} style={{ color: c.warn ? '#888' : c.ok ? '#444' : '#888' }}>
-                                {c.warn ? '⚠' : c.ok ? '✓' : '✗'} {c.label}
-                              </span>
-                            ))}
-                          </div>
+                          <div style={{ fontWeight:600, color:T.ink, marginBottom:10 }}>Export 검증</div>
+                          {groups.map(g => (
+                            <div key={g.label} style={{ marginBottom:8 }}>
+                              <div style={{ fontSize:10, fontWeight:700, color:T.muted,
+                                textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:4 }}>
+                                {g.label}
+                              </div>
+                              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                                {g.items.map((c, i) => (
+                                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:6 }}>
+                                    <span style={{ flexShrink:0, color: c.warn ? '#b45309' : c.ok ? '#166534' : '#991b1b', fontWeight:700 }}>
+                                      {c.warn ? '⚠' : c.ok ? '✅' : '❌'}
+                                    </span>
+                                    <span style={{ color: c.warn ? '#b45309' : c.ok ? T.ink : '#991b1b', lineHeight:1.5 }}>
+                                      {c.label}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       );
                     })()}
