@@ -3502,7 +3502,7 @@ reasons는변경항목만.`;
                   // top → adjustwidth + 주석 블록 위에 배치
                   // bottom → \ImpFN{N}을 \footnote{내용}으로 인라인 치환 (per-page 각주, 미주 방지)
                   if (notePosition === 'top') {
-                    finalBodyContent = gridComment + '\n' + wrapVariableLayout({
+                    finalBodyContent = _headPrefix + gridComment + '\n' + wrapVariableLayout({
                       bodyLatex: wrappedBody,
                       noteLatex: allNotesLatex,
                       grid,
