@@ -1667,6 +1667,7 @@ export default function App() {
   }
 
   const [hint, setHint] = useState("");
+  const [selectionMode, setSelectionMode] = useState('auto'); // 'auto'|'genre-forced'|'ref-locked'
 
   const [lockedStyleId, setLockedStyleId] = useState(null); // lockedStyle 모드에서 고정
   const [runMeta, setRunMeta] = useState(null); // 마지막 실행 메타 로그
@@ -2107,7 +2108,7 @@ export default function App() {
 
       // testMode: 기능 비활성화 (useState 제거됨 → 'normal' 고정)
       const testMode = 'normal';
-      const isLocked = testMode === 'lockedStyle' && lockedStyleId !== null;
+      const isLocked = (testMode === 'lockedStyle' || selectionMode === 'ref-locked') && lockedStyleId !== null;
       const isLengthCompare = testMode === 'lengthCompare' && lockedStyleId !== null;
       const forceIdx = (isLocked || isLengthCompare) ? lockedStyleId : null;
 
@@ -4696,18 +4697,75 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             ) : (
               <>
                 <div>
+                  {/* 스타일 선택 모드 */}
                   <label style={{ display:"block", fontSize:11, fontWeight:600,
                     color:T.ink, marginBottom:6 }}>
-                    장르 / 출판 형태 직접 지정
+                    스타일 선택 모드
                   </label>
-                  <select value={hint} onChange={e => setHint(e.target.value)}
-                    style={{ width:"100%", padding:"9px 11px", fontSize:13,
+                  <div style={{ display:"flex", gap:4, marginBottom:10 }}>
+                    {[
+                      ['auto',         '자동 추천'],
+                      ['genre-forced', '장르 강제'],
+                      ['ref-locked',   '레퍼런스 고정'],
+                    ].map(([mode, label]) => {
+                      const active = selectionMode === mode;
+                      return (
+                        <button key={mode} onClick={() => {
+                          setSelectionMode(mode);
+                          if (mode === 'auto') { setHint(''); setLockedStyleId(null); }
+                          if (mode === 'genre-forced') { setLockedStyleId(null); }
+                          if (mode === 'ref-locked') { setHint(''); }
+                        }} style={{
+                          flex:1, padding:"5px 8px", fontSize:11, fontWeight: active ? 600 : 400,
+                          border:`1px solid ${active ? T.ink : T.border}`,
+                          borderRadius:3,
+                          background: active ? T.ink : 'transparent',
+                          color: active ? '#fff' : T.ink,
+                          cursor:"pointer",
+                        }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 장르 강제 모드: 장르 드롭다운 표시 */}
+                  {selectionMode === 'genre-forced' && (
+                    <div style={{ marginBottom:8 }}>
+                      <label style={{ display:"block", fontSize:11, fontWeight:600,
+                        color:T.ink, marginBottom:6 }}>
+                        장르 / 출판 형태 직접 지정
+                      </label>
+                      <select value={hint} onChange={e => setHint(e.target.value)}
+                        style={{ width:"100%", padding:"9px 11px", fontSize:13,
+                          border:`1px solid ${T.border}`, borderRadius:3,
+                          background:T.bg, color:T.ink, cursor:"pointer" }}>
+                        {GENRE_OPTIONS.map(g => (
+                          <option key={g} value={g}>{g || "— 장르를 선택하세요 —"}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* 레퍼런스 고정 모드: 현재 고정된 레퍼런스 표시 */}
+                  {selectionMode === 'ref-locked' && (
+                    <div style={{ padding:"8px 10px", background:T.bg,
                       border:`1px solid ${T.border}`, borderRadius:3,
-                      background:T.bg, color:T.ink, cursor:"pointer" }}>
-                    {GENRE_OPTIONS.map(g => (
-                      <option key={g} value={g}>{g || "— AI가 자동 판단 —"}</option>
-                    ))}
-                  </select>
+                      fontSize:12, color:T.ink, marginBottom:8 }}>
+                      {lockedStyleId !== null
+                        ? <>
+                            <span style={{ fontWeight:600 }}>{DB[lockedStyleId]?.t?.slice(0,30)}</span>
+                            <span style={{ color:T.muted }}> 고정됨</span>
+                            <button onClick={() => { setLockedStyleId(null); setSelectionMode('auto'); }}
+                              style={{ marginLeft:8, fontSize:10, color:T.muted, background:"none",
+                                border:"none", cursor:"pointer", textDecoration:"underline" }}>
+                              해제
+                            </button>
+                          </>
+                        : <span style={{ color:T.muted }}>스타일 생성 후 "이 스타일 고정" 버튼으로 고정하세요</span>
+                      }
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display:"block", fontSize:11, fontWeight:600,
@@ -5087,6 +5145,16 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         <span style={{ color:T.ink }}> · {pkg.designer}</span>}
                     </div>
                   </div>
+                  <button onClick={() => {
+                    setLockedStyleId(selIdx);
+                    setSelectionMode('ref-locked');
+                  }} style={{ padding:"6px 12px", fontSize:11, fontWeight:500, whiteSpace:"nowrap",
+                    border:`1px solid ${T.border}`, borderRadius:3,
+                    background: selectionMode === 'ref-locked' && lockedStyleId === selIdx ? T.ink : T.surface,
+                    color: selectionMode === 'ref-locked' && lockedStyleId === selIdx ? '#fff' : T.ink,
+                    cursor:"pointer", transition:"all 150ms", flexShrink:0 }}>
+                    {selectionMode === 'ref-locked' && lockedStyleId === selIdx ? '고정됨 ✓' : '이 스타일 고정'}
+                  </button>
                   <button onClick={copy}
                     style={{ padding:"6px 12px", fontSize:11, fontWeight:500, whiteSpace:"nowrap",
                       border:`1px solid ${T.border}`, borderRadius:3,
@@ -5172,6 +5240,34 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       );
       return (
         <div style={{ display:"flex", flexDirection:"column" }}>
+
+          {/* 0. 선택 모드 배지 */}
+          {(() => {
+            const modeLabel = selectionMode === 'genre-forced'
+              ? `장르 강제${hint ? ` (${hint})` : ''}`
+              : selectionMode === 'ref-locked'
+              ? `레퍼런스 고정${lockedStyleId !== null ? ` — ${DB[lockedStyleId]?.t?.slice(0,20)}` : ''}`
+              : '자동 추천';
+            const modeColor = selectionMode === 'auto'
+              ? { bg:'#f0f4ff', text:'#3b5bdb' }
+              : selectionMode === 'genre-forced'
+              ? { bg:'#fff4e6', text:'#d9480f' }
+              : { bg:'#f3fce4', text:'#2f9e44' };
+            return (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:9, fontWeight:700, color:T.muted,
+                  textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6 }}>
+                  선택 모드
+                </div>
+                <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:12,
+                  fontSize:12, fontWeight:600,
+                  background: modeColor.bg, color: modeColor.text }}>
+                  {modeLabel}
+                </span>
+              </div>
+            );
+          })()}
+          <Divider />
 
           {/* 1. 레퍼런스 선정 */}
           {sr.reference_reason && <>
