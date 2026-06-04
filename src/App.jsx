@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 
 // Imprint 1.0.0
 // 편집 디자인 타이포그래피 스타일 패키지 선택기
@@ -1752,7 +1752,7 @@ export default function App() {
   // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
 
   // Evidence Map: latex 생성 완료 시 백그라운드 실행
-  React.useEffect(() => {
+  useEffect(() => {
     if (!latex || !apiKey) return;
     const bodyText = (fields['본문'] || '').trim();
     if (!bodyText || !structuredReason) return;
@@ -1867,6 +1867,69 @@ export default function App() {
     return { bs, bl, bt, margins, layoutHint };
   }
 
+  // ── AI 타이포그래피 미세조정: 텍스트 의미 기반 수치 조정 ──────────────
+  // 레퍼런스 기본값 ±1.5pt(크기) / ±3pt(행간) / ±5mm(여백) 범위 내 조정
+  async function adjustTypography(text, profile, p, structReason, _apiKey) {
+    if (!_apiKey) return null;
+    try {
+      const base = {
+        bodySize:     p.b.크기,
+        bodyLeading:  p.b.행간,
+        tracking:     p.b.자간 || 0,
+        marginTop:    p.m.상,
+        marginBottom: p.m.하,
+        marginInner:  p.m.안,
+        marginOuter:  p.m.밖,
+      };
+      const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.
+텍스트(앞200자):"${text.slice(0,200)}"
+성격: 장르/주제:${profile?.topic||'-'} 문체:${profile?.textForm||'-'} 톤:${profile?.tone||'-'}
+디자인개념:${(structReason?.design_concept||[]).join(',')} 과제:${(structReason?.design_task||[]).join(',')}
+기본수치: 크기${base.bodySize}pt 행간${base.bodyLeading}pt 자간${base.tracking} 여백${base.marginTop}/${base.marginBottom}/${base.marginInner}/${base.marginOuter}mm
+한도:크기±1.5pt(최소7pt),행간±3pt(최소크기×1.3),자간±20,여백±5mm. 불필요하면기본값유지.
+반환JSON:{"bodySize":<n>,"bodyLeading":<n>,"tracking":<n>,"marginTop":<n>,"marginBottom":<n>,"marginInner":<n>,"marginOuter":<n>,"reasons":[{"variable":"<항목>","base":"<기본>","adjusted":"<조정>","reason":"<이유10자>"}]}
+reasons는변경항목만.`;
+
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch('/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 400,
+          system: 'Return ONLY valid JSON, no other text.',
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      clearTimeout(tid);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const raw = (data.content || []).map(x => x.text || '').join('');
+      const parsed = JSON.parse(raw.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
+
+      // 안전 범위 클램핑
+      const clamp = (v, b, d, mn) => Math.max(mn, Math.min(b + d, Math.max(b - d, Number(v) || b)));
+      const adjSize = clamp(parsed.bodySize, base.bodySize, 1.5, 7);
+      return {
+        bs: adjSize,
+        bl: clamp(parsed.bodyLeading, base.bodyLeading, 3, Math.round(adjSize * 1.3 * 10) / 10),
+        bt: clamp(parsed.tracking, base.tracking, 20, -100),
+        margins: {
+          상: clamp(parsed.marginTop,    base.marginTop,    5, 8),
+          하: clamp(parsed.marginBottom, base.marginBottom, 5, 8),
+          안: clamp(parsed.marginInner,  base.marginInner,  5, 8),
+          밖: clamp(parsed.marginOuter,  base.marginOuter,  5, 8),
+        },
+        reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
+      };
+    } catch (e) {
+      console.warn('[adjustTypography] 실패:', e.message);
+      return null;
+    }
+  }
+
   // ── Semantic Rerank v29: 혼합 후보 구성 + 탈락 이유 반환 ──────────
   // 후보 구성: 장르top4 + 출판형태top3 + 내용유사도top3 + 레이아웃다양성2
   // 탈락 이유 3개 반환 (item 7, 8)
@@ -1908,12 +1971,8 @@ export default function App() {
       }).join('\n');
 
       const genreConstraint = hint
-        ? `[장르 강제] 사용자가 "${hint}" 장르를 명시적으로 선택했음. 반드시 해당 장르 항목을 선택해야 함.\n`
-          + `우선순위: ①"${hint}" 장르 필수 ②본문내용 적합성 ③레이아웃 차별성 ④서체/여백 의도.\n`
-          + `⚠️ 다른 장르 항목을 선택하면 사용자 의도에 반함. [PREV-USED-PENALIZE] 항목은 피할 것.\n`
-        : `[자동 모드] 텍스트의 전반적 문체·구조·주제를 종합적으로 판단하라.\n`
-          + `⚠️ 단일 키워드로 장르 판단 금지. 서사/논증 텍스트에 잡지형 다단 금지.\n`
-          + `후보 중 다양한 레이아웃/장르에서 가장 잘 맞는 것을 선택하라.\n`;
+        ? `[장르강제:"${hint}"] 반드시 해당 장르 선택. 우선순위:①장르일치 ②내용적합 ③레이아웃다양성. [PREV-USED-PENALIZE] 항목 회피.\n`
+        : `[자동모드] 텍스트 문체·구조·주제 종합 판단. 단일 키워드로 장르 판단 금지. 서사/논증 텍스트에 잡지형 다단 금지.\n`;
 
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 25000);
@@ -1926,7 +1985,7 @@ export default function App() {
             '편집 디자인 레퍼런스 중 최적 1개를 선택하라.\n' +
             genreConstraint + '\n' +
             (profileStr ? '텍스트 프로파일: ' + profileStr + '\n\n' : '') +
-            '입력 텍스트(앞 300자): "' + text.slice(0,300) + '"\n\n' +
+            '입력 텍스트(앞 200자): "' + text.slice(0,200) + '"\n\n' +
             '후보([idx]제목|장르|출판형태|요약|특징):\n' + candidates + '\n\n' +
             '반환 JSON:\n{"i":<index>,"reference_reason":"<20자>","content_match":"<20자>","layout_reason":"<20자>","typography_reason":"<20자>","margin_reason":"<20자>","design_concept":["<개념1>","<개념2>"],"design_task":["<과제1>","<과제2>"],"visual_element":["<요소1>","<요소2>","<요소3>"],"rejected":[{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"}],"prevUsedForced":<true|false>,"prevUsedReason":"<이유 or empty>"}\n\ndesign_concept: 본문 정서/분위기 2~4개 (예: ["조용한 회고","기억의 회복"])\ndesign_task: 조판 과제 2~4개 (예: ["읽기 속도 낮추기","정적 분위기 만들기"])\nvisual_element: 실제 수치/스타일 3~6개 (예: ["120×192mm 판형","8.5pt/16pt","넓은 하단 여백"])'
           }]
@@ -2142,6 +2201,22 @@ export default function App() {
       // ── Stage 3: 텍스트 양 보정 ─────────────────────────────────
       const corrections = applyTextCorrections(chosen.p, matchText, fields.각주);
       setAppliedMargins(corrections.margins);
+
+      // ── Stage 3c: AI 타이포그래피 미세조정 ───────────────────────
+      pushLog('typo', '타이포 조정', 'running', 'AI 기반 수치 미세조정 중');
+      const typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
+      if (typoAdj) {
+        corrections.bs = typoAdj.bs;
+        corrections.bl = typoAdj.bl;
+        corrections.bt = typoAdj.bt;
+        corrections.margins = typoAdj.margins;
+        setAppliedMargins(typoAdj.margins);
+        if (typoAdj.reasons?.length > 0) {
+          setStructuredReason(prev => prev ? { ...prev, variable_reasons: typoAdj.reasons } : { variable_reasons: typoAdj.reasons });
+        }
+      }
+      pushLog('typo', '타이포 조정', 'done',
+        typoAdj?.reasons?.length > 0 ? `${typoAdj.reasons.length}개 수치 조정` : '기본값 유지');
 
       // ── Stage 3b: alignment 확정 ────────────────────────────────
       // isLengthCompare: 이전 runMeta의 alignment 고정
@@ -3698,7 +3773,7 @@ export default function App() {
 
         // LaTeX 구조 검증 (sanitize 후 검증)
         const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent, layoutConfig: styleConfig });
-        console.log('[각주DEBUG] validation errors=', _valErrors, '| \\footnote inTex=', finalMainTex.includes('\\footnote{'));
+
         if (_valErrors.length > 0) {
           setErr('LaTeX 검증 오류:\n' + _valErrors.join('\n'));
           pushLog('latex', 'LaTeX 생성', 'error', '검증 실패');
@@ -4043,7 +4118,11 @@ export default function App() {
     if (!text || !_apiKey) return;
     setEvidenceMap([]); // 로딩 시작 (빈 배열 = 생성 중)
     try {
-      const prompt = `아래 입력 텍스트와 선택된 디자인 개념/과제를 보고,\n본문에서 중요한 근거 문장/표현 3~5개를 추출하여 각각이 어떤 조판 결정과 연결되는지 분석하라.\n\n입력 텍스트(앞 400자):\n"${text.slice(0, 400)}"\n\n선택된 디자인 개념: ${(structReason?.design_concept || []).join(', ')}\n선택된 디자인 과제: ${(structReason?.design_task || []).join(', ')}\n\n반환 JSON (배열):\n[\n  {\n    "textSpan": "<본문에서 추출한 실제 표현 (10~25자)>",\n    "interpretation": "<그 표현의 디자인적 해석 (10~20자)>",\n    "designConcept": "<관련 디자인 개념 (10자 이내)>",\n    "designTask": "<관련 디자인 과제 (15자 이내)>",\n    "affectedVariables": ["<조판 변수1>", "<조판 변수2>"]\n  }\n]\n반드시 유효한 JSON 배열만 반환하라. 다른 텍스트 없음.`;
+      const prompt = `입력 텍스트에서 조판 결정의 근거가 된 표현 3~5개를 추출하여 각각의 디자인 연결을 분석하라.
+텍스트(앞300자):"${text.slice(0,300)}"
+디자인개념:${(structReason?.design_concept||[]).join(',')} 과제:${(structReason?.design_task||[]).join(',')}
+반환JSON배열:[{"textSpan":"<표현10~20자>","interpretation":"<해석10자>","designConcept":"<개념>","designTask":"<과제>","affectedVariables":["<변수1>","<변수2>"]}]
+유효한JSON배열만반환.`;
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 30000);
       const res = await fetch('/anthropic/v1/messages', {
@@ -4239,7 +4318,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
     ];
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
     try {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
@@ -4254,7 +4333,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         }),
       });
 
-      console.log('[refine] fetch response:', res.status, res.statusText);
+
       if (!res.ok) {
         let errMsg = res.statusText;
         try {
@@ -4263,7 +4342,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         } catch {
           try { errMsg = await res.text(); } catch { /* 무시 */ }
         }
-        console.error('[refine] API error:', res.status, errMsg);
+
         throw new Error(`API 오류 ${res.status}: ${errMsg}`);
       }
 
@@ -4301,7 +4380,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 setStreamingText(naturalPart);
               }
             }
-          } catch (e) { console.error('[refine] JSON.parse failed:', e, 'raw line:', line); } // JSON 파싱 오류 무시 */ }
+          } catch { /* JSON 파싱 오류 무시 */ }
         }
       }
 
@@ -5313,6 +5392,25 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 <li key={i} style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{v}</li>
               ))}
             </ul>
+            <Divider />
+          </>}
+
+          {/* 5b. 수치 조정 근거 */}
+          {sr.variable_reasons?.length > 0 && <>
+            <SectionLabel text="수치 조정 근거" />
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
+              {sr.variable_reasons.map((r, i) => (
+                <div key={i} style={{ fontSize:12, lineHeight:1.65 }}>
+                  <span style={{ fontFamily:T.mono, fontSize:11,
+                    background:T.tagBg, padding:'1px 6px', borderRadius:2,
+                    color:T.ink, marginRight:6 }}>
+                    {r.base} → {r.adjusted}
+                  </span>
+                  <span style={{ fontWeight:600, color:T.ink }}>{r.variable}</span>
+                  {r.reason && <span style={{ color:T.muted }}> — {r.reason}</span>}
+                </div>
+              ))}
+            </div>
             <Divider />
           </>}
 
