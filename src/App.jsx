@@ -3677,7 +3677,7 @@ reasons는변경항목만.`;
               const wrappedBody2 = wrapBodyTextColumns(bodyLatex, btc);
               // bottom 모드: noteLatex 블록 전달 금지 (inline \footnote 사용)
               const _noteLatex2 = notePosition === 'bottom' ? '' : noteLatex;
-              finalBodyContent = gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex: _noteLatex2, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
+              finalBodyContent = _headPrefix + gridComment + '\n' + wrapVariableLayout({ bodyLatex: wrappedBody2, noteLatex: _noteLatex2, grid, notePosition, textW, bodyColumnStart: bcs, bottomNoteFlowColumns: bnfc, bottomNoteWidth: bnw });
             }
           }
         }
