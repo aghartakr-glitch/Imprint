@@ -3424,6 +3424,9 @@ reasons는변경항목만.`;
               bodyLatex = finalBodyContent.slice(0, idx).trim();
               noteLatex = finalBodyContent.slice(idx + PARACOL_MARKER.length).trim();
             }
+            // 제목/소제목을 paracol 바깥으로 분리 — 본문 첫 줄과 주석 첫 줄 정렬
+            const { prefix: _headPrefix, body: _bodyOnly } = extractHeadingPrefix(bodyLatex);
+            if (_headPrefix) bodyLatex = _bodyOnly;
 
             const ntc = Number(styleConfig.noteTextColumns || 1); // 주석 내부 단 수
             const bcs = Number(styleConfig.bodyColumnStart || 1); // 본문 시작 열
