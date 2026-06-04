@@ -3547,7 +3547,7 @@ reasons는변경항목만.`;
                           `\\par\\endgroup`,
                         ].filter(Boolean).join('\n')
                       : bottomBody.trim();
-                    finalBodyContent = gridComment + '\n' + bottomLayout;
+                    finalBodyContent = _headPrefix + gridComment + '\n' + bottomLayout;
                     // bottom 처리 완료 — plines 조립 생략
                   } else {
 
