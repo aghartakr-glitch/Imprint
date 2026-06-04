@@ -1038,6 +1038,27 @@ function stripWrappingQuotes(s) {
   return s;
 }
 
+// 제목/소제목 블록을 paracol 바깥으로 분리
+// side-note 레이아웃에서 본문 첫 줄과 주석 첫 줄이 맞도록
+// 제목·소제목은 paracol 앞에 배치해야 정렬이 맞음
+function extractHeadingPrefix(bodyLatex) {
+  let prefix = '';
+  let rest = bodyLatex;
+  // \renewcommand{\imprintrunninghead}{...}
+  const rhRe = /^(\\renewcommand\{\\imprintrunninghead\}\{[^}]*\}\n+)/;
+  const rhM = rest.match(rhRe);
+  if (rhM) { prefix += rhM[1]; rest = rest.slice(rhM[1].length); }
+  // 제목: \Needspace{...}\n{\hone ...}\n\vspace{...}\n
+  const h1Re = /^(\\Needspace\{[^}]+\}\n\{\\hone[\s\S]*?\\par\}\n\\vspace\{[^}]+\}\n*)/;
+  const h1M = rest.match(h1Re);
+  if (h1M) { prefix += h1M[1] + '\n'; rest = rest.slice(h1M[1].length); }
+  // 소제목: \Needspace{...}\n{\htwo ...}\n\vspace{...}\n
+  const h2Re = /^(\\Needspace\{[^}]+\}\n\{\\htwo[\s\S]*?\\par\}\n\\vspace\{[^}]+\}\n*)/;
+  const h2M = rest.match(h2Re);
+  if (h2M) { prefix += h2M[1] + '\n'; rest = rest.slice(h2M[1].length); }
+  return { prefix, body: rest };
+}
+
 // 가변단 레이아웃 조립 (JS 보장 — Claude 의존 없음)
 // notePosition: 'right'(기본) | 'left' | 'top' | 'bottom'
 // hasNote=false → paracol 2열 (1열=본문, 2열=빈 주석 영역)  ← adjustwidth 제거 (memoir에서 \footnote 충돌)
