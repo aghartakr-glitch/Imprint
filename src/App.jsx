@@ -1708,7 +1708,9 @@ export default function App() {
   const [matching, setMatching] = useState(false);
   const [rationale, setRationale] = useState('');
   const [chosenReason, setChosenReason] = useState('');
-  const [structuredReason, setStructuredReason] = useState(null); // {reference_reason, content_match, layout_reason, typography_reason, margin_reason}
+  const [structuredReason, setStructuredReason] = useState(null); // {reference_reason, content_match, layout_reason, design_concept[], design_task[], visual_element[], ...}
+  const [evidenceMap, setEvidenceMap] = useState(null);
+  const [revisionLog, setRevisionLog] = useState([]); // Revision Trajectory [{id, type, ...}]
   const [textProfile, setTextProfile] = useState(null); // analyzeText 결과
   const [selIdx, setSelIdx] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -1727,6 +1729,15 @@ export default function App() {
   const [currentLog, setCurrentLog] = useState(null);     // 현재 generationLog
   const [allLogs, setAllLogs] = useState([]);              // 세션 내 전체 로그 (인메모리)
   // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
+
+  // Evidence Map: latex 생성 완료 시 백그라운드 실행
+  React.useEffect(() => {
+    if (!latex || !apiKey) return;
+    const bodyText = (fields['본문'] || '').trim();
+    if (!bodyText || !structuredReason) return;
+    buildEvidenceMap(bodyText, structuredReason, apiKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latex]);
 
   // ── 1차 후보 스코어링 v29: 분리 점수 계산 ──────────────────────────
   // contentScore / genreScore / pubTypeScore / layoutScore 분리
@@ -1888,7 +1899,7 @@ export default function App() {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey }, signal: ctrl.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 450,
+          model: 'claude-sonnet-4-6', max_tokens: 700,
           system: 'Return ONLY valid JSON, no other text.',
           messages: [{ role: 'user', content:
             '편집 디자인 레퍼런스 중 최적 1개를 선택하라.\n' +
@@ -1896,7 +1907,7 @@ export default function App() {
             (profileStr ? '텍스트 프로파일: ' + profileStr + '\n\n' : '') +
             '입력 텍스트(앞 300자): "' + text.slice(0,300) + '"\n\n' +
             '후보([idx]제목|장르|출판형태|요약|특징):\n' + candidates + '\n\n' +
-            '반환 JSON:\n{"i":<index>,"reference_reason":"<20자>","content_match":"<20자>","layout_reason":"<20자>","typography_reason":"<20자>","margin_reason":"<20자>","rejected":[{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"}],"prevUsedForced":<true|false>,"prevUsedReason":"<이유 or empty>"}'
+            '반환 JSON:\n{"i":<index>,"reference_reason":"<20자>","content_match":"<20자>","layout_reason":"<20자>","typography_reason":"<20자>","margin_reason":"<20자>","design_concept":["<개념1>","<개념2>"],"design_task":["<과제1>","<과제2>"],"visual_element":["<요소1>","<요소2>","<요소3>"],"rejected":[{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"}],"prevUsedForced":<true|false>,"prevUsedReason":"<이유 or empty>"}\n\ndesign_concept: 본문 정서/분위기 2~4개 (예: ["조용한 회고","기억의 회복"])\ndesign_task: 조판 과제 2~4개 (예: ["읽기 속도 낮추기","정적 분위기 만들기"])\nvisual_element: 실제 수치/스타일 3~6개 (예: ["120×192mm 판형","8.5pt/16pt","넓은 하단 여백"])'
           }]
         })
       });
@@ -1931,6 +1942,8 @@ export default function App() {
     setStructuredReason(null);
     setTextProfile(null);
     setRunLog([]);
+    setRevisionLog([]);
+    setEvidenceMap(null);
     setDisplayBodySize(null);
     const h = hint;
 
@@ -3666,6 +3679,39 @@ export default function App() {
         }
         setStyCode(finalStyContent);
         setLatex(finalMainTex);
+        // ── Revision Trajectory: rev_000 초기 생성 기록 ──────────────────
+        const _cmdMap0 = extractLatexCommandMap(finalMainTex || '');
+        setRevisionLog([{
+          id: 'rev_000',
+          type: 'initial_generation',
+          timestamp: new Date().toISOString(),
+          userInput: {
+            title: fields['제목'] || '',
+            bodyHash: simpleHash(fields['본문'] || ''),
+            styleInstruction: h || '자동',
+          },
+          selectedReference: {
+            title: DB[rerank?.i ?? selIdx]?.t || '',
+            designer: DB[rerank?.i ?? selIdx]?.designer || '',
+            reason: structReason?.reference_reason || '',
+          },
+          interpretation: {
+            designConcept: structReason?.design_concept || [],
+            designTask: structReason?.design_task || [],
+            visualElement: structReason?.visual_element || [],
+          },
+          variables: {
+            bodySize: _cmdMap0.bodySize ? `${_cmdMap0.bodySize}pt` : '',
+            leading: _cmdMap0.bodyLeading ? `${_cmdMap0.bodyLeading}pt` : '',
+            marginBottom: _cmdMap0.marginBottom ? `${_cmdMap0.marginBottom}mm` : '',
+            marginTop: _cmdMap0.marginTop ? `${_cmdMap0.marginTop}mm` : '',
+            letterSpace: _cmdMap0.letterSpace || '',
+          },
+          files: {
+            mainTexHash: simpleHash(finalMainTex || ''),
+            styHash: simpleHash(finalStyContent || ''),
+          },
+        }]);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
@@ -3952,6 +3998,37 @@ export default function App() {
     return map;
   }
 
+  // ── Evidence Map 백그라운드 생성 ─────────────────────────────────
+  async function buildEvidenceMap(text, structReason, _apiKey) {
+    if (!text || !_apiKey) return;
+    setEvidenceMap([]); // 로딩 시작 (빈 배열 = 생성 중)
+    try {
+      const prompt = `아래 입력 텍스트와 선택된 디자인 개념/과제를 보고,\n본문에서 중요한 근거 문장/표현 3~5개를 추출하여 각각이 어떤 조판 결정과 연결되는지 분석하라.\n\n입력 텍스트(앞 400자):\n"${text.slice(0, 400)}"\n\n선택된 디자인 개념: ${(structReason?.design_concept || []).join(', ')}\n선택된 디자인 과제: ${(structReason?.design_task || []).join(', ')}\n\n반환 JSON (배열):\n[\n  {\n    "textSpan": "<본문에서 추출한 실제 표현 (10~25자)>",\n    "interpretation": "<그 표현의 디자인적 해석 (10~20자)>",\n    "designConcept": "<관련 디자인 개념 (10자 이내)>",\n    "designTask": "<관련 디자인 과제 (15자 이내)>",\n    "affectedVariables": ["<조판 변수1>", "<조판 변수2>"]\n  }\n]\n반드시 유효한 JSON 배열만 반환하라. 다른 텍스트 없음.`;
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 30000);
+      const res = await fetch('/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 800,
+          system: 'Return ONLY valid JSON array, no other text.',
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      clearTimeout(tid);
+      if (!res.ok) { setEvidenceMap([]); return; }
+      const data = await res.json();
+      const raw = (data.content || []).map(x => x.text || '').join('');
+      const parsed = JSON.parse(raw.replace(/^[^\[]*/, '').replace(/[^\]]*$/, ''));
+      setEvidenceMap(Array.isArray(parsed) ? parsed : []);
+    } catch (e) {
+      console.warn('[EvidenceMap] 생성 실패:', e.message);
+      setEvidenceMap([]);
+    }
+  }
+
   async function refine() {
     if (!refineInput.trim() || !latex) return;
     if (!apiKey) {
@@ -4062,13 +4139,15 @@ export default function App() {
 4. 수정을 원한다면 어떻게 요청하면 되는지 짧게 안내해도 된다.`
       : intent === 'modify'
       ? `출력 규칙 (수정 모드):
-1. 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
-2. 반드시 <latex_update> 태그 안에 수정된 전체 LaTeX(.sty 내용)를 출력한다.
-   — 수정이 완전히 불가한 경우에만 생략하고 이유를 설명한다.
-3. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX만 넣는다.
-4. LaTeX 출력 후 아래 형식으로 변경 내역을 보고한다:
-   【변경】항목명: 이전값 → 이후값
-   【유지】판형(${p.f.w}×${p.f.h}mm), 본문 정렬(${runMeta?.selectedAlignment||'justified'}), 선택 레퍼런스
+1. 먼저 아래 형식으로 디자인 해석을 출력한다:
+<interpretation>
+designConcept: <개념 한 줄>
+designTask: <과제 한 줄>
+visualElement: <수치/스타일 한 줄>
+</interpretation>
+2. 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
+3. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
+4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX만 넣는다.
 5. 핵심 스타일(판형·정렬·레퍼런스)은 절대 변경하지 않는다.`
       : /* ambiguous */
       `출력 규칙:
@@ -4193,6 +4272,24 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       const latexMatch = fullText.match(/<latex_update>([\s\S]+?)<\/latex_update>/i);
       const chatContent = fullText.replace(/<latex_update>[\s\S]+?<\/latex_update>/i, '').trim();
 
+      // ── interpretation 태그 파싱 ─────────────────────────────────────
+      const interpretMatch = fullText.match(/<interpretation>([\s\S]+?)<\/interpretation>/i);
+      let parsedInterp = null;
+      if (interpretMatch) {
+        const interpText = interpretMatch[1];
+        const getField = (key) => {
+          const m = interpText.match(new RegExp(`${key}:\\s*(.+)`));
+          return m ? m[1].trim() : '';
+        };
+        parsedInterp = {
+          designConcept: getField('designConcept'),
+          designTask: getField('designTask'),
+          visualElement: getField('visualElement'),
+        };
+      }
+      // interpretation 제거한 자연어 부분
+      const chatContentClean = chatContent.replace(/<interpretation>[\s\S]*?<\/interpretation>/i, '').trim();
+
       let directDiffs = [];
       let finalLatex = latex;
       let codeChanged = false;
@@ -4239,7 +4336,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       let changesSummary = directDiffs.join('\n');
 
       // Claude가 【변경】 형식으로 보고한 경우 추가 수집
-      const claudeChanges = [...chatContent.matchAll(/【변경】([^\n]+)/g)].map(m => `- ${m[1].trim()}`);
+      const claudeChanges = [...chatContentClean.matchAll(/【변경】([^\n]+)/g)].map(m => `- ${m[1].trim()}`);
       if (claudeChanges.length > 0 && directDiffs.length === 0) {
         changesSummary = claudeChanges.join('\n');
       }
@@ -4253,12 +4350,45 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
 
       setRefineHistory(h => [...h, {
         role: 'assistant',
-        chatContent,             // 자연어 응답 (다음 턴 히스토리에도 사용)
-        content: chatContent,
+        chatContent: chatContentClean,   // 자연어 응답 (다음 턴 히스토리에도 사용)
+        content: chatContentClean,
         changes: changesSummary, // 수치 변경 요약
         codeChanged,
         intent,                  // question | modify | ambiguous
       }]);
+
+      // ── revisionLog에 user_refinement 기록 ───────────────────────────
+      if (codeChanged) {
+        const _cmdMapAfter = extractLatexCommandMap(finalLatex);
+        const cmLabel = {
+          bodySize:'본문 크기', bodyLeading:'본문 행간',
+          noteSize:'주석 크기', noteLeading:'주석 행간',
+          footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
+          letterSpace:'자간',
+          marginTop:'상단 여백', marginBottom:'하단 여백',
+          marginInner:'내측 여백', marginOuter:'외측 여백',
+        };
+        const patchItems = Object.keys(cmLabel)
+          .filter(k => _cmdMapAfter[k] !== undefined && cmdMap[k] !== _cmdMapAfter[k])
+          .map(k => ({
+            target: cmLabel[k],
+            before: cmdMap[k] !== undefined ? String(cmdMap[k]) : '(없음)',
+            after: String(_cmdMapAfter[k]),
+            reason: '',
+          }));
+        setRevisionLog(prev => {
+          const newId = `rev_${String(prev.length).padStart(3, '0')}`;
+          return [...prev, {
+            id: newId,
+            type: 'user_refinement',
+            timestamp: new Date().toISOString(),
+            userRequest: userMsg,
+            systemInterpretation: parsedInterp || {},
+            patch: patchItems,
+            userDecision: 'accepted',
+          }];
+        });
+      }
 
       // ── 로그 업데이트 ─────────────────────────────────────────
       setCurrentLog(prev => {
@@ -4968,6 +5098,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 padding:"0 24px", background:T.surface, flexShrink:0 }}>
                 {[
                   ["intent","작업 의도"],
+                  ["revlog","수정 기록"],
                   ["final","최종 파일"],
                   ["sty","스타일 파일"],
                 ].map(([key,label]) => (
@@ -4986,61 +5117,211 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
 
                 {/* 작업 의도 */}
                 {tab === "intent" && (
+  <div style={{ padding:"20px 24px" }}>
+    {!structuredReason && !pkg ? (
+      <div style={{ color:T.muted, fontSize:13 }}>스타일을 먼저 생성하세요.</div>
+    ) : (() => {
+      const sr = structuredReason || {};
+      const SectionLabel = ({ text }) => (
+        <div style={{ fontSize:9, fontWeight:700, color:T.muted,
+          textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6 }}>
+          {text}
+        </div>
+      );
+      const Divider = () => (
+        <div style={{ borderTop:`1px solid ${T.border}`, margin:"14px 0" }} />
+      );
+      return (
+        <div style={{ display:"flex", flexDirection:"column" }}>
+
+          {/* 1. 레퍼런스 선정 */}
+          {sr.reference_reason && <>
+            <SectionLabel text="레퍼런스 선정" />
+            <div style={{ fontSize:13, color:T.ink, lineHeight:1.75, paddingBottom:14 }}>{sr.reference_reason}</div>
+            <Divider />
+          </>}
+
+          {/* 2. 내용 매칭 */}
+          {sr.content_match && <>
+            <SectionLabel text="내용 매칭" />
+            <div style={{ fontSize:13, color:T.ink, lineHeight:1.75, paddingBottom:14 }}>{sr.content_match}</div>
+            <Divider />
+          </>}
+
+          {/* 3. Design Concept */}
+          {sr.design_concept?.length > 0 && <>
+            <SectionLabel text="Design Concept / 디자인 개념" />
+            <ul style={{ margin:"0 0 14px 0", padding:"0 0 0 16px" }}>
+              {sr.design_concept.map((c, i) => (
+                <li key={i} style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{c}</li>
+              ))}
+            </ul>
+            <Divider />
+          </>}
+
+          {/* 4. Design Task */}
+          {sr.design_task?.length > 0 && <>
+            <SectionLabel text="Design Task / 디자인 과제" />
+            <ul style={{ margin:"0 0 14px 0", padding:"0 0 0 16px" }}>
+              {sr.design_task.map((t, i) => (
+                <li key={i} style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{t}</li>
+              ))}
+            </ul>
+            <Divider />
+          </>}
+
+          {/* 5. Visual Element */}
+          {sr.visual_element?.length > 0 && <>
+            <SectionLabel text="Visual Element / 시각 요소" />
+            <ul style={{ margin:"0 0 14px 0", padding:"0 0 0 16px" }}>
+              {sr.visual_element.map((v, i) => (
+                <li key={i} style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{v}</li>
+              ))}
+            </ul>
+            <Divider />
+          </>}
+
+          {/* 6. Evidence Map */}
+          {evidenceMap && evidenceMap.length > 0 && <>
+            <SectionLabel text="본문 근거 / Evidence Map" />
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+              {evidenceMap.map((e, i) => (
+                <div key={i} style={{ background:T.bg, border:`1px solid ${T.border}`,
+                  borderRadius:3, padding:"10px 12px" }}>
+                  <div style={{ fontSize:12, color:T.ink, fontStyle:"italic",
+                    marginBottom:4 }}>"{e.textSpan}"</div>
+                  <div style={{ fontSize:11, color:T.muted, lineHeight:1.6 }}>
+                    → {e.interpretation} → {e.affectedVariables?.join(' / ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Divider />
+          </>}
+          {evidenceMap === null && latex && (
+            <div style={{ marginBottom:14 }}>
+              <SectionLabel text="본문 근거 / Evidence Map" />
+              <div style={{ fontSize:12, color:T.muted }}>분석 중…</div>
+            </div>
+          )}
+
+          {/* 7. DB 기반 설계 근거 */}
+          {[
+            ["서체 선택", pkg?.why_font],
+            ["여백 설계", pkg?.why_margin],
+            ["자간 설정", pkg?.why_tracking],
+          ].filter(([,v]) => v).map(([label, value], i, arr) => (
+            <div key={label}>
+              <SectionLabel text={label} />
+              <div style={{ fontSize:13, color:T.ink, lineHeight:1.75,
+                paddingBottom: i < arr.length - 1 ? 14 : 0 }}>{value}</div>
+              {i < arr.length - 1 && <Divider />}
+            </div>
+          ))}
+
+          {/* 탈락 패키지 */}
+          {sr.rejected?.length > 0 && (
+            <div style={{ paddingTop:14, marginTop:4, borderTop:`1px solid ${T.border}` }}>
+              <SectionLabel text="검토 후 제외" />
+              {sr.rejected.map((r, i) => (
+                <div key={i} style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
+                  <span style={{ color:T.ink, fontWeight:600 }}>{DB[r.i]?.t?.slice(0,20)}</span>
+                  {" — "}{r.reason}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    })()}
+  </div>
+)}
+
+                {/* 수정 기록 탭 */}
+                {tab === "revlog" && (
                   <div style={{ padding:"20px 24px" }}>
-                    {(() => {
-                      const reason = structuredReason || (pkg ? {
-                        reference_reason: pkg.summary || null,
-                        content_match: null,
-                        layout_reason: pkg.c?.구성 ? `${pkg.c.구성} 레이아웃 — ${pkg.layout_type || ''}` : null,
-                        typography_reason: pkg.why_font || null,
-                        margin_reason: pkg.why_margin || null,
-                      } : null);
-                      return reason ? (
-                      <div style={{ display:"flex", flexDirection:"column" }}>
-                        {[
-                          ["레퍼런스 선정", reason.reference_reason],
-                          ["내용 매칭", reason.content_match],
-                          ["레이아웃 판단", reason.layout_reason],
-                          ["서체 선택", reason.typography_reason || pkg?.why_font],
-                          ["여백 설계", reason.margin_reason || pkg?.why_margin],
-                          ["자간 설정", pkg?.why_tracking],
-                        ].filter(([,v]) => v).map(([label, value], idx, arr) => (
-                          <div key={label} style={{
-                            padding:"14px 0",
-                            borderBottom: idx < arr.length - 1 ? `1px solid ${T.border}` : "none",
-                          }}>
-                            <div style={{
-                              fontSize:9, fontWeight:700, color:T.muted,
-                              textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6,
-                            }}>
-                              {label}
+                    {revisionLog.length === 0 ? (
+                      <div style={{ color:T.muted, fontSize:13 }}>스타일을 먼저 생성하세요.</div>
+                    ) : (
+                      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                        {revisionLog.map((rev, ri) => (
+                          <div key={rev.id} style={{ border:`1px solid ${T.border}`, borderRadius:4,
+                            padding:"14px 16px", background:T.bg }}>
+                            <div style={{ display:"flex", justifyContent:"space-between",
+                              alignItems:"flex-start", marginBottom:10 }}>
+                              <div>
+                                <span style={{ fontSize:11, fontWeight:700, color:T.ink }}>
+                                  Revision {ri}
+                                </span>
+                                <span style={{ fontSize:10, color:T.muted, marginLeft:8 }}>
+                                  {rev.type === 'initial_generation' ? '초기 생성' : '사용자 수정'}
+                                </span>
+                              </div>
+                              <span style={{ fontSize:10, color:T.muted }}>
+                                {rev.timestamp ? new Date(rev.timestamp).toLocaleTimeString('ko-KR') : ''}
+                              </span>
                             </div>
-                            <div style={{ fontSize:13, color:T.ink, lineHeight:1.75 }}>{value}</div>
+                            {rev.type === 'initial_generation' && (
+                              <div style={{ fontSize:12, lineHeight:1.7, color:T.ink }}>
+                                {rev.selectedReference?.title && (
+                                  <div><span style={{ color:T.muted }}>레퍼런스</span> {rev.selectedReference.title}</div>
+                                )}
+                                {rev.interpretation?.designConcept?.length > 0 && (
+                                  <div><span style={{ color:T.muted }}>개념</span> {rev.interpretation.designConcept.join(' / ')}</div>
+                                )}
+                                {rev.interpretation?.designTask?.length > 0 && (
+                                  <div><span style={{ color:T.muted }}>과제</span> {rev.interpretation.designTask.join(' / ')}</div>
+                                )}
+                                {rev.variables?.bodySize && (
+                                  <div><span style={{ color:T.muted }}>본문</span> {rev.variables.bodySize} / {rev.variables.leading} 행간</div>
+                                )}
+                              </div>
+                            )}
+                            {rev.type === 'user_refinement' && (
+                              <div style={{ fontSize:12, lineHeight:1.7 }}>
+                                {rev.userRequest && (
+                                  <div style={{ fontStyle:"italic", color:T.ink, marginBottom:6 }}>"{rev.userRequest}"</div>
+                                )}
+                                {rev.systemInterpretation?.designTask && (
+                                  <div style={{ color:T.muted, marginBottom:6 }}>해석: {rev.systemInterpretation.designTask}</div>
+                                )}
+                                {rev.patch?.map((p, pi) => (
+                                  <div key={pi} style={{ display:"flex", gap:6, alignItems:"center", marginBottom:3 }}>
+                                    <span style={{ color:T.muted, fontSize:11 }}>{p.target}</span>
+                                    <span style={{ color:'#c44', fontSize:11 }}>{p.before}</span>
+                                    <span style={{ color:T.muted, fontSize:11 }}>→</span>
+                                    <span style={{ color:'#2d7', fontSize:11 }}>{p.after}</span>
+                                  </div>
+                                ))}
+                                <div style={{ marginTop:6 }}>
+                                  <span style={{
+                                    fontSize:10, padding:"2px 8px", borderRadius:2,
+                                    background: rev.userDecision === 'accepted' ? '#e6f4ea' : '#f5f5f5',
+                                    color: rev.userDecision === 'accepted' ? '#2d7d46' : T.muted,
+                                  }}>
+                                    {rev.userDecision === 'accepted' ? '수락됨' : '검토 중'}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
-
-                        {/* 탈락 패키지 */}
-                        {structuredReason?.rejected?.length > 0 && (
-                          <div style={{ paddingTop:14, marginTop:4, borderTop:`1px solid ${T.border}` }}>
-                            <div style={{
-                              fontSize:9, fontWeight:700, color:T.muted,
-                              textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8,
-                            }}>
-                              검토 후 제외
-                            </div>
-                            {structuredReason.rejected.map((r, i) => (
-                              <div key={i} style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
-                                <span style={{ color:T.ink, fontWeight:600 }}>{DB[r.i]?.t?.slice(0,20)}</span>
-                                {" — "}{r.reason}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <button onClick={() => {
+                          const blob = new Blob([JSON.stringify(revisionLog, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `revision_log_${new Date().toISOString().slice(0,10)}.json`;
+                          document.body.appendChild(a); a.click();
+                          document.body.removeChild(a); URL.revokeObjectURL(url);
+                        }} style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
+                          border:`1px solid ${T.border}`, borderRadius:3,
+                          background:T.surface, color:T.ink, cursor:"pointer",
+                          alignSelf:"flex-start" }}>
+                          수정 기록 Export (JSON)
+                        </button>
                       </div>
-                      ) : (
-                        <div style={{ color:T.muted, fontSize:13 }}>스타일을 먼저 생성하세요.</div>
-                      );
-                    })()}
+                    )}
                   </div>
                 )}
 
