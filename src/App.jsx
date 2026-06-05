@@ -5493,21 +5493,30 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             <Divider />
           </>}
 
-          {/* 5b. 수치 조정 근거 */}
-          {sr.variable_reasons?.length > 0 && <>
-            <SectionLabel text="수치 조정 근거" />
-            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:14 }}>
-              {sr.variable_reasons.map((r, i) => (
-                <div key={i} style={{ fontSize:12, lineHeight:1.65 }}>
-                  <span style={{ fontFamily:T.mono, fontSize:11,
-                    background:T.tagBg, padding:'1px 6px', borderRadius:2,
-                    color:T.ink, marginRight:6 }}>
-                    {r.base} → {r.adjusted}
-                  </span>
-                  <span style={{ fontWeight:600, color:T.ink }}>{r.variable}</span>
-                  {r.reason && <span style={{ color:T.muted }}> — {r.reason}</span>}
+          {/* 5b. 레퍼런스 반영 내역 */}
+          {sr.style_diff && <>
+            <SectionLabel text="레퍼런스 반영 내역" />
+            <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:14 }}>
+              {/* 수정된 항목 */}
+              {sr.style_diff.modified?.map((r, i) => (
+                <div key={`m${i}`} style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:12, lineHeight:1.65 }}>
+                  <span style={{ flexShrink:0, color:'#d9480f', fontWeight:700, marginTop:1 }}>→</span>
+                  <div>
+                    <span style={{ fontWeight:600, color:T.ink }}>{r.label}</span>
+                    <span style={{ fontFamily:T.mono, fontSize:11, color:T.muted, marginLeft:6 }}>
+                      {r.ref} → {r.applied}
+                    </span>
+                    {r.reason && <span style={{ color:T.muted }}> — {r.reason}</span>}
+                  </div>
                 </div>
               ))}
+              {/* 유지된 항목 */}
+              {sr.style_diff.kept?.length > 0 && (
+                <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:12, lineHeight:1.65, marginTop: sr.style_diff.modified?.length > 0 ? 4 : 0 }}>
+                  <span style={{ flexShrink:0, color:'#2f9e44', fontWeight:700, marginTop:1 }}>✓</span>
+                  <span style={{ color:T.muted }}>유지: {sr.style_diff.kept.join(' · ')}</span>
+                </div>
+              )}
             </div>
             <Divider />
           </>}
