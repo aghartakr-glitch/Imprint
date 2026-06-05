@@ -2641,6 +2641,31 @@ reasons는변경항목만.`;
         : bodyLead);
       setDisplayBodySize(adjustedBodySize);
 
+      // ── Visual Element를 실제 적용값으로 업데이트 ───────────────
+      // semanticRerank의 AI 추측 텍스트 대신 실제 수치로 덮어씀
+      {
+        const _colDesc = (() => {
+          if (styleConfig.columnMode === 'variable') {
+            const vg = styleConfig.variableGrid || { total:5, body:4, note:1 };
+            return `가변 그리드 ${vg.total}열 (본문 ${vg.body}열 + 주석 ${vg.note}열)`;
+          }
+          if (styleConfig.columnMode === 'fixed') return `${styleConfig.fixedColumns || numCols}단 고정`;
+          return numCols > 1 ? `${numCols}단 자동` : '1단 본문';
+        })();
+        const _fontDesc = (bodyIsSerif ? '명조 계열' : '고딕 계열') + ` 본문 서체 (${mainFont})`;
+        const _alignDesc = alignResult.alignment === 'ragged' ? '좌측 정렬' : '양끝 정렬';
+        const _actualVisualElements = [
+          `${adjustedBodySize}pt 본문 / ${adjustedBodyLead}pt 행간`,
+          `${p.f.w}×${p.f.h}mm 판형`,
+          _colDesc,
+          _fontDesc,
+          `여백 상${corrections.margins.상}/하${corrections.margins.하}mm · 안${corrections.margins.안}/밖${corrections.margins.밖}mm`,
+          _alignDesc,
+          p.pn && p.pn !== '-' ? `쪽번호 ${p.pn}` : null,
+        ].filter(Boolean);
+        setStructuredReason(prev => prev ? { ...prev, visual_element: _actualVisualElements } : prev);
+      }
+
       // ── 위계별 글자 크기 + 행간 계산 ──────────────────────────────
       // 본문 크기 기반 기본값 + DB subheading 값이 있으면 h2/h3에 반영
       const hs = TYPO_BASE.headingSizes(adjustedBodySize);
