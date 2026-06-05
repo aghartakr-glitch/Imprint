@@ -2663,7 +2663,56 @@ reasons는변경항목만.`;
           _alignDesc,
           p.pn && p.pn !== '-' ? `쪽번호 ${p.pn}` : null,
         ].filter(Boolean);
-        setStructuredReason(prev => prev ? { ...prev, visual_element: _actualVisualElements } : prev);
+        // ── 레퍼런스 원본 vs 적용값 diff ───────────────────────────
+        const _ref = {
+          bodySize:   p.b.크기,
+          bodyLead:   p.b.행간,
+          tracking:   p.b.자간 || 0,
+          marginTop:  p.m.상,
+          marginBottom: p.m.하,
+          marginInner: p.m.안,
+          marginOuter: p.m.밖,
+        };
+        const _applied = {
+          bodySize:   adjustedBodySize,
+          bodyLead:   adjustedBodyLead,
+          tracking:   corrections.bt ?? _ref.tracking,
+          marginTop:  corrections.margins.상,
+          marginBottom: corrections.margins.하,
+          marginInner: corrections.margins.안,
+          marginOuter: corrections.margins.밖,
+        };
+        const _label = { bodySize:'본문 크기', bodyLead:'행간', tracking:'자간',
+          marginTop:'상단 여백', marginBottom:'하단 여백', marginInner:'내측 여백', marginOuter:'외측 여백' };
+        const _unit  = { bodySize:'pt', bodyLead:'pt', tracking:'', marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm' };
+        const _modified = [], _kept = [];
+        for (const k of Object.keys(_label)) {
+          const rVal = Number(_ref[k] ?? 0);
+          const aVal = Number(_applied[k] ?? 0);
+          if (Math.abs(rVal - aVal) > 0.05) {
+            // 수정된 항목 — typoAdj.reasons에서 이유 찾기
+            const reason = typoAdj?.reasons?.find(r => r.variable === _label[k])?.reason || '';
+            _modified.push({ label: _label[k], ref: `${rVal}${_unit[k]}`, applied: `${aVal}${_unit[k]}`, reason });
+          } else {
+            _kept.push(`${_label[k]} ${rVal}${_unit[k]}`);
+          }
+        }
+        // 레이아웃·서체는 레퍼런스에서 그대로 가져온 항목으로 처리
+        const _keptLayout = [
+          `판형 ${p.f.w}×${p.f.h}mm`,
+          `${bodyIsSerif ? '명조' : '고딕'} 계열 서체`,
+          p.pn && p.pn !== '-' ? `쪽번호 ${p.pn}` : null,
+          p.layout_type ? `레이아웃 ${p.layout_type}` : null,
+        ].filter(Boolean);
+
+        setStructuredReason(prev => prev ? {
+          ...prev,
+          visual_element: _actualVisualElements,
+          style_diff: {
+            kept: [..._keptLayout, ..._kept],
+            modified: _modified,
+          },
+        } : prev);
       }
 
       // ── 위계별 글자 크기 + 행간 계산 ──────────────────────────────
