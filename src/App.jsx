@@ -2057,6 +2057,7 @@ reasons는변경항목만.`;
     setExperimentFeedback('');
     setSatisfactionScore(null);
     setExperimentAnalysis(null);
+    setExperimentLoading(false);
     setDisplayBodySize(null);
     const h = hint;
 
