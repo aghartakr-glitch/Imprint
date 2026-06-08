@@ -1565,7 +1565,7 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
 export default function App() {
   const [step, setStep] = useState(0);
   const [fields, setFields] = useState({ 제목:"", 소제목:"", 본문:"", 면주:"", 각주:"" });
-  const [inputTab, setInputTab] = useState(0);
+  const [inputTab, setInputTab] = useState('text'); // 'text' | 'experiment'
 
   const [styleConfig, setStyleConfig] = useState({
     columnMode: 'auto',       // 'auto'|'fixed'|'variable'
