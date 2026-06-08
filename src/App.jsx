@@ -2048,6 +2048,9 @@ reasons는변경항목만.`;
     setRunLog([]);
     setRevisionLog([]);
     setEvidenceMap(null);
+    setExperimentFeedback('');
+    setSatisfactionScore(null);
+    setExperimentAnalysis(null);
     setDisplayBodySize(null);
     const h = hint;
 
