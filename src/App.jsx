@@ -37,9 +37,15 @@ function simpleHash(str = "") {
 const _LOG_STORE = { logs: [] };
 function saveGenerationLog(log) { _LOG_STORE.logs = [log, ..._LOG_STORE.logs].slice(0, 100); }
 function loadGenerationLogs() { return _LOG_STORE.logs; }
-const _EXPERIMENT_STORE = { experiments: [] };
+const _EXPERIMENT_STORE = (() => {
+  try {
+    const saved = localStorage.getItem('imprint_experiments');
+    return { experiments: saved ? JSON.parse(saved) : [] };
+  } catch { return { experiments: [] }; }
+})();
 function saveExperiment(exp) {
   _EXPERIMENT_STORE.experiments = [..._EXPERIMENT_STORE.experiments, exp];
+  try { localStorage.setItem('imprint_experiments', JSON.stringify(_EXPERIMENT_STORE.experiments)); } catch {}
 }
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
 // sendLogToGoogleSheet: ENABLE_GOOGLE_SHEET_LOGGING=false 상태에서 미사용
