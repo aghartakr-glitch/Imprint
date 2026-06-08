@@ -4802,7 +4802,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
           </div>
 
           <div style={{ flex:1, overflowY:"auto", padding:"18px 20px", display:"flex", flexDirection:"column", gap:14 }}>
-            {inputTab === 'text' ? (
+            {inputTab === 'text' && (
               <>
                 {[
                   { key:"제목", label:"제목", rows:2, placeholder:"출판물 제목" },
