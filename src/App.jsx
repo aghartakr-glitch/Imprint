@@ -5480,9 +5480,13 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 const csv = [headers.join(','), ...rows].join('\n');
                 const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url;
+                const a = document.createElement('a');
+                document.body.appendChild(a);
+                a.href = url;
                 a.download = `imprint_experiments_${Date.now()}.csv`;
-                a.click(); URL.revokeObjectURL(url);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
               }} style={{ flex:1, padding:'8px', fontSize:11, fontWeight:600,
                 border:`1px solid ${T.border}`, borderRadius:3,
                 background:T.surface, color:T.ink, cursor:'pointer' }}>
