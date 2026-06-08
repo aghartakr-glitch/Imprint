@@ -1934,7 +1934,8 @@ export default function App() {
         marginInner:  p.m.안,
         marginOuter:  p.m.밖,
       };
-      const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.
+      const _designRules = buildDesignRules();
+      const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.${_designRules ? `\n[사용자 디자인 규칙 — 이전 피드백 기반, 우선 반영]\n${_designRules}` : ''}
 텍스트(앞200자):"${text.slice(0,200)}"
 성격: 장르/주제:${profile?.topic||'-'} 문체:${profile?.textForm||'-'} 톤:${profile?.tone||'-'}
 디자인개념:${(structReason?.design_concept||[]).join(',')} 과제:${(structReason?.design_task||[]).join(',')}
