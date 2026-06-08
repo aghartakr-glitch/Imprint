@@ -5464,6 +5464,60 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             )}
           </div>
 
+          {/* CSV / MD 다운로드 */}
+          {loadExperiments().length > 0 && (
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => {
+                const exps = loadExperiments();
+                const headers = [
+                  'experiment_id','timestamp','system_intent','system_action',
+                  'user_correct_intent','satisfaction_score','match_rate',
+                  'difference','next_rule'
+                ];
+                const rows = exps.map(e =>
+                  headers.map(h => `"${String(e[h] ?? '').replace(/"/g, '""')}"`).join(',')
+                );
+                const csv = [headers.join(','), ...rows].join('\n');
+                const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `imprint_experiments_${Date.now()}.csv`;
+                a.click(); URL.revokeObjectURL(url);
+              }} style={{ flex:1, padding:'8px', fontSize:11, fontWeight:600,
+                border:`1px solid ${T.border}`, borderRadius:3,
+                background:T.surface, color:T.ink, cursor:'pointer' }}>
+                CSV 다운로드
+              </button>
+              <button onClick={() => {
+                const exps = loadExperiments();
+                const md = exps.map(e => `# Experiment Log: ${e.experiment_id}
+## Timestamp
+${e.timestamp}
+## System Intent
+${e.system_intent}
+## System Action
+${e.system_action}
+## User Feedback
+${e.user_correct_intent}
+## Satisfaction: ${e.satisfaction_score}/5
+## Match Rate: ${e.match_rate}%
+## Difference
+${e.difference}
+## Next Rule
+${e.next_rule}`).join('\n\n---\n\n');
+                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `imprint_experiments_${Date.now()}.md`;
+                a.click(); URL.revokeObjectURL(url);
+              }} style={{ flex:1, padding:'8px', fontSize:11, fontWeight:600,
+                border:`1px solid ${T.border}`, borderRadius:3,
+                background:T.surface, color:T.ink, cursor:'pointer' }}>
+                MD 다운로드
+              </button>
+            </div>
+          )}
+
           {/* 실행 버튼 */}
           <div style={{ padding:"16px 20px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
             {!apiKey && (
