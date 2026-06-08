@@ -48,6 +48,23 @@ function saveExperiment(exp) {
   try { localStorage.setItem('imprint_experiments', JSON.stringify(_EXPERIMENT_STORE.experiments)); } catch {}
 }
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
+function buildDesignRules() {
+  const exps = loadExperiments();
+  // 만족도 4~5 또는 일치율 70%+ 실험의 next_rule만 추출
+  const rules = exps
+    .filter(e => (e.satisfaction_score >= 4 || e.match_rate >= 70) && e.next_rule?.trim())
+    .map(e => e.next_rule.trim());
+  if (rules.length === 0) return '';
+  // 중복 제거 (앞 40자 기준)
+  const seen = new Set();
+  const unique = rules.filter(r => {
+    const key = r.slice(0, 40);
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  // 최대 5개, 토큰 절약
+  return unique.slice(0, 5).map(r => `- ${r}`).join('\n');
+}
 // sendLogToGoogleSheet: ENABLE_GOOGLE_SHEET_LOGGING=false 상태에서 미사용
 // async function sendLogToGoogleSheet(_log) { /* TODO */ }
 
