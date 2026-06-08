@@ -5410,23 +5410,50 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     </div>
                     {/* 피드백 전송 버튼 */}
                     <button
-                      disabled={!experimentFeedback.trim() || satisfactionScore === null}
+                      onClick={analyzeExperiment}
+                      disabled={!experimentFeedback.trim() || satisfactionScore === null || experimentLoading}
                       style={{ padding:'10px', fontSize:12, fontWeight:600,
                         border:'none', borderRadius:3,
-                        background: (!experimentFeedback.trim() || satisfactionScore === null)
+                        background: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
                           ? T.border : T.ink,
-                        color: (!experimentFeedback.trim() || satisfactionScore === null)
+                        color: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
                           ? T.muted : '#fff',
-                        cursor: (!experimentFeedback.trim() || satisfactionScore === null)
+                        cursor: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
                           ? 'not-allowed' : 'pointer' }}>
-                      피드백 분석하기
+                      {experimentLoading ? '분석 중…' : '피드백 분석하기'}
                     </button>
-                    {/* 분석 결과 (Plan E-B에서 채움) */}
                     {experimentAnalysis && (
                       <div style={{ padding:'12px', background:T.bg,
                         border:`1px solid ${T.border}`, borderRadius:3,
-                        fontSize:12, color:T.ink }}>
-                        분석 결과 (Plan E-B에서 구현)
+                        fontSize:12, color:T.ink, display:'flex', flexDirection:'column', gap:8 }}>
+                        <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+                          <span style={{ fontWeight:700, fontSize:20, color:T.ink }}>
+                            {experimentAnalysis.matchRate}%
+                          </span>
+                          <span style={{ color:T.muted }}>일치율</span>
+                        </div>
+                        {experimentAnalysis.difference && (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:T.muted,
+                              textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>
+                              차이점
+                            </div>
+                            <div style={{ lineHeight:1.6, color:T.ink }}>
+                              {experimentAnalysis.difference}
+                            </div>
+                          </div>
+                        )}
+                        {experimentAnalysis.nextRule && (
+                          <div>
+                            <div style={{ fontSize:10, fontWeight:600, color:T.muted,
+                              textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>
+                              다음 규칙
+                            </div>
+                            <div style={{ lineHeight:1.6, color:T.ink }}>
+                              {experimentAnalysis.nextRule}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
