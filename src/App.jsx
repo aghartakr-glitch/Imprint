@@ -4781,14 +4781,14 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
 
           {/* 입력 탭 */}
           <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`, padding:"0 20px", flexShrink:0 }}>
-            {[["text","텍스트 입력"],["style","스타일 지시"]].map(([k,label]) => (
-              <button key={k} onClick={() => setInputTab(k === "text" ? 0 : 1)}
+            {[["text","텍스트 입력"],["experiment","실험"]].map(([k,label]) => (
+              <button key={k} onClick={() => setInputTab(k)}
                 style={{ padding:"11px 14px", fontSize:12,
-                  fontWeight: (k === "text" ? inputTab===0 : inputTab===1) ? 700 : 400,
-                  border:"none", borderBottom: (k === "text" ? inputTab===0 : inputTab===1)
+                  fontWeight: inputTab === k ? 700 : 400,
+                  border:"none", borderBottom: inputTab === k
                     ? `2px solid ${T.ink}` : "2px solid transparent",
-                  background:"transparent", color: (k === "text" ? inputTab===0 : inputTab===1)
-                    ? T.ink : T.muted, cursor:"pointer", marginBottom:-1 }}>
+                  background:"transparent", color: inputTab === k ? T.ink : T.muted,
+                  cursor:"pointer", marginBottom:-1 }}>
                 {label}
               </button>
             ))}
