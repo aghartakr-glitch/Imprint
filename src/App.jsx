@@ -4260,6 +4260,82 @@ reasons는변경항목만.`;
     }
   }
 
+  async function analyzeExperiment() {
+    if (!experimentFeedback.trim() || satisfactionScore === null || !apiKey) return;
+    setExperimentLoading(true);
+
+    // 시스템 결과 요약 구성 (본문 전체 미전송, 의도+매칭만)
+    const systemIntent = [
+      currentLog?.text_analysis?.layout_intent,
+      currentLog?.matching?.semantic_reason,
+    ].filter(Boolean).join(' / ') || '(의도 정보 없음)';
+
+    const systemAction = [
+      currentLog?.matching?.selected_reference_title
+        ? `레퍼런스: ${currentLog.matching.selected_reference_title}`
+        : null,
+      currentLog?.text_analysis?.detected_genre
+        ? `장르: ${currentLog.text_analysis.detected_genre}`
+        : null,
+    ].filter(Boolean).join(', ') || '(행동 정보 없음)';
+
+    const prompt = `시스템 결과:
+- 의도: ${systemIntent}
+- 행동: ${systemAction}
+
+사용자 피드백: ${experimentFeedback}
+만족도: ${satisfactionScore}/5
+
+아래 JSON만 반환하라 (다른 텍스트 없이):
+{"match_rate":0~100정수,"difference":"차이점 1~2문장","next_rule":"다음 생성 시 반영할 규칙 1문장"}`;
+
+    try {
+      const res = await fetch('/anthropic/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const raw = data?.content?.[0]?.text?.trim() || '{}';
+      // JSON 파싱 (마크다운 코드블록 제거 후)
+      const jsonStr = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
+      const parsed = JSON.parse(jsonStr);
+
+      const analysis = {
+        matchRate: typeof parsed.match_rate === 'number' ? parsed.match_rate : 0,
+        difference: parsed.difference || '',
+        nextRule: parsed.next_rule || '',
+      };
+      setExperimentAnalysis(analysis);
+
+      // 로그 저장
+      const exp = {
+        experiment_id: `exp_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        system_intent: systemIntent,
+        system_action: systemAction,
+        user_correct_intent: experimentFeedback,
+        satisfaction_score: satisfactionScore,
+        match_rate: analysis.matchRate,
+        difference: analysis.difference,
+        next_rule: analysis.nextRule,
+      };
+      saveExperiment(exp);
+    } catch (err) {
+      setExperimentAnalysis({ matchRate: 0, difference: `분석 오류: ${err.message}`, nextRule: '' });
+    } finally {
+      setExperimentLoading(false);
+    }
+  }
+
   async function refine() {
     if (!refineInput.trim() || !latex) return;
     if (!apiKey) {
