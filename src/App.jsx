@@ -5338,6 +5338,23 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 ) : (
                   /* 생성 후: 피드백 활성화 */
                   <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'4px 0' }}>
+                    {/* 시스템 결과 요약 */}
+                    {currentLog && (
+                      <div style={{ padding:'10px 12px', background:T.bg,
+                        border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}>
+                        <div style={{ fontWeight:600, color:T.ink, marginBottom:4 }}>시스템 결과 요약</div>
+                        {currentLog.text_analysis?.layout_intent && (
+                          <div style={{ color:T.muted, lineHeight:1.6 }}>
+                            의도: {currentLog.text_analysis.layout_intent}
+                          </div>
+                        )}
+                        {currentLog.matching?.selected_reference_title && (
+                          <div style={{ color:T.muted, lineHeight:1.6 }}>
+                            레퍼런스: {currentLog.matching.selected_reference_title}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {/* 정답 피드백 */}
                     <div>
                       <label style={{ display:'block', fontSize:11, fontWeight:600,
