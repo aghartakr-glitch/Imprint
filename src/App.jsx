@@ -1574,6 +1574,7 @@ export default function App() {
   const [experimentFeedback, setExperimentFeedback] = useState(''); // 사용자 정답 피드백
   const [satisfactionScore, setSatisfactionScore] = useState(null); // 1~5 또는 null
   const [experimentAnalysis, setExperimentAnalysis] = useState(null); // 분석 결과 {matchRate, diff, nextRule}
+  const [experimentLoading, setExperimentLoading] = useState(false); // 분석 API 호출 중
 
   const [styleConfig, setStyleConfig] = useState({
     columnMode: 'auto',       // 'auto'|'fixed'|'variable'
