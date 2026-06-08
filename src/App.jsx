@@ -5465,7 +5465,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
           </div>
 
           {/* CSV / MD 다운로드 */}
-          {loadExperiments().length > 0 && (
+          {experimentAnalysis !== null && (
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={() => {
                 const exps = loadExperiments();
