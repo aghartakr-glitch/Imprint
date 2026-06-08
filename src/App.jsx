@@ -1566,6 +1566,9 @@ export default function App() {
   const [step, setStep] = useState(0);
   const [fields, setFields] = useState({ 제목:"", 소제목:"", 본문:"", 면주:"", 각주:"" });
   const [inputTab, setInputTab] = useState('text'); // 'text' | 'experiment'
+  const [experimentFeedback, setExperimentFeedback] = useState(''); // 사용자 정답 피드백
+  const [satisfactionScore, setSatisfactionScore] = useState(null); // 1~5 또는 null
+  const [experimentAnalysis, setExperimentAnalysis] = useState(null); // 분석 결과 {matchRate, diff, nextRule}
 
   const [styleConfig, setStyleConfig] = useState({
     columnMode: 'auto',       // 'auto'|'fixed'|'variable'
