@@ -5221,6 +5221,112 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   })()}
                 </div>
               </>
+            ) : (
+              /* ── 실험 탭 ──────────────────────────────────────────── */
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                {!isDone ? (
+                  /* 생성 전: 전체 비활성화 안내 */
+                  <div style={{ padding:"20px 16px", textAlign:"center" }}>
+                    <div style={{ fontSize:13, color:T.muted, lineHeight:1.8 }}>
+                      아직 생성 전입니다.<br/>
+                      <strong style={{ color:T.ink }}>텍스트 입력 탭</strong>에서 본문을 넣고<br/>
+                      <strong style={{ color:T.ink }}>조판 스타일 생성하기</strong>를 클릭하세요.
+                    </div>
+                    <div style={{ marginTop:20, opacity:0.35, pointerEvents:'none', display:'flex', flexDirection:'column', gap:12 }}>
+                      <div style={{ padding:"10px 12px", background:T.bg, border:`1px solid ${T.border}`,
+                        borderRadius:3, fontSize:12, color:T.muted, textAlign:'left' }}>
+                        정답 피드백을 입력하세요…
+                      </div>
+                      <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
+                        {[1,2,3,4,5].map(n => (
+                          <div key={n} style={{ width:36, height:36, borderRadius:3,
+                            border:`1px solid ${T.border}`, background:T.bg,
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            fontSize:14, color:T.muted }}>{n}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* 생성 후: 피드백 활성화 */
+                  <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'4px 0' }}>
+                    {/* 정답 피드백 */}
+                    <div>
+                      <label style={{ display:'block', fontSize:11, fontWeight:600,
+                        color:T.ink, marginBottom:5 }}>
+                        정답 피드백
+                      </label>
+                      <div style={{ fontSize:11, color:T.muted, marginBottom:6, lineHeight:1.5 }}>
+                        시스템의 결과가 의도와 얼마나 맞았는지, 어떤 부분이 달랐는지 작성하세요.
+                      </div>
+                      <textarea
+                        value={experimentFeedback}
+                        onChange={e => setExperimentFeedback(e.target.value)}
+                        rows={5}
+                        placeholder={"예: 각주 크기는 맞게 줄었지만, 내가 원한 건 크기보다 본문과 각주 사이 간격을 넓히는 것이었다."}
+                        style={{ width:'100%', padding:'9px 11px', fontSize:12,
+                          border:`1px solid ${T.border}`, borderRadius:3,
+                          background:T.bg, color:T.ink, lineHeight:1.6,
+                          resize:'vertical' }}
+                        onFocus={e => e.target.style.borderColor = T.ink}
+                        onBlur={e => e.target.style.borderColor = T.border}
+                      />
+                    </div>
+                    {/* 만족도 5단계 */}
+                    <div>
+                      <label style={{ display:'block', fontSize:11, fontWeight:600,
+                        color:T.ink, marginBottom:8 }}>
+                        만족도
+                      </label>
+                      <div style={{ display:'flex', gap:6 }}>
+                        {[
+                          [1, '매우\n불일치'],
+                          [2, '불일치'],
+                          [3, '일부\n일치'],
+                          [4, '일치'],
+                          [5, '매우\n일치'],
+                        ].map(([n, lbl]) => {
+                          const active = satisfactionScore === n;
+                          return (
+                            <button key={n} onClick={() => setSatisfactionScore(n)}
+                              style={{ flex:1, padding:'8px 4px', borderRadius:3,
+                                border:`1px solid ${active ? T.ink : T.border}`,
+                                background: active ? T.ink : T.bg,
+                                color: active ? '#fff' : T.muted,
+                                cursor:'pointer', fontSize:10, lineHeight:1.4,
+                                whiteSpace:'pre-line', textAlign:'center' }}>
+                              <div style={{ fontSize:16, fontWeight:700,
+                                color: active ? '#fff' : T.ink, marginBottom:2 }}>{n}</div>
+                              {lbl}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* 피드백 전송 버튼 */}
+                    <button
+                      disabled={!experimentFeedback.trim() || satisfactionScore === null}
+                      style={{ padding:'10px', fontSize:12, fontWeight:600,
+                        border:'none', borderRadius:3,
+                        background: (!experimentFeedback.trim() || satisfactionScore === null)
+                          ? T.border : T.ink,
+                        color: (!experimentFeedback.trim() || satisfactionScore === null)
+                          ? T.muted : '#fff',
+                        cursor: (!experimentFeedback.trim() || satisfactionScore === null)
+                          ? 'not-allowed' : 'pointer' }}>
+                      피드백 분석하기
+                    </button>
+                    {/* 분석 결과 (Plan E-B에서 채움) */}
+                    {experimentAnalysis && (
+                      <div style={{ padding:'12px', background:T.bg,
+                        border:`1px solid ${T.border}`, borderRadius:3,
+                        fontSize:12, color:T.ink }}>
+                        분석 결과 (Plan E-B에서 구현)
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
