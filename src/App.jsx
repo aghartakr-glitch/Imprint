@@ -5409,19 +5409,21 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       </div>
                     </div>
                     {/* 피드백 전송 버튼 */}
-                    <button
-                      onClick={analyzeExperiment}
-                      disabled={!experimentFeedback.trim() || satisfactionScore === null || experimentLoading}
-                      style={{ padding:'10px', fontSize:12, fontWeight:600,
-                        border:'none', borderRadius:3,
-                        background: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
-                          ? T.border : T.ink,
-                        color: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
-                          ? T.muted : '#fff',
-                        cursor: (!experimentFeedback.trim() || satisfactionScore === null || experimentLoading)
-                          ? 'not-allowed' : 'pointer' }}>
-                      {experimentLoading ? '분석 중…' : '피드백 분석하기'}
-                    </button>
+                    {(() => {
+                      const canSubmit = !!experimentFeedback.trim() && satisfactionScore !== null && !experimentLoading;
+                      return (
+                        <button
+                          onClick={analyzeExperiment}
+                          disabled={!canSubmit}
+                          style={{ padding:'10px', fontSize:12, fontWeight:600,
+                            border:'none', borderRadius:3,
+                            background: canSubmit ? T.ink : T.border,
+                            color: canSubmit ? '#fff' : T.muted,
+                            cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
+                          {experimentLoading ? '분석 중…' : '피드백 분석하기'}
+                        </button>
+                      );
+                    })()}
                     {experimentAnalysis && (
                       <div style={{ padding:'12px', background:T.bg,
                         border:`1px solid ${T.border}`, borderRadius:3,
