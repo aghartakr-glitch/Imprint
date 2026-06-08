@@ -4303,6 +4303,10 @@ reasons는변경항목만.`;
           messages: [{ role: 'user', content: prompt }],
         }),
       });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(`API ${res.status}: ${errBody?.error?.message ?? res.statusText}`);
+      }
       const data = await res.json();
       const raw = data?.content?.[0]?.text?.trim() || '{}';
       // JSON 파싱 (마크다운 코드블록 제거 후)
