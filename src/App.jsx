@@ -3932,6 +3932,7 @@ reasons는변경항목만.`;
           },
         }]);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
+        setInputTab('experiment'); // 생성 완료 → 실험 탭으로 자동 이동
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
         const _latexHash = simpleHash(mainTex);
