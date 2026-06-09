@@ -66,8 +66,15 @@ function buildDesignRules() {
   // 최대 5개, 토큰 절약
   return unique.slice(0, 5).map(r => `- ${r}`).join('\n');
 }
-// sendLogToGoogleSheet: ENABLE_GOOGLE_SHEET_LOGGING=false 상태에서 미사용
-// async function sendLogToGoogleSheet(_log) { /* TODO */ }
+async function sendToSheet(payload) {
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch { /* silent fail — logging must not break the app */ }
+}
 
 // ─── Design Tokens ───────────────────────────────────────────────
 const T = {
