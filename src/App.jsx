@@ -4482,7 +4482,20 @@ reasons는변경항목만.`;
 만족도: ${satisfactionScore}/5
 
 아래 JSON만 반환하라 (다른 텍스트 없이):
-{"match_rate":0~100정수,"difference":"차이점 1~2문장","next_rule":"다음 생성 시 반영할 규칙 1문장","target_variable":"대상 스타일 변수명 (예: body_leading, footnote_size)","direction_match":true또는false,"system_pct":"시스템 변경률 (예: +8%)","user_pct":"사용자 원하는 변경률 (예: +20%)"}`;
+{
+  "match_rate": 0~100정수,
+  "difference": "차이점 1~2문장",
+  "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
+  "corrections": [
+    {
+      "target_variable": "변수명 (body_leading|body_size|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size)",
+      "system_pct": "시스템 변경률 또는 현재값 (예: +8%, 3단)",
+      "user_pct": "사용자 원하는 변경률 또는 목표값 (예: +20%, 2단)",
+      "direction_match": true또는false
+    }
+  ]
+}
+corrections는 피드백에서 언급된 모든 변수를 각각 항목으로 포함하라.`;
 
     try {
       const res = await fetch('/anthropic/v1/messages', {
