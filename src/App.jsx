@@ -4733,6 +4733,18 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         });
       }
 
+      // ── Google Sheets 01-Revision 로깅 ───────────────────────
+      if (ENABLE_GOOGLE_SHEET_LOGGING && intent !== 'question') {
+        sendToSheet({
+          sheet: 'revision',
+          user_request: userMsg,
+          ai_result: [
+            chatContentClean,
+            changesSummary ? '\n변경 수치:\n' + changesSummary : '',
+          ].filter(Boolean).join(''),
+        });
+      }
+
       // ── 로그 업데이트 ─────────────────────────────────────────
       setCurrentLog(prev => {
         if (!prev) return prev;
