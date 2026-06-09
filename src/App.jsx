@@ -49,6 +49,69 @@ function saveExperiment(exp) {
   try { localStorage.setItem('imprint_experiments', JSON.stringify(_EXPERIMENT_STORE.experiments)); } catch {}
 }
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
+// 저장된 실험에서 수치 규칙을 파싱해 base 값을 직접 보정
+// target_variable + user_pct → 실제 수치 변환
+// 같은 변수에 대해 여러 실험이 있으면 가중 평균 적용
+function applyLearnedCorrections(base) {
+  const exps = loadExperiments();
+  if (exps.length === 0) return base;
+
+  // variable → 누적 보정값 수집
+  const corrections = {}; // { variable: [{ pct, weight }] }
+
+  for (const e of exps) {
+    const v = e.target_variable?.trim();
+    const p = e.user_pct?.trim();           // 예: "+20%", "-12%"
+    if (!v || !p) continue;
+
+    const match = p.match(/([+-]?\d+(?:\.\d+)?)%/);
+    if (!match) continue;
+    const pct = parseFloat(match[1]);       // 예: 20, -12
+
+    // 만족도 기반 가중치: 만족도 낮을수록 더 강하게 반영
+    const s = e.satisfaction_score || 3;
+    const weight = s <= 2 ? 1.5 : s === 3 ? 1.0 : 0.7;
+
+    if (!corrections[v]) corrections[v] = [];
+    corrections[v].push({ pct, weight });
+  }
+
+  // 변수명 → base 키 매핑
+  const varMap = {
+    'body_leading':      'bodyLeading',
+    'body_size':         'bodySize',
+    'footnote_size':     'footnoteSize',
+    'footnote_spacing':  null,   // LaTeX에서 직접 제어, 현재 생략
+    'title_size':        null,
+    'margin_top':        'marginTop',
+    'margin_bottom':     'marginBottom',
+    'margin_inner':      'marginInner',
+    'margin_outer':      'marginOuter',
+    'tracking':          'tracking',
+  };
+
+  const result = { ...base };
+
+  for (const [varName, baseKey] of Object.entries(varMap)) {
+    if (!baseKey || !corrections[varName]) continue;
+
+    const items = corrections[varName];
+    const totalWeight = items.reduce((s, x) => s + x.weight, 0);
+    const weightedPct = items.reduce((s, x) => s + x.pct * x.weight, 0) / totalWeight;
+
+    const current = parseFloat(result[baseKey]);
+    if (isNaN(current)) continue;
+
+    // 적용: 현재값 × (1 + weightedPct/100)
+    // 안전 한도: 원래값의 50% 이내만 허용
+    const rawNew = current * (1 + weightedPct / 100);
+    const clamped = Math.max(current * 0.5, Math.min(current * 1.5, rawNew));
+    result[baseKey] = Math.round(clamped * 10) / 10;
+  }
+
+  return result;
+}
+
 function buildDesignRules() {
   const exps = loadExperiments();
   if (exps.length === 0) return '';
