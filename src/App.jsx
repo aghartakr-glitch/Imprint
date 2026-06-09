@@ -5687,6 +5687,26 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
                 MD 다운로드
               </button>
             </div>
+            <button onClick={() => {
+              const rules = buildDesignRules();
+              const content = rules
+                ? `# User Design Rules\n\n생성일: ${new Date().toISOString().slice(0,10)}\n실험 수: ${loadExperiments().length}\n\n${rules.split('\n').map(r => r).join('\n')}`
+                : '# User Design Rules\n\n아직 만족도 4+ 실험이 없습니다.';
+              const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              document.body.appendChild(a);
+              a.href = url;
+              a.download = 'user_design_rules.md';
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }} style={{ width:'100%', padding:'8px', fontSize:11, fontWeight:600,
+              border:`1px solid #c8e6c8`, borderRadius:3,
+              background:'#f0f7f0', color:'#2a7', cursor:'pointer' }}>
+              디자인 규칙 파일 저장 (user_design_rules.md)
+            </button>
+            </div>
           )}
 
           {/* 실행 버튼 */}
