@@ -4083,7 +4083,7 @@ reasons는변경항목만.`;
             _fc.bodySize    ? `${_fc.bodySize}pt 본문 / ${_fc.bodyLeading || ''}pt 행간` : null,
             p?.f             ? `${p.f.w}×${p.f.h}mm 판형` : null,
             _colInfo,
-            _fontDesc || null,
+            ((bodyIsSerif ? '명조 계열' : '고딕 계열') + ` 본문 서체 (${mainFont})`),
             (_fc.marginTop && _fc.marginBottom && _fc.marginInner && _fc.marginOuter)
               ? `여백 상${_fc.marginTop}/하${_fc.marginBottom} · 안${_fc.marginInner}/밖${_fc.marginOuter}mm`
               : null,
