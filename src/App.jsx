@@ -4486,8 +4486,27 @@ reasons는변경항목만.`;
           match_rate: analysis.matchRate,
           difference: analysis.difference,
           next_rule: analysis.nextRule,
-          csv_flag: '',
-          md_flag: '',
+          // CSV: 이 실험의 핵심 수치 요약 1줄
+          csv_flag: [
+            exp.experiment_id,
+            exp.timestamp?.slice(0,10),
+            analysis.targetVariable || '',
+            analysis.systemPct || '',
+            analysis.userPct || '',
+            satisfactionScore,
+            analysis.matchRate + '%',
+          ].join(' | '),
+          // MD: 이 실험의 전체 로그
+          md_flag: [
+            `# ${exp.experiment_id}`,
+            `날짜: ${exp.timestamp?.slice(0,10)}`,
+            `피드백: ${experimentFeedback}`,
+            `대상 변수: ${analysis.targetVariable || '-'}`,
+            `시스템: ${analysis.systemPct || '-'} / 정답: ${analysis.userPct || '-'}`,
+            `만족도: ${satisfactionScore}/5`,
+            `일치율: ${analysis.matchRate}%`,
+            `다음 규칙: ${analysis.nextRule}`,
+          ].join('\n'),
         });
       }
     } catch (err) {
