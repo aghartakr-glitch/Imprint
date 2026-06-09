@@ -4005,6 +4005,30 @@ reasons는변경항목만.`;
           },
         }]);
         pushLog('latex', 'LaTeX 생성', 'done', '조판 완료');
+
+        // ── 작업 의도 > Visual Element: 최종 LaTeX 실제값으로 덮어쓰기 ────
+        // microAdjust 이후 값이 반영되도록 finalMainTex에서 직접 추출
+        {
+          const _fc = extractLatexCommandMap(finalMainTex || '');
+          const _colInfo = styleConfig.columnMode === 'fixed'
+            ? `${styleConfig.fixedColumns || 1}단 고정`
+            : styleConfig.columnMode === 'variable'
+            ? `가변단 (${styleConfig.variableGrid?.body || 1}본문+${styleConfig.variableGrid?.note || 1}주석)`
+            : _colDesc || '1단';
+          const _actualVE = [
+            _fc.bodySize    ? `${_fc.bodySize}pt 본문 / ${_fc.bodyLeading || ''}pt 행간` : null,
+            p?.f             ? `${p.f.w}×${p.f.h}mm 판형` : null,
+            _colInfo,
+            _fontDesc || null,
+            (_fc.marginTop && _fc.marginBottom && _fc.marginInner && _fc.marginOuter)
+              ? `여백 상${_fc.marginTop}/하${_fc.marginBottom} · 안${_fc.marginInner}/밖${_fc.marginOuter}mm`
+              : null,
+            _alignDesc || null,
+            p?.pn && p.pn !== '-' ? `쪽번호 ${p.pn}` : null,
+          ].filter(Boolean);
+          setStructuredReason(prev => prev ? { ...prev, visual_element: _actualVE } : prev);
+        }
+
         setInputTab('experiment'); // 생성 완료 → 실험 탭으로 자동 이동
 
         // ── Generation Log 생성 (추가 API 호출 없음) ──────────────
