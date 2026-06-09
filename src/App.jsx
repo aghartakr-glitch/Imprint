@@ -5475,8 +5475,14 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         color:T.ink, marginBottom:5 }}>
                         정답 피드백
                       </label>
-                      <div style={{ fontSize:11, color:T.muted, marginBottom:6, lineHeight:1.5 }}>
-                        시스템의 결과가 의도와 얼마나 맞았는지, 어떤 부분이 달랐는지 작성하세요.
+                      <div style={{ fontSize:11, color:T.muted, marginBottom:6, lineHeight:1.7,
+                        padding:'8px 10px', background:'#f9f9f9', borderRadius:3,
+                        border:`1px solid ${T.border}` }}>
+                        <div style={{ fontWeight:600, color:T.ink, marginBottom:4 }}>
+                          피드백 형식: [문제 판단] + [기준값] + [변경 방향] + [변경 비율]
+                        </div>
+                        <div>예: <em>행간이 좁으므로, 기준이 되는 현재 행간의 20%만큼 증가시켜야 함.</em></div>
+                        <div>예: <em>각주가 튀므로, 현재 각주 크기를 12% 줄이고 각주 간격을 50% 늘려야 함.</em></div>
                       </div>
                       <textarea
                         value={experimentFeedback}
