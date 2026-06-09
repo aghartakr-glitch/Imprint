@@ -5074,9 +5074,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     onBlur={e => e.target.style.borderColor = T.border}
                   />
                 </div>
-              </>
-            ) : (
-              <>
+                {/* ── 스타일 설정 ── */}
                 <div>
                   {/* 스타일 선택 모드 */}
                   <label style={{ display:"block", fontSize:11, fontWeight:600,
