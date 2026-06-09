@@ -103,6 +103,7 @@ function applyLearnedCorrections(base) {
 
     const items = corrections[varName];
     const totalWeight = items.reduce((s, x) => s + x.weight, 0);
+    if (totalWeight === 0) continue;  // 빈 배열 방어 (NaN 전파 방지)
     const weightedPct = items.reduce((s, x) => s + x.pct * x.weight, 0) / totalWeight;
 
     const current = parseFloat(result[baseKey]);
