@@ -1964,7 +1964,8 @@ reasons는변경항목만.`;
           model: 'claude-sonnet-4-6',
           max_tokens: 400,
           system: 'Return ONLY valid JSON, no other text.',
-          messages: [{ role: 'user', content: prompt }],
+          // 같은 본문+설정이면 prompt가 동일 → 캐시 히트
+          messages: [{ role: 'user', content: [{ type: 'text', text: prompt, cache_control: { type: 'ephemeral' } }] }],
         }),
       });
       clearTimeout(tid);
