@@ -128,14 +128,20 @@ function getLearnedColumnCount() {
     const s = e.satisfaction_score || 3;
     if (s > 3) continue; // 만족도 4-5는 현재 단 수가 맞다는 의미 → 변경 불필요
 
+    // 새 포맷: corrections 배열에서 column_count 항목 확인
+    if (Array.isArray(e.corrections)) {
+      const colCorr = e.corrections.find(c => c.target_variable === 'column_count');
+      if (colCorr?.user_pct) {
+        const m = colCorr.user_pct.match(/(\d+)/);
+        if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 10) return n; }
+      }
+    }
+
+    // 구 포맷 fallback: next_rule / user_correct_intent 텍스트에서 파싱
     const sources = [e.next_rule, e.user_correct_intent].filter(Boolean);
     for (const text of sources) {
-      // "2단", "3단", "1단" 등 패턴 추출
       const m = text.match(/(\d+)[단열]\s*(?:구성|레이아웃|조판|으로|변환|전환|고정)?/);
-      if (m) {
-        const n = parseInt(m[1]);
-        if (n >= 1 && n <= 10) return n;
-      }
+      if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 10) return n; }
     }
   }
   return null;
