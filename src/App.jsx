@@ -2045,14 +2045,23 @@ reasons는변경항목만.`;
         body: JSON.stringify({
           model: 'claude-sonnet-4-6', max_tokens: 700,
           system: 'Return ONLY valid JSON, no other text.',
-          messages: [{ role: 'user', content:
-            '편집 디자인 레퍼런스 중 최적 1개를 선택하라.\n' +
-            genreConstraint + '\n' +
-            (profileStr ? '텍스트 프로파일: ' + profileStr + '\n\n' : '') +
-            '입력 텍스트(앞 200자): "' + text.slice(0,200) + '"\n\n' +
-            '후보([idx]제목|장르|출판형태|요약|특징):\n' + candidates + '\n\n' +
-            '반환 JSON:\n{"i":<index>,"reference_reason":"<20자>","content_match":"<20자>","layout_reason":"<20자>","typography_reason":"<20자>","margin_reason":"<20자>","design_concept":["<개념1>","<개념2>"],"design_task":["<과제1>","<과제2>"],"visual_element":["<요소1>","<요소2>","<요소3>"],"rejected":[{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"}],"prevUsedForced":<true|false>,"prevUsedReason":"<이유 or empty>"}\n\ndesign_concept: 본문 정서/분위기 2~4개 (예: ["조용한 회고","기억의 회복"])\ndesign_task: 조판 과제 2~4개 (예: ["읽기 속도 낮추기","정적 분위기 만들기"])\nvisual_element: 실제 수치/스타일 3~6개 (예: ["120×192mm 판형","8.5pt/16pt","넓은 하단 여백"])'
-          }]
+          messages: [{ role: 'user', content: [
+            // ── 캐시 대상: 레퍼런스 후보 데이터 (같은 본문이면 동일 → 캐시 히트) ──
+            {
+              type: 'text',
+              text: '후보([idx]제목|장르|출판형태|요약|특징):\n' + candidates + '\n\n' +
+                    '반환 JSON:\n{"i":<index>,"reference_reason":"<20자>","content_match":"<20자>","layout_reason":"<20자>","typography_reason":"<20자>","margin_reason":"<20자>","design_concept":["<개념1>","<개념2>"],"design_task":["<과제1>","<과제2>"],"visual_element":["<요소1>","<요소2>","<요소3>"],"rejected":[{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"},{"i":<idx>,"reason":"<15자>"}],"prevUsedForced":<true|false>,"prevUsedReason":"<이유 or empty>"}\n\ndesign_concept: 본문 정서/분위기 2~4개 (예: ["조용한 회고","기억의 회복"])\ndesign_task: 조판 과제 2~4개 (예: ["읽기 속도 낮추기","정적 분위기 만들기"])\nvisual_element: 실제 수치/스타일 3~6개 (예: ["120×192mm 판형","8.5pt/16pt","넓은 하단 여백"])',
+              cache_control: { type: 'ephemeral' }
+            },
+            // ── 비캐시: 본문·프로파일 (다를 수 있음) ──────────────────────────
+            {
+              type: 'text',
+              text: '편집 디자인 레퍼런스 중 최적 1개를 선택하라.\n' +
+                    genreConstraint + '\n' +
+                    (profileStr ? '텍스트 프로파일: ' + profileStr + '\n\n' : '') +
+                    '입력 텍스트(앞 200자): "' + text.slice(0,200) + '"'
+            }
+          ]}]
         })
       });
       clearTimeout(tid);
