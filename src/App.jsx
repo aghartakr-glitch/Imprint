@@ -5430,18 +5430,41 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                   /* 생성 후: 피드백 활성화 */
                   <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'4px 0' }}>
                     {/* 시스템 결과 요약 */}
-                    {currentLog && (currentLog.text_analysis?.layout_intent || currentLog.matching?.selected_reference_title) && (
+                    {currentLog && (
                       <div style={{ padding:'10px 12px', background:T.bg,
-                        border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}>
-                        <div style={{ fontWeight:600, color:T.ink, marginBottom:4 }}>시스템 결과 요약</div>
+                        border:`1px solid ${T.border}`, borderRadius:3, fontSize:11,
+                        display:'flex', flexDirection:'column', gap:6 }}>
+                        <div style={{ fontWeight:600, color:T.ink }}>시스템 결과 요약</div>
                         {currentLog.text_analysis?.layout_intent && (
                           <div style={{ color:T.muted, lineHeight:1.6 }}>
-                            의도: {currentLog.text_analysis.layout_intent}
+                            <span style={{ fontWeight:600, color:T.ink }}>의도:</span> {currentLog.text_analysis.layout_intent}
+                          </div>
+                        )}
+                        {structuredReason?.design_concept?.length > 0 && (
+                          <div style={{ color:T.muted, lineHeight:1.6 }}>
+                            <span style={{ fontWeight:600, color:T.ink }}>디자인 개념:</span> {structuredReason.design_concept.join(', ')}
                           </div>
                         )}
                         {currentLog.matching?.selected_reference_title && (
                           <div style={{ color:T.muted, lineHeight:1.6 }}>
-                            레퍼런스: {currentLog.matching.selected_reference_title}
+                            <span style={{ fontWeight:600, color:T.ink }}>레퍼런스:</span> {currentLog.matching.selected_reference_title}
+                          </div>
+                        )}
+                        {structuredReason?.variable_reasons?.length > 0 && (
+                          <div>
+                            <div style={{ fontWeight:600, color:T.ink, marginBottom:3 }}>적용된 수치 변경</div>
+                            {structuredReason.variable_reasons.map((r, i) => {
+                              const base = parseFloat(r.base);
+                              const adj = parseFloat(r.adjusted);
+                              const pct = base > 0 ? Math.round((adj - base) / base * 100) : 0;
+                              const sign = pct >= 0 ? '+' : '';
+                              return (
+                                <div key={i} style={{ color:T.muted, lineHeight:1.7, fontFamily:T.mono, fontSize:10 }}>
+                                  {r.variable}: {r.base} → {r.adjusted} ({sign}{pct}%)
+                                  {r.reason ? <span style={{ color:T.muted, fontFamily:T.sans }}> — {r.reason}</span> : null}
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
