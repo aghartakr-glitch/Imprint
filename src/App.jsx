@@ -134,8 +134,9 @@ function getLearnedColumnCount() {
     // 새 포맷: corrections 배열에서 column_count 항목 확인
     if (Array.isArray(e.corrections)) {
       const colCorr = e.corrections.find(c => c.target_variable === 'column_count');
-      if (colCorr?.user_pct) {
-        const m = colCorr.user_pct.match(/(\d+)/);
+      const _up = colCorr?.user_pct;
+      if (_up && typeof _up === 'string') {
+        const m = _up.match(/(\d+)/);
         if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 10) return n; }
       }
     }
