@@ -112,6 +112,31 @@ function applyLearnedCorrections(base) {
   return result;
 }
 
+// 피드백에서 학습된 단 수 선호도 반환 (없으면 null)
+// next_rule 또는 user_correct_intent에서 "N단" 패턴 파싱
+// 만족도 낮을수록(시스템이 틀렸을수록) 더 강한 신호로 처리
+function getLearnedColumnCount() {
+  const exps = loadExperiments();
+  if (exps.length === 0) return null;
+
+  // 가장 최근 것부터 확인 — 최신 피드백이 우선
+  for (const e of [...exps].reverse()) {
+    const s = e.satisfaction_score || 3;
+    if (s > 3) continue; // 만족도 4-5는 현재 단 수가 맞다는 의미 → 변경 불필요
+
+    const sources = [e.next_rule, e.user_correct_intent].filter(Boolean);
+    for (const text of sources) {
+      // "2단", "3단", "1단" 등 패턴 추출
+      const m = text.match(/(\d+)[단열]\s*(?:구성|레이아웃|조판|으로|변환|전환|고정)?/);
+      if (m) {
+        const n = parseInt(m[1]);
+        if (n >= 1 && n <= 10) return n;
+      }
+    }
+  }
+  return null;
+}
+
 function buildDesignRules() {
   const exps = loadExperiments();
   if (exps.length === 0) return '';
