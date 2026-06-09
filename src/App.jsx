@@ -4078,7 +4078,7 @@ reasons는변경항목만.`;
             ? `${styleConfig.fixedColumns || 1}단 고정`
             : styleConfig.columnMode === 'variable'
             ? `가변단 (${styleConfig.variableGrid?.body || 1}본문+${styleConfig.variableGrid?.note || 1}주석)`
-            : _colDesc || '1단';
+            : (numCols > 1 ? `${numCols}단 자동` : '1단 본문');
           const _actualVE = [
             _fc.bodySize    ? `${_fc.bodySize}pt 본문 / ${_fc.bodyLeading || ''}pt 행간` : null,
             p?.f             ? `${p.f.w}×${p.f.h}mm 판형` : null,
