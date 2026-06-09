@@ -60,20 +60,24 @@ function applyLearnedCorrections(base) {
   const corrections = {}; // { variable: [{ pct, weight }] }
 
   for (const e of exps) {
-    const v = e.target_variable?.trim();
-    const p = e.user_pct?.trim();           // 예: "+20%", "-12%"
-    if (!v || !p) continue;
-
-    const match = p.match(/([+-]?\d+(?:\.\d+)?)%/);
-    if (!match) continue;
-    const pct = parseFloat(match[1]);       // 예: 20, -12
-
-    // 만족도 기반 가중치: 만족도 낮을수록 더 강하게 반영
     const s = e.satisfaction_score || 3;
     const weight = s <= 2 ? 1.5 : s === 3 ? 1.0 : 0.7;
 
-    if (!corrections[v]) corrections[v] = [];
-    corrections[v].push({ pct, weight });
+    // 새 포맷: corrections 배열 우선 (여러 변수 동시 처리)
+    const corrList = Array.isArray(e.corrections) && e.corrections.length > 0
+      ? e.corrections
+      : (e.target_variable ? [{ target_variable: e.target_variable, user_pct: e.user_pct }] : []);
+
+    for (const c of corrList) {
+      const v = c.target_variable?.trim();
+      const p = c.user_pct?.trim();
+      if (!v || !p) continue;
+      const match = p.match(/([+-]?\d+(?:\.\d+)?)%/);
+      if (!match) continue;
+      const pct = parseFloat(match[1]);
+      if (!corrections[v]) corrections[v] = [];
+      corrections[v].push({ pct, weight });
+    }
   }
 
   // 변수명 → base 키 매핑
