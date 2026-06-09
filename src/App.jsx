@@ -129,7 +129,9 @@ function getLearnedColumnCount() {
   // 가장 최근 것부터 확인 — 최신 피드백이 우선
   for (const e of [...exps].reverse()) {
     const s = e.satisfaction_score || 3;
-    if (s > 3) continue; // 만족도 4-5는 현재 단 수가 맞다는 의미 → 변경 불필요
+    if (s > 3) continue; // 만족도 4-5: 현재 단 수 유지 → 변경 불필요
+    // 주의: analyzeExperiment 프롬프트가 만족도 4-5인 경우에도 corrections를 emit하면
+    // column_count가 여기서 무시된다. 프롬프트 변경 시 이 invariant 재검토 필요.
 
     // 새 포맷: corrections 배열에서 column_count 항목 확인
     if (Array.isArray(e.corrections)) {
