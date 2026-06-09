@@ -4507,6 +4507,8 @@ reasons는변경항목만.`;
             `일치율: ${analysis.matchRate}%`,
             `다음 규칙: ${analysis.nextRule}`,
           ].join('\n'),
+          // 디자인 규칙 파일: 이 시점까지 누적된 전체 규칙
+          design_rules: buildDesignRules() || '(아직 규칙 없음)',
         });
       }
     } catch (err) {
