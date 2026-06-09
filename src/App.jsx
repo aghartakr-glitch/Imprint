@@ -51,11 +51,21 @@ function saveExperiment(exp) {
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
 function buildDesignRules() {
   const exps = loadExperiments();
-  // 만족도 4~5 또는 일치율 70%+ 실험의 next_rule만 추출
+  if (exps.length === 0) return '';
+
+  // 모든 실험의 next_rule 포함 — 만족도와 무관하게 학습
+  // analyzeExperiment가 이미 "다음엔 이렇게"로 방향 정리해서 반환함
+  // 만족도에 따라 강도 표시만 다르게
   const rules = exps
-    .filter(e => (e.satisfaction_score >= 4 || e.match_rate >= 70) && e.next_rule?.trim())
-    .map(e => e.next_rule.trim());
-  if (rules.length === 0) return '';
+    .filter(e => e.next_rule?.trim())
+    .map(e => {
+      const s = e.satisfaction_score;
+      const rule = e.next_rule.trim();
+      if (s <= 2) return `[강하게 수정] ${rule}`;   // 1~2: 많이 틀림
+      if (s === 3) return `[부분 수정] ${rule}`;     // 3: 방향은 맞으나 부족
+      return rule;                                    // 4~5: 그대로 강화
+    });
+
   // 중복 제거 (앞 40자 기준)
   const seen = new Set();
   const unique = rules.filter(r => {
@@ -63,8 +73,14 @@ function buildDesignRules() {
     if (seen.has(key)) return false;
     seen.add(key); return true;
   });
-  // 최대 5개, 토큰 절약
-  return unique.slice(0, 5).map(r => `- ${r}`).join('\n');
+
+  // 최대 8개 (만족도 낮은 것 우선 — 더 강한 학습 신호)
+  const sorted = [
+    ...unique.filter(r => r.startsWith('[강하게')),
+    ...unique.filter(r => r.startsWith('[부분')),
+    ...unique.filter(r => !r.startsWith('[')),
+  ];
+  return sorted.slice(0, 8).map(r => `- ${r}`).join('\n');
 }
 async function sendToSheet(payload) {
   try {
