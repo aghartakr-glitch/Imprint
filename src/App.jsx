@@ -4087,7 +4087,7 @@ reasons는변경항목만.`;
             (_fc.marginTop && _fc.marginBottom && _fc.marginInner && _fc.marginOuter)
               ? `여백 상${_fc.marginTop}/하${_fc.marginBottom} · 안${_fc.marginInner}/밖${_fc.marginOuter}mm`
               : null,
-            _alignDesc || null,
+            (alignResult?.alignment === 'ragged' ? '좌측 정렬' : '양끝 정렬'),
             p?.pn && p.pn !== '-' ? `쪽번호 ${p.pn}` : null,
           ].filter(Boolean);
           setStructuredReason(prev => prev ? { ...prev, visual_element: _actualVE } : prev);
