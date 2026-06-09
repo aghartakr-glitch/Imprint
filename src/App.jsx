@@ -4424,10 +4424,13 @@ reasons는변경항목만.`;
           visual_element: (structuredReason?.visual_element || []).join(', ') || cl?.text_analysis?.layout_intent || '',
           ref_detail: cl?.matching?.semantic_reason || '',
           body_reason: cl?.text_analysis?.topic || '',
-          font_choice: cl?.layout_spec?.body_font || '',
-          margin_design: cl?.layout_spec ? `상${cl.layout_spec.margin_top_mm}/하${cl.layout_spec.margin_bottom_mm}/내${cl.layout_spec.margin_inner_mm}/외${cl.layout_spec.margin_outer_mm}mm` : '',
-          tracking: cl?.layout_spec?.tracking != null ? String(cl.layout_spec.tracking) : '',
-          rejected: (cl?.matching?.rejected || []).slice(0,3).join(', '),
+          // 레퍼런스 DB의 설계 근거 텍스트 (작업 의도 탭에 표시되는 내용)
+          font_choice: DB[cl?.matching?.selected_reference_id]?.why_font || '',
+          margin_design: DB[cl?.matching?.selected_reference_id]?.why_margin || '',
+          tracking: DB[cl?.matching?.selected_reference_id]?.why_tracking || '',
+          rejected: (cl?.matching?.rejected || []).slice(0,3)
+            .map(r => typeof r === 'object' ? `${DB[r.i]?.t?.slice(0,20) || r.i} — ${r.reason}` : String(r))
+            .join(' / '),
           user_feedback: experimentFeedback,
           satisfaction: satisfactionScore,
           target_variable: analysis.targetVariable || '',
