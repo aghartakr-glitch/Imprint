@@ -4362,6 +4362,10 @@ reasons는변경항목만.`;
         matchRate: typeof parsed.match_rate === 'number' ? parsed.match_rate : 0,
         difference: parsed.difference || '',
         nextRule: parsed.next_rule || '',
+        targetVariable: parsed.target_variable || '',
+        directionMatch: parsed.direction_match ?? true,
+        systemPct: parsed.system_pct || '',
+        userPct: parsed.user_pct || '',
       };
       setExperimentAnalysis(analysis);
 
