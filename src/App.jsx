@@ -2641,9 +2641,14 @@ reasons는변경항목만.`;
 
       // styleConfig.columnMode → 사용자 지정 단 우선
       // 'auto': 데이터 기반 / 'fixed': fixedColumns 사용 / 'variable': variableGrid 사용
-      const colMode = styleConfig.columnMode || 'auto';
+      // 학습된 단 수 피드백 반영 — 사용자가 수동으로 단 수 설정하지 않은 경우(auto)에만 적용
+      const _learnedCols = styleConfig.columnMode === 'auto' ? getLearnedColumnCount() : null;
+      const colMode = _learnedCols
+        ? 'fixed'                        // 학습 규칙으로 고정단 모드 전환
+        : styleConfig.columnMode || 'auto';
+      const _fixedCols = _learnedCols || styleConfig.fixedColumns || 1;
       // legacy 호환: 'auto'|'fixed'|'variable'
-      const userMode = colMode === 'fixed' ? String(styleConfig.fixedColumns || 1)
+      const userMode = colMode === 'fixed' ? String(_fixedCols)
                      : colMode === 'variable' ? 'variable'
                      : 'auto';
       const userOverride = colMode !== 'auto';
