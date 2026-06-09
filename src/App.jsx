@@ -4313,15 +4313,26 @@ reasons는변경항목만.`;
         : null,
     ].filter(Boolean).join(', ') || '(행동 정보 없음)';
 
+    const varReasons = structuredReason?.variable_reasons || [];
+    const varSummary = varReasons.length > 0
+      ? varReasons.map(r => {
+          const base = parseFloat(r.base);
+          const adj = parseFloat(r.adjusted);
+          const pct = base > 0 ? Math.round((adj - base) / base * 100) : 0;
+          return `${r.variable}: ${r.base}→${r.adjusted} (${pct >= 0 ? '+' : ''}${pct}%)`;
+        }).join(', ')
+      : systemAction;
+
     const prompt = `시스템 결과:
 - 의도: ${systemIntent}
-- 행동: ${systemAction}
+- 디자인 개념: ${(structuredReason?.design_concept||[]).join(', ') || '(없음)'}
+- 적용 수치: ${varSummary}
 
 사용자 피드백: ${experimentFeedback}
 만족도: ${satisfactionScore}/5
 
 아래 JSON만 반환하라 (다른 텍스트 없이):
-{"match_rate":0~100정수,"difference":"차이점 1~2문장","next_rule":"다음 생성 시 반영할 규칙 1문장"}`;
+{"match_rate":0~100정수,"difference":"차이점 1~2문장","next_rule":"다음 생성 시 반영할 규칙 1문장","target_variable":"대상 스타일 변수명 (예: body_leading, footnote_size)","direction_match":true또는false,"system_pct":"시스템 변경률 (예: +8%)","user_pct":"사용자 원하는 변경률 (예: +20%)"}`;
 
     try {
       const res = await fetch('/anthropic/v1/messages', {
