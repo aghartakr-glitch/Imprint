@@ -5566,30 +5566,53 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     {experimentAnalysis && (
                       <div style={{ padding:'12px', background:T.bg,
                         border:`1px solid ${T.border}`, borderRadius:3,
-                        fontSize:12, color:T.ink, display:'flex', flexDirection:'column', gap:8 }}>
+                        fontSize:12, color:T.ink, display:'flex', flexDirection:'column', gap:10 }}>
+                        {/* 일치율 */}
                         <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
                           <span style={{ fontWeight:700, fontSize:20, color:T.ink }}>
                             {experimentAnalysis.matchRate}%
                           </span>
                           <span style={{ color:T.muted }}>일치율</span>
                         </div>
+                        {/* 비교 테이블 */}
+                        {experimentAnalysis.targetVariable && (
+                          <div style={{ background:T.surface, border:`1px solid ${T.border}`,
+                            borderRadius:3, padding:'8px 10px', fontFamily:T.mono, fontSize:11 }}>
+                            <div style={{ marginBottom:4, fontFamily:T.sans, fontWeight:600, fontSize:11, color:T.ink }}>
+                              비교: {experimentAnalysis.targetVariable}
+                            </div>
+                            <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'2px 8px', color:T.muted }}>
+                              <span>시스템</span>
+                              <span style={{ color: experimentAnalysis.directionMatch ? '#2a7' : '#c44' }}>
+                                {experimentAnalysis.systemPct || '—'}
+                              </span>
+                              <span>정답</span>
+                              <span style={{ color:T.ink, fontWeight:600 }}>
+                                {experimentAnalysis.userPct || '—'}
+                              </span>
+                              <span>방향</span>
+                              <span style={{ color: experimentAnalysis.directionMatch ? '#2a7' : '#c44' }}>
+                                {experimentAnalysis.directionMatch ? '✓ 일치' : '✗ 불일치'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {/* 차이점 */}
                         {experimentAnalysis.difference && (
                           <div>
                             <div style={{ fontSize:10, fontWeight:600, color:T.muted,
-                              textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>
-                              차이점
-                            </div>
+                              letterSpacing:1, marginBottom:3 }}>차이점</div>
                             <div style={{ lineHeight:1.6, color:T.ink }}>
                               {experimentAnalysis.difference}
                             </div>
                           </div>
                         )}
+                        {/* 다음 규칙 */}
                         {experimentAnalysis.nextRule && (
-                          <div>
-                            <div style={{ fontSize:10, fontWeight:600, color:T.muted,
-                              textTransform:'uppercase', letterSpacing:1, marginBottom:3 }}>
-                              다음 규칙
-                            </div>
+                          <div style={{ padding:'8px 10px', background:'#f0f7f0',
+                            border:'1px solid #c8e6c8', borderRadius:3 }}>
+                            <div style={{ fontSize:10, fontWeight:600, color:'#2a7',
+                              letterSpacing:1, marginBottom:3 }}>다음 생성 반영 규칙</div>
                             <div style={{ lineHeight:1.6, color:T.ink }}>
                               {experimentAnalysis.nextRule}
                             </div>
