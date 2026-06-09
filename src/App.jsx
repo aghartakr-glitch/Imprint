@@ -4114,7 +4114,10 @@ reasons는변경항목만.`;
         // microAdjust 이후 값이 반영되도록 finalMainTex에서 직접 추출
         {
           const _fc = extractLatexCommandMap(finalMainTex || '');
-          const _colInfo = styleConfig.columnMode === 'fixed'
+          // _learnedCols가 있으면 학습 기반 고정단으로 표시
+          const _colInfo = _learnedCols
+            ? `${_learnedCols}단 고정 (학습 적용)`
+            : styleConfig.columnMode === 'fixed'
             ? `${styleConfig.fixedColumns || 1}단 고정`
             : styleConfig.columnMode === 'variable'
             ? `가변단 (${styleConfig.variableGrid?.body || 1}본문+${styleConfig.variableGrid?.note || 1}주석)`
