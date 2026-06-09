@@ -70,8 +70,10 @@ function applyLearnedCorrections(base) {
 
     for (const c of corrList) {
       const v = c.target_variable?.trim();
-      const p = c.user_pct?.trim();
+      const p = String(c.user_pct ?? '').trim();
       if (!v || !p) continue;
+      // column_count는 getLearnedColumnCount()에서 별도 처리 — 여기서 명시적으로 건너뜀
+      if (v === 'column_count') continue;
       const match = p.match(/([+-]?\d+(?:\.\d+)?)%/);
       if (!match) continue;
       const pct = parseFloat(match[1]);
