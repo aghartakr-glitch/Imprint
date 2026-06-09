@@ -2014,7 +2014,8 @@ export default function App() {
   async function adjustTypography(text, profile, p, structReason, _apiKey) {
     if (!_apiKey) return null;
     try {
-      const base = {
+      // 레퍼런스 기본값에 학습된 수치 보정 직접 적용
+      const base = applyLearnedCorrections({
         bodySize:     p.b.크기,
         bodyLeading:  p.b.행간,
         tracking:     p.b.자간 || 0,
@@ -2022,7 +2023,7 @@ export default function App() {
         marginBottom: p.m.하,
         marginInner:  p.m.안,
         marginOuter:  p.m.밖,
-      };
+      });
       const _designRules = buildDesignRules();
       const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.${_designRules ? `\n[사용자 디자인 규칙 — 이전 피드백 기반, 우선 반영]\n${_designRules}` : ''}
 텍스트(앞200자):"${text.slice(0,200)}"
