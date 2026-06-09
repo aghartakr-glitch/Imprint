@@ -4365,6 +4365,51 @@ reasons는변경항목만.`;
         next_rule: analysis.nextRule,
       };
       saveExperiment(exp);
+
+      // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
+      if (ENABLE_GOOGLE_SHEET_LOGGING) {
+        const cl = currentLog;
+        const sc = styleConfig;
+        sendToSheet({
+          sheet: 'feedback',
+          date: cl?.created_at?.slice(0,10) || new Date().toISOString().slice(0,10),
+          title: fields.제목 || '',
+          subtitle: fields.소제목 || '',
+          body: (fields.본문 || '').slice(0, 500),
+          footnote: fields.각주 || '',
+          running_head: fields.면주 || '',
+          mode: selectionMode === 'auto' ? '자동 추천' : selectionMode === 'genre-forced' ? '장르 강제' : '레퍼런스 고정',
+          genre: hint || '',
+          col_auto: sc.columnMode === 'auto' ? '자동' : '',
+          col_fixed: sc.columnMode === 'fixed' ? sc.fixedColumns : '',
+          col_var_total: sc.columnMode === 'variable' ? (sc.variableGrid?.total ?? '') : '',
+          col_body: sc.columnMode === 'variable' ? (sc.variableGrid?.body ?? '') : '',
+          col_note: sc.columnMode === 'variable' ? (sc.variableGrid?.note ?? '') : '',
+          col_gap_mm: sc.columnGapMm || '',
+          note_position: sc.notePosition || '',
+          body_columns: sc.bodyTextColumns || 1,
+          note_columns: sc.noteTextColumns || 1,
+          select_mode: cl?.matching?.match_mode || '',
+          reference: cl?.matching?.selected_reference_title || '',
+          content_match: (cl?.matching?.top_candidates || []).slice(0,3).map(c => c.title).filter(Boolean).join(', '),
+          design_concept: '',
+          design_task: '',
+          visual_element: cl?.text_analysis?.layout_intent || '',
+          ref_detail: cl?.matching?.semantic_reason || '',
+          body_reason: cl?.text_analysis?.topic || '',
+          font_choice: '',
+          margin_design: '',
+          tracking: '',
+          rejected: (cl?.matching?.rejected || []).slice(0,3).join(', '),
+          user_feedback: experimentFeedback,
+          satisfaction: satisfactionScore,
+          match_rate: analysis.matchRate,
+          difference: analysis.difference,
+          next_rule: analysis.nextRule,
+          csv_flag: '',
+          md_flag: '',
+        });
+      }
     } catch (err) {
       setExperimentAnalysis({ matchRate: 0, difference: `분석 오류: ${err.message}`, nextRule: '' });
     } finally {
