@@ -4500,6 +4500,10 @@ reasons는변경항목만.`;
         match_rate: analysis.matchRate,
         difference: analysis.difference,
         next_rule: analysis.nextRule,
+        // applyLearnedCorrections가 읽는 필드 — 반드시 저장
+        target_variable: analysis.targetVariable || '',
+        user_pct: analysis.userPct || '',
+        system_pct: analysis.systemPct || '',
       };
       saveExperiment(exp);
 
