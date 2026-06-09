@@ -68,9 +68,11 @@ function buildDesignRules() {
 }
 async function sendToSheet(payload) {
   try {
+    // Content-Type: text/plain → CORS preflight 없이 전송 가능
+    // Apps Script doPost에서 e.postData.contents로 JSON 수신
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     });
   } catch { /* silent fail — logging must not break the app */ }
