@@ -4124,7 +4124,7 @@ reasons는변경항목만.`;
         saveGenerationLog(_genLog);  // 인메모리 스토어
         setCurrentLog(_genLog);
         setAllLogs(prev => [_genLog, ...prev].slice(0, 100));
-        if (ENABLE_GOOGLE_SHEET_LOGGING) sendLogToGoogleSheet(_genLog);
+        // sendLogToGoogleSheet: 피드백 제출 시 sendToSheet로 처리 (analyzeExperiment 내부)
         pushLog('rationale', '레이아웃 해설', 'running', '편집 근거 생성 중');
         // rationale만 백그라운드 (semantic은 이미 foreground에서 완료)
         const cachedRat = rationaleCache.current[chosen.i];
