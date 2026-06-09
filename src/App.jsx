@@ -4468,8 +4468,23 @@ reasons는변경항목만.`;
           design_concept: (structuredReason?.design_concept || []).join(', '),
           design_task: (structuredReason?.design_task || []).join(', '),
           visual_element: (structuredReason?.visual_element || []).join(', ') || cl?.text_analysis?.layout_intent || '',
-          ref_detail: cl?.matching?.semantic_reason || '',
-          body_reason: cl?.text_analysis?.topic || '',
+          // 레퍼런스 반영 내역: style_diff (작업 의도 탭과 동일한 형식)
+          ref_detail: (() => {
+            const diff = structuredReason?.style_diff;
+            if (!diff) return cl?.matching?.semantic_reason || '';
+            const modified = (diff.modified || [])
+              .map(r => `→${r.label} ${r.ref} → ${r.applied}${r.reason ? ` — ${r.reason}` : ''}`)
+              .join('\n');
+            const kept = diff.kept?.length > 0 ? `✓ 유지: ${diff.kept.join(' · ')}` : '';
+            return [modified, kept].filter(Boolean).join('\n');
+          })(),
+          // 본문 근거: evidenceMap 텍스트 인용 (작업 의도 탭과 동일한 형식)
+          body_reason: (() => {
+            if (Array.isArray(evidenceMap) && evidenceMap.length > 0) {
+              return evidenceMap.map(e => `"${e.textSpan}"\n→ ${e.interpretation}`).join('\n');
+            }
+            return cl?.text_analysis?.topic || '';
+          })(),
           // 레퍼런스 DB의 설계 근거 텍스트 (작업 의도 탭에 표시되는 내용)
           font_choice: DB[cl?.matching?.selected_reference_id]?.why_font || '',
           margin_design: DB[cl?.matching?.selected_reference_id]?.why_margin || '',
