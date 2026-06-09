@@ -6,7 +6,8 @@
 // Pipeline: 텍스트 → analyzeText → scoreKw → semanticRerank → inferAlignment → LaTeX → Refine
 
 const IMPRINT_VERSION = "1.3.0";
-const ENABLE_GOOGLE_SHEET_LOGGING = false;
+const ENABLE_GOOGLE_SHEET_LOGGING = true;
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5AyD3yHe8fwwE0kWozSXi2x77hL8rw8hklNpEeuLIVxVfsjkLcDAMfs0cOg5u9MnB/exec';
 
 // ── LaTeX escape (note content용 — 특수문자 안전 처리) ─────────────
 const latexEscNote = s => String(s || '')
