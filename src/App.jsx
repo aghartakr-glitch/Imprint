@@ -6025,6 +6025,43 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
               디자인 규칙 파일 저장 (user_design_rules.md)
             </button>
 
+            {/* ── 빠른 규칙 설정 ── */}
+            <div style={{ border:`1px solid #e0d4c0`, borderRadius:4, overflow:'hidden', marginBottom:4 }}>
+              <div style={{ padding:'7px 12px', background:'#fdf8f0', borderBottom:`1px solid #e0d4c0`,
+                fontSize:11, fontWeight:700, color:'#7a5c20' }}>
+                빠른 규칙 설정 (즉시 적용)
+              </div>
+              <div style={{ padding:'8px 12px', display:'flex', flexWrap:'wrap', gap:6 }}>
+                {[
+                  { label:'여백 -25%', rules:[
+                    {target_variable:'margin_top',    user_pct:'-25%'},
+                    {target_variable:'margin_bottom', user_pct:'-25%'},
+                    {target_variable:'margin_inner',  user_pct:'-25%'},
+                    {target_variable:'margin_outer',  user_pct:'-25%'},
+                  ]},
+                  { label:'여백 -30%', rules:[
+                    {target_variable:'margin_top',    user_pct:'-30%'},
+                    {target_variable:'margin_bottom', user_pct:'-30%'},
+                    {target_variable:'margin_inner',  user_pct:'-30%'},
+                    {target_variable:'margin_outer',  user_pct:'-30%'},
+                  ]},
+                  { label:'고딕체 고정', rules:[{target_variable:'font_style', user_pct:'gothic'}]},
+                  { label:'2단 고정',    rules:[{target_variable:'column_count', user_pct:'2단'}]},
+                ].map(({ label, rules }) => (
+                  <button key={label} onClick={() => {
+                    // 3회 반복 저장 → confidence: high 즉시 달성
+                    for (let i = 0; i < 3; i++) updateSystemRules(rules, 2);
+                    alert(`"${label}" 규칙이 high confidence로 저장됐습니다.\n다음 생성에 바로 반영됩니다.`);
+                    window.location.reload();
+                  }} style={{ padding:'5px 10px', fontSize:11, fontWeight:600,
+                    border:`1px solid #c8a84a`, borderRadius:3,
+                    background:'#fffbf0', color:'#7a5c20', cursor:'pointer' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* ── 기존 실험 로그 → 새 학습 시스템 마이그레이션 ── */}
             {(() => {
               const expCount = loadExperiments().length;
