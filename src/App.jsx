@@ -1218,7 +1218,7 @@ function calcVariableGrid(vg, textW, colGap) {
 function wrapBodyTextColumns(bodyLatex, bodyTextColumns) {
   const n = Number(bodyTextColumns || 1);
   if (n <= 1) return bodyLatex;
-  return [`\\begin{multicols}{${n}}`, '', bodyLatex.trim(), '', `\\end{multicols}`].join('\n');
+  return [`\\begin{multicols*}{${n}}`, '', bodyLatex.trim(), '', `\\end{multicols*}`].join('\n');
 }
 
 // 주석 영역 내부 단 구성: noteTextColumns≥2일 때 multicols 래핑
