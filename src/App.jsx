@@ -49,108 +49,154 @@ function saveExperiment(exp) {
   try { localStorage.setItem('imprint_experiments', JSON.stringify(_EXPERIMENT_STORE.experiments)); } catch {}
 }
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
-// 저장된 실험에서 수치 규칙을 파싱해 base 값을 직접 보정
-// target_variable + user_pct → 실제 수치 변환
-// 같은 변수에 대해 여러 실험이 있으면 가중 평균 적용
-function applyLearnedCorrections(base) {
-  const exps = loadExperiments();
-  if (exps.length === 0) return base;
+// ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
+// 이전 applyLearnedCorrections / getLearnedColumnCount 대체
+// 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
 
-  // variable → 누적 보정값 수집
-  const corrections = {}; // { variable: [{ pct, weight }] }
-
-  for (const e of exps) {
-    const s = e.satisfaction_score || 3;
-    const weight = s <= 2 ? 1.5 : s === 3 ? 1.0 : 0.7;
-
-    // 새 포맷: corrections 배열 우선 (여러 변수 동시 처리)
-    const corrList = Array.isArray(e.corrections) && e.corrections.length > 0
-      ? e.corrections
-      : (e.target_variable ? [{ target_variable: e.target_variable, user_pct: e.user_pct }] : []);
-
-    for (const c of corrList) {
-      const v = c.target_variable?.trim();
-      const p = String(c.user_pct ?? '').trim();
-      if (!v || !p) continue;
-      // column_count는 getLearnedColumnCount()에서 별도 처리 — 여기서 명시적으로 건너뜀
-      if (v === 'column_count') continue;
-      const match = p.match(/([+-]?\d+(?:\.\d+)?)%/);
-      if (!match) continue;
-      const pct = parseFloat(match[1]);
-      if (!corrections[v]) corrections[v] = [];
-      corrections[v].push({ pct, weight });
+function _defaultSystemRules() {
+  return {
+    version: 2,
+    last_updated: '',
+    rules: {
+      column_count:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      font_style:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      paragraph_spacing: { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      body_leading:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      body_size:         { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      margin_top:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      margin_bottom:     { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      margin_inner:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      margin_outer:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      tracking:          { value: null, weighted_count: 0, confidence: 'none', history: [] },
     }
+  };
+}
+function loadSystemRules() {
+  try {
+    const saved = localStorage.getItem('imprint_system_rules');
+    if (!saved) return _defaultSystemRules();
+    const parsed = JSON.parse(saved);
+    const def = _defaultSystemRules();
+    return { ...def, ...parsed, rules: { ...def.rules, ...parsed.rules } };
+  } catch { return _defaultSystemRules(); }
+}
+function saveSystemRules(sr) {
+  try { localStorage.setItem('imprint_system_rules', JSON.stringify(sr)); } catch {}
+}
+
+// satisfaction → 학습 가중치 (낮을수록 더 강한 교정 신호)
+function _satWeight(sat) {
+  if (sat <= 2) return 1.5;
+  if (sat === 3) return 1.0;
+  return 0.7; // 4-5: 만족했지만 방향 제시가 있으면 약하게 반영
+}
+
+// weighted_count → confidence 등급
+function _calcConfidence(wc) {
+  if (wc >= 3.5) return 'high';
+  if (wc >= 1.5) return 'medium';
+  if (wc > 0)    return 'low';
+  return 'none';
+}
+
+// 피드백 분석 결과(corrections[]) → system_rules 업데이트 및 저장
+function updateSystemRules(corrections, satisfactionScore) {
+  if (!Array.isArray(corrections) || corrections.length === 0) return;
+  const sr = loadSystemRules();
+  const weight = _satWeight(satisfactionScore || 3);
+  const now = new Date().toISOString();
+
+  for (const c of corrections) {
+    const v = c.target_variable?.trim();
+    const up = String(c.user_pct ?? '').trim();
+    if (!v || !up || !sr.rules[v]) continue;
+
+    const rule = sr.rules[v];
+    let parsedValue = null;
+
+    if (v === 'column_count') {
+      const m = up.match(/(\d+)/);
+      if (m) parsedValue = parseInt(m[1]);
+    } else if (v === 'font_style') {
+      if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
+      else if (/명조|serif|부리/i.test(up)) parsedValue = 'serif';
+    } else {
+      // 수치형: user_pct에서 % 파싱
+      const m = up.match(/([+-]?\d+(?:\.\d+)?)%/);
+      if (m) parsedValue = parseFloat(m[1]);
+    }
+    if (parsedValue === null) continue;
+
+    // history 추가 (최대 10개)
+    rule.history = [...(rule.history || []), { value: parsedValue, weight, timestamp: now }].slice(-10);
+    rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
+
+    // consensus: 카테고리형은 최다 weighted, 수치형은 가중 평균
+    if (v === 'font_style' || v === 'column_count') {
+      const tally = {};
+      for (const h of rule.history) tally[h.value] = (tally[h.value] || 0) + h.weight;
+      rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
+      if (v === 'column_count') rule.value = parseInt(rule.value);
+    } else {
+      const totalW = rule.history.reduce((s, h) => s + h.weight, 0);
+      rule.value = totalW > 0 ? rule.history.reduce((s, h) => s + h.value * h.weight, 0) / totalW : null;
+    }
+
+    rule.confidence = _calcConfidence(rule.weighted_count);
   }
 
-  // 변수명 → base 키 매핑
-  const varMap = {
-    'body_leading':      'bodyLeading',
-    'body_size':         'bodySize',
-    'footnote_size':     'footnoteSize',
-    'footnote_spacing':  null,   // LaTeX에서 직접 제어, 현재 생략
-    'title_size':        null,
-    'margin_top':        'marginTop',
-    'margin_bottom':     'marginBottom',
-    'margin_inner':      'marginInner',
-    'margin_outer':      'marginOuter',
-    'tracking':          'tracking',
-  };
+  sr.last_updated = now;
+  saveSystemRules(sr);
+}
 
+// base 수치 보정 (numeric rules)
+// confidence high: 강도 100%, medium: 70%, low: 30%
+function applySystemRules(base) {
+  const sr = loadSystemRules();
+  const r = sr.rules;
   const result = { ...base };
 
-  for (const [varName, baseKey] of Object.entries(varMap)) {
-    if (!baseKey || !corrections[varName]) continue;
+  const numericMap = {
+    body_size:     'bodySize',
+    body_leading:  'bodyLeading',
+    tracking:      'tracking',
+    margin_top:    'marginTop',
+    margin_bottom: 'marginBottom',
+    margin_inner:  'marginInner',
+    margin_outer:  'marginOuter',
+  };
 
-    const items = corrections[varName];
-    const totalWeight = items.reduce((s, x) => s + x.weight, 0);
-    if (totalWeight === 0) continue;  // 빈 배열 방어 (NaN 전파 방지)
-    const weightedPct = items.reduce((s, x) => s + x.pct * x.weight, 0) / totalWeight;
-
+  for (const [ruleName, baseKey] of Object.entries(numericMap)) {
+    const rule = r[ruleName];
+    if (!rule || rule.confidence === 'none' || rule.value === null) continue;
+    const strength = rule.confidence === 'high' ? 1.0 : rule.confidence === 'medium' ? 0.7 : 0.3;
     const current = parseFloat(result[baseKey]);
     if (isNaN(current)) continue;
+    const rawNew = current * (1 + (rule.value * strength) / 100);
+    result[baseKey] = Math.round(Math.max(current * 0.6, Math.min(current * 1.4, rawNew)) * 10) / 10;
+  }
 
-    // 적용: 현재값 × (1 + weightedPct/100)
-    // 안전 한도: 원래값의 50% 이내만 허용
-    const rawNew = current * (1 + weightedPct / 100);
-    const clamped = Math.max(current * 0.5, Math.min(current * 1.5, rawNew));
-    result[baseKey] = Math.round(clamped * 10) / 10;
+  // paragraph_spacing: 별도 필드로 전달 (LaTeX 생성 시 \parskip에 반영)
+  if (r.paragraph_spacing?.confidence !== 'none' && r.paragraph_spacing?.value !== null) {
+    result.paragraphSpacingPct  = r.paragraph_spacing.value;
+    result.paragraphSpacingConf = r.paragraph_spacing.confidence;
   }
 
   return result;
 }
 
-// 피드백에서 학습된 단 수 선호도 반환 (없으면 null)
-// next_rule 또는 user_correct_intent에서 "N단" 패턴 파싱
-// 만족도 낮을수록(시스템이 틀렸을수록) 더 강한 신호로 처리
-function getLearnedColumnCount() {
-  const exps = loadExperiments();
-  if (exps.length === 0) return null;
+// 학습된 단 수 반환 — confidence medium 이상 (satisfaction 조건 제거)
+function getSystemColumnCount() {
+  const rule = loadSystemRules().rules.column_count;
+  if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
+  return typeof rule.value === 'number' ? rule.value : null;
+}
 
-  // 가장 최근 것부터 확인 — 최신 피드백이 우선
-  for (const e of [...exps].reverse()) {
-    const s = e.satisfaction_score || 3;
-    if (s > 3) continue; // 만족도 4-5: 현재 단 수 유지 → 변경 불필요
-    // 주의: analyzeExperiment 프롬프트가 만족도 4-5인 경우에도 corrections를 emit하면
-    // column_count가 여기서 무시된다. 프롬프트 변경 시 이 invariant 재검토 필요.
-
-    // 새 포맷: corrections 배열에서 column_count 항목 확인
-    if (Array.isArray(e.corrections)) {
-      const colCorr = e.corrections.find(c => c.target_variable === 'column_count');
-      const _up = colCorr?.user_pct;
-      if (_up && typeof _up === 'string') {
-        const m = _up.match(/(\d+)/);
-        if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 10) return n; }
-      }
-    }
-
-    // 구 포맷 fallback: next_rule / user_correct_intent 텍스트에서 파싱
-    const sources = [e.next_rule, e.user_correct_intent].filter(Boolean);
-    for (const text of sources) {
-      const m = text.match(/(\d+)[단열]\s*(?:구성|레이아웃|조판|으로|변환|전환|고정)?/);
-      if (m) { const n = parseInt(m[1]); if (n >= 1 && n <= 10) return n; }
-    }
-  }
-  return null;
+// 학습된 서체 스타일 반환 — confidence medium 이상
+function getSystemFontStyle() {
+  const rule = loadSystemRules().rules.font_style;
+  if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
+  return rule.value; // 'gothic' | 'serif'
 }
 
 function buildDesignRules() {
