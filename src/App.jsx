@@ -1472,8 +1472,8 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   return [
     `% ── 면주 / 쪽번호 macro (memoir 전용) ────────────────────────`,
     pnNone ? `% pn-status: none` : `% pn-status: active`,
-    `\\newcommand{\\foliof}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
-    `\\newcommand{\\runningheadf}{\\rmfamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\foliof}{\\sffamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
+    `\\newcommand{\\runningheadf}{\\sffamily\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
     `\\newcommand{\\imprintrunninghead}{}`,
     `\\makepagestyle{imprint}`,
     `\\makeheadrule{imprint}{\\textwidth}{0pt}`,
