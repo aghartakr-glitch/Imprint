@@ -1719,7 +1719,7 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
     if (layoutConfig && !isMethodB) {
       const btc = Number(layoutConfig.bodyTextColumns || 1);
       const beforeSwitch = mainTex.split('\\switchcolumn')[0] || '';
-      const multicolsInBody = count(beforeSwitch, /\\begin\{multicols\}/g);
+      const multicolsInBody = count(beforeSwitch, /\\begin\{multicols\*?\}/g);
       if (btc >= 2 && multicolsInBody === 0)
         errors.push(`main.tex: bodyTextColumns=${btc}인데 body column 안에 \\begin{multicols}가 없습니다`);
       if (btc === 1 && multicolsInBody > 0)
