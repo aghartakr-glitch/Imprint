@@ -2159,6 +2159,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           밖: clamp(parsed.marginOuter,  base.marginOuter,  5, 8),
         },
         reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
+        // parSkip: AI가 반환한 문단 간격 pt값 (null이면 기본값 유지)
+        parSkip: (typeof parsed.parSkip === 'number' && parsed.parSkip > 0) ? parsed.parSkip : null,
       };
     } catch (e) {
       console.warn('[adjustTypography] 실패:', e.message);
