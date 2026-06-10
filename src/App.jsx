@@ -4044,6 +4044,24 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         let finalMainTex = sanitizeUnicodeForLatex(mainTex);
         let finalStyContent = sanitizeUnicodeForLatex(styContent);
 
+        // ── 문단 간격 정리: Claude가 본문에 삽입한 불필요한 수직 공백 제거 ──────
+        // \parskip=0pt임에도 \medskip/\bigskip/\vspace가 있으면 문단 간격이 넓어짐
+        // \begin{document} 이후 body 부분만 처리 (preamble 건드리지 않음)
+        {
+          const _bodyStart = finalMainTex.indexOf('\\begin{document}');
+          if (_bodyStart !== -1) {
+            const _pre  = finalMainTex.slice(0, _bodyStart);
+            let   _body = finalMainTex.slice(_bodyStart);
+            // 단독 줄에 있는 \medskip, \bigskip, \smallskip 제거
+            _body = _body.replace(/^[ \t]*\\(medskip|bigskip|smallskip)[ \t]*$/gm, '');
+            // \vspace{...} 단독 줄 제거 (단, \vspace*는 섹션 간격용일 수 있으므로 유지)
+            _body = _body.replace(/^[ \t]*\\vspace\{[^}]*\}[ \t]*$/gm, '');
+            // 연속 빈 줄 3개 이상 → 2개로 (LaTeX에서 빈 줄=문단 구분, 2개 이상은 동일)
+            _body = _body.replace(/\n{4,}/g, '\n\n\n');
+            finalMainTex = _pre + _body;
+          }
+        }
+
         // ── .sty 누락 패키지 자동 보완 ─────────────────────────────────────
         // main.tex에서 사용하는 패키지가 .sty에 없을 때 자동으로 추가
         // (Claude가 auto 모드에서 독자적으로 \begin{paracol}/\begin{multicols}를 생성한 경우 대비)
