@@ -2813,7 +2813,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           (isVariable
             ? ' (VARIABLE — analyze content and vary columns editorially)\n' +
               '% Base: ' + _effN + ' cols. Headlines/openers → full-width. Body → ' + _effN + ' cols. Vary intentionally.\n' +
-              '% Each switch: \\end{multicols} → \\begin{multicols}{N}\n'
+              '% Each switch: \\end{multicols*} → \\begin{multicols*}{N}\n'
             : '\n') +
           '\\setlength{\\columnsep}{' + colGap + 'mm}\n' +
           '% \\begin{multicols}{' + _effN + '} ... \\end{multicols}\n';
