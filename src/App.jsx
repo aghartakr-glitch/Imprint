@@ -4601,14 +4601,14 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
   "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
   "corrections": [
     {
-      "target_variable": "변수명 (body_leading|body_size|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size)",
-      "system_pct": "시스템 변경률 또는 현재값 (예: +8%, 3단)",
-      "user_pct": "사용자 원하는 변경률 또는 목표값 (예: +20%, 2단)",
-      "direction_match": true또는false
+      "target_variable": "변수명 (body_leading|body_size|heading_size|subheading_size|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size|heading_layout)",
+      "system_pct": "시스템이 실제 적용한 값 또는 변경률 (예: +8%, 3단, 21pt). 시스템이 사용자 요청을 구현하지 못했으면 '미반영'으로 표기",
+      "user_pct": "사용자가 원하는 값 또는 변경률 (예: +15%, 2단, body×1.15)",
+      "direction_match": "system_pct와 user_pct가 같은 방향이면 true, 시스템이 미반영이거나 반대 방향이면 false"
     }
   ]
 }
-corrections는 피드백에서 언급된 모든 변수를 각각 항목으로 포함하라.`;
+corrections는 피드백에서 언급된 모든 항목을 각각 항목으로 포함하라. system_pct가 '미반영'이면 direction_match는 반드시 false.`;
 
     try {
       const res = await fetch('/anthropic/v1/messages', {
