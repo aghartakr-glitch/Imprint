@@ -3263,12 +3263,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `\\feetbelowfloat`, // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         `\\renewcommand{\\footnoterule}{}`,
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
-        `\\newcommand{\\notef}{${(() => {
-          const noteFontIsSerif = p.pn_font === '명조';
-          return noteFontIsSerif
-            ? `\\rmfamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`
-            : `\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont`;
-        })()}}`,
+        `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
         // 각주 N단: fields.각주단 >= 2이면 bigfoot(sty 내 \RequirePackage), 아니면 1단
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
