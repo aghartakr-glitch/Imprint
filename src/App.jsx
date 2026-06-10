@@ -4582,7 +4582,6 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
 아래 JSON만 반환하라 (다른 텍스트 없이):
 {
-  "match_rate": 0~100정수,
   "difference": "차이점 1~2문장",
   "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
   "corrections": [
