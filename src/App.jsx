@@ -4057,6 +4057,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           }
         }
 
+        // ── multicols → multicols* 강제 치환 (post-processing 안전망) ──────────
+        // Claude가 프롬프트 예시를 따라 \begin{multicols} 생성할 수 있으므로 최종 치환
+        finalMainTex = finalMainTex
+          .replace(/\\begin\{multicols\}(\{[^}]*\})/g, '\\begin{multicols*}$1')
+          .replace(/\\end\{multicols\}(?!\*)/g, '\\end{multicols*}');
+
         // ── .sty 누락 패키지 자동 보완 ─────────────────────────────────────
         // main.tex에서 사용하는 패키지가 .sty에 없을 때 자동으로 추가
         // (Claude가 auto 모드에서 독자적으로 \begin{paracol}/\begin{multicols}를 생성한 경우 대비)
