@@ -2196,10 +2196,24 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       // 합치고 중복 제거 (최대 16개)
       const seen = new Set();
-      const pool = [...byContent, ...byLayout, ...byGenre].filter(r => {
+      let pool = [...byContent, ...byLayout, ...byGenre].filter(r => {
         if (seen.has(r.i)) return false;
         seen.add(r.i); return true;
       }).slice(0, 16);
+
+      // ── 학습된 서체 스타일 필터링 ──────────────────────────────────────
+      // font_style confidence medium 이상이면 해당 서체 계열 레퍼런스 우선
+      const _learnedFont = getSystemFontStyle();
+      if (_learnedFont) {
+        const filtered = pool.filter(r => {
+          const cls = (r.p.ty?.분류 || '').toLowerCase();
+          if (_learnedFont === 'gothic') return /고딕|sans|gothic|그로테스크|grotesque/i.test(cls);
+          if (_learnedFont === 'serif')  return /명조|serif|부리|바탕/i.test(cls);
+          return true;
+        });
+        // fallback: 필터 후 후보가 2개 미만이면 필터 무시 (레이아웃 파괴 방지)
+        if (filtered.length >= 2) pool = filtered;
+      }
       // genreCompare 중 이전 선택 항목 감점 표시
       const prevId = testCtx?.prevStyleId;
 
