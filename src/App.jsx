@@ -2816,7 +2816,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
               '% Each switch: \\end{multicols*} → \\begin{multicols*}{N}\n'
             : '\n') +
           '\\setlength{\\columnsep}{' + colGap + 'mm}\n' +
-          '% \\begin{multicols}{' + _effN + '} ... \\end{multicols}\n';
+          '% \\begin{multicols*}{' + _effN + '} ... \\end{multicols*}\n';
 
       } else {
         // 모듈 그리드 (열 표기) 또는 본문+주석 분리 → paracol
