@@ -2101,8 +2101,8 @@ export default function App() {
   async function adjustTypography(text, profile, p, structReason, _apiKey) {
     if (!_apiKey) return null;
     try {
-      // 레퍼런스 기본값에 학습된 수치 보정 직접 적용
-      const base = applyLearnedCorrections({
+      // 레퍼런스 기본값에 학습된 수치 보정 직접 적용 (applySystemRules)
+      const base = applySystemRules({
         bodySize:     p.b.크기,
         bodyLeading:  p.b.행간,
         tracking:     p.b.자간 || 0,
@@ -2112,14 +2112,18 @@ export default function App() {
         marginOuter:  p.m.밖,
       });
       const _designRules = buildDesignRules();
-      const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.${_designRules ? `\n[사용자 디자인 규칙 — 이전 피드백 기반, 우선 반영]\n${_designRules}` : ''}
+      // paragraph_spacing 학습 규칙이 있으면 프롬프트에 명시
+      const _parSpacingHint = base.paragraphSpacingPct != null
+        ? `\n문단간격(\\parskip): 기준값에서 ${base.paragraphSpacingPct > 0 ? '+' : ''}${Math.round(base.paragraphSpacingPct)}% 적용 (confidence:${base.paragraphSpacingConf})`
+        : '';
+      const prompt = `편집 디자인 조판 전문가. 입력 텍스트의 성격을 보고 레퍼런스 수치를 미세조정하라.${_designRules ? `\n[사용자 디자인 규칙 — 이전 피드백 기반, 우선 반영]\n${_designRules}` : ''}${_parSpacingHint}
 텍스트(앞200자):"${text.slice(0,200)}"
 성격: 장르/주제:${profile?.topic||'-'} 문체:${profile?.textForm||'-'} 톤:${profile?.tone||'-'}
 디자인개념:${(structReason?.design_concept||[]).join(',')} 과제:${(structReason?.design_task||[]).join(',')}
 기본수치: 크기${base.bodySize}pt 행간${base.bodyLeading}pt 자간${base.tracking} 여백${base.marginTop}/${base.marginBottom}/${base.marginInner}/${base.marginOuter}mm
 한도:크기±1.5pt(최소7pt),행간±3pt(최소크기×1.3),자간±20,여백±5mm. 불필요하면기본값유지.
-반환JSON:{"bodySize":<n>,"bodyLeading":<n>,"tracking":<n>,"marginTop":<n>,"marginBottom":<n>,"marginInner":<n>,"marginOuter":<n>,"reasons":[{"variable":"<항목>","base":"<기본>","adjusted":"<조정>","reason":"<이유10자>"}]}
-reasons는변경항목만.`;
+반환JSON:{"bodySize":<n>,"bodyLeading":<n>,"tracking":<n>,"marginTop":<n>,"marginBottom":<n>,"marginInner":<n>,"marginOuter":<n>,"parSkip":<n_or_null>,"reasons":[{"variable":"<항목>","base":"<기본>","adjusted":"<조정>","reason":"<이유10자>"}]}
+parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항목만.`;
 
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 20000);
