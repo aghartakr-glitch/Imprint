@@ -6004,6 +6004,86 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
               background:'#f0f7f0', color:'#2a7', cursor:'pointer' }}>
               디자인 규칙 파일 저장 (user_design_rules.md)
             </button>
+
+            {/* ── 현재 학습된 시스템 규칙 패널 ── */}
+            {(() => {
+              const sr = loadSystemRules();
+              const activeRules = Object.entries(sr.rules).filter(([, r]) => r.confidence !== 'none' && r.value !== null);
+              const confColor = { high:'#c8440a', medium:'#b07c00', low:'#888' };
+              const confLabel = { high:'강함 ●●●', medium:'중간 ●●○', low:'약함 ●○○' };
+              const varLabel  = {
+                column_count:'단 수', font_style:'서체 스타일', paragraph_spacing:'문단 간격',
+                body_size:'글자 크기', body_leading:'행간', tracking:'자간',
+                margin_top:'상 여백', margin_bottom:'하 여백', margin_inner:'안 여백', margin_outer:'밖 여백',
+              };
+              return (
+                <div style={{ marginTop:12, border:`1px solid ${T.border}`, borderRadius:4, overflow:'hidden' }}>
+                  <div style={{ padding:'8px 12px', background:T.bg, borderBottom:`1px solid ${T.border}`,
+                    display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:T.ink }}>
+                      현재 학습된 규칙 {activeRules.length > 0 ? `(${activeRules.length}개 활성)` : '(없음)'}
+                    </span>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button onClick={() => {
+                        const blob = new Blob([JSON.stringify(sr, null, 2)], { type:'application/json' });
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                        a.download = 'system_rules.json'; document.body.appendChild(a);
+                        a.click(); document.body.removeChild(a);
+                      }} style={{ padding:'3px 8px', fontSize:10, border:`1px solid ${T.border}`,
+                        borderRadius:3, background:T.surface, color:T.muted, cursor:'pointer' }}>
+                        JSON 저장
+                      </button>
+                      <button onClick={() => {
+                        if (window.confirm('모든 학습 규칙을 초기화하시겠습니까?')) {
+                          saveSystemRules(_defaultSystemRules());
+                          window.location.reload();
+                        }
+                      }} style={{ padding:'3px 8px', fontSize:10, border:'1px solid #fcc',
+                        borderRadius:3, background:'#fff8f8', color:'#c44', cursor:'pointer' }}>
+                        초기화
+                      </button>
+                    </div>
+                  </div>
+                  {activeRules.length === 0 ? (
+                    <div style={{ padding:'10px 12px', fontSize:11, color:T.muted }}>
+                      아직 학습된 규칙이 없습니다. 피드백을 분석하면 여기에 쌓입니다.
+                    </div>
+                  ) : (
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+                      <thead>
+                        <tr style={{ background:T.bg }}>
+                          {['항목','학습값','강도','누적횟수'].map(h => (
+                            <th key={h} style={{ padding:'5px 10px', textAlign:'left', fontWeight:600,
+                              color:T.muted, borderBottom:`1px solid ${T.border}` }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeRules.map(([key, rule]) => (
+                          <tr key={key} style={{ borderBottom:`1px solid ${T.bg}` }}>
+                            <td style={{ padding:'5px 10px', color:T.ink, fontWeight:500 }}>
+                              {varLabel[key] || key}
+                            </td>
+                            <td style={{ padding:'5px 10px', color:T.ink, fontFamily:T.mono }}>
+                              {key === 'font_style' ? (rule.value === 'gothic' ? '고딕' : '명조')
+                               : key === 'column_count' ? `${rule.value}단`
+                               : typeof rule.value === 'number' ? `${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}%`
+                               : String(rule.value)}
+                            </td>
+                            <td style={{ padding:'5px 10px', color: confColor[rule.confidence], fontWeight:600 }}>
+                              {confLabel[rule.confidence]}
+                            </td>
+                            <td style={{ padding:'5px 10px', color:T.muted }}>
+                              {rule.history?.length || 0}회
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })()}
             </div>
           )}
 
