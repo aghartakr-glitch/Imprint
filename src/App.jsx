@@ -2797,7 +2797,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           colPackages = '\\usepackage{multicol}\n';
           colSetupBlock =
             'cols=' + n + ' \\setlength{\\columnsep}{' + (colGap||5) + 'mm}\n' +
-            '\\begin{multicols}{' + n + '}...\\end{multicols}\n';
+            '\\begin{multicols*}{' + n + '}...\\end{multicols*}\n';
         }
 
       } else if (!isModuleGrid && baseN <= 1) {
