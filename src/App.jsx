@@ -1181,7 +1181,7 @@ function wrapParacol(body, bodyMm, noteMm, colGapMm) {
 // 고정 단 구성 wrapping: Claude가 multicols를 생성하지 않았을 때 JS에서 보장
 function wrapFixedColumns(body, n, colGapMm) {
   if (n <= 1) return body;
-  if (body.includes('\\begin{multicols}') || body.includes('\\begin{paracol}')) return body;
+  if (body.includes('\\begin{multicols}') || body.includes('\\begin{multicols*}') || body.includes('\\begin{paracol}')) return body;
   const gap = colGapMm || 10;
   return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols*}{${n}}\n${body}\n\\end{multicols*}`;
 }
