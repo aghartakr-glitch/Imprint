@@ -1183,7 +1183,7 @@ function wrapFixedColumns(body, n, colGapMm) {
   if (n <= 1) return body;
   if (body.includes('\\begin{multicols}') || body.includes('\\begin{paracol}')) return body;
   const gap = colGapMm || 10;
-  return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols}{${n}}\n${body}\n\\end{multicols}`;
+  return `\\setlength{\\columnsep}{${gap}mm}\n\\begin{multicols*}{${n}}\n${body}\n\\end{multicols*}`;
 }
 
 // 가변단 그리드 계산: vg={total,body,note}, textW=판면너비(mm), colGap=단간격(mm)
