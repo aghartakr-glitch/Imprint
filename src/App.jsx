@@ -173,7 +173,11 @@ function applySystemRules(base) {
     const current = parseFloat(result[baseKey]);
     if (isNaN(current)) continue;
     const rawNew = current * (1 + (rule.value * strength) / 100);
-    result[baseKey] = Math.round(Math.max(current * 0.6, Math.min(current * 1.4, rawNew)) * 10) / 10;
+    // 마진 변수는 최대 60% 감소 허용 (사용자가 50%+ 요청 가능), 나머지는 40%
+    const isMargin = ruleName.startsWith('margin_');
+    const minFactor = isMargin ? 0.4 : 0.6;
+    const maxFactor = isMargin ? 1.6 : 1.4;
+    result[baseKey] = Math.round(Math.max(current * minFactor, Math.min(current * maxFactor, rawNew)) * 10) / 10;
   }
 
   // paragraph_spacing: 별도 필드로 전달 (LaTeX 생성 시 \parskip에 반영)
