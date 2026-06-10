@@ -128,9 +128,15 @@ function updateSystemRules(corrections, satisfactionScore) {
       if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
       else if (/명조|serif|부리/i.test(up)) parsedValue = 'serif';
     } else {
-      // 수치형: user_pct에서 % 파싱
-      const m = up.match(/([+-]?\d+(?:\.\d+)?)%/);
-      if (m) parsedValue = parseFloat(m[1]);
+      // 수치형: user_pct에서 % 또는 배율(body×N, ×N) 파싱
+      const mPct = up.match(/([+-]?\d+(?:\.\d+)?)%/);
+      if (mPct) {
+        parsedValue = parseFloat(mPct[1]);
+      } else {
+        // "body×1.15" 또는 "×0.9" 형식: (배율-1)×100 = %
+        const mMult = up.match(/[×x*](\d+(?:\.\d+)?)/i);
+        if (mMult) parsedValue = Math.round((parseFloat(mMult[1]) - 1) * 100 * 10) / 10;
+      }
     }
     if (parsedValue === null) continue;
 
