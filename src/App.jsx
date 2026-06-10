@@ -3349,7 +3349,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `% 쪽번호: ${p.pn || '하단-외측'} / 면주: ${styleConfig.rhPos || '자동'} / 크기: ${p.pn_size || pnAutoSize + 'pt'}`,
         buildMemoirPageStyle({
           pnPos: p.pn || '하단-외측',
-          pnSizePt: (() => { const s = parseFloat(p.pn_size); return (s > 0 && s < 30) ? s : pnAutoSize; })(),
+          pnSizePt: (() => { const s = parseFloat(p.pn_size); const base = (s > 0 && s < 30) ? s : pnAutoSize; return getLearnedDesignOverride('folio_size', base); })(),
           hasRunningHead: !!effectiveRH(),
           rhPos: (() => {
             const rp = styleConfig.rhPos || '자동';
