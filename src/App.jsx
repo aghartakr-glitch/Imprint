@@ -169,12 +169,17 @@ function applySystemRules(base) {
   for (const [ruleName, baseKey] of Object.entries(numericMap)) {
     const rule = r[ruleName];
     if (!rule || rule.confidence === 'none' || rule.value === null) continue;
-    const strength = rule.confidence === 'high' ? 1.0 : rule.confidence === 'medium' ? 0.7 : 0.3;
+    const isMargin = ruleName.startsWith('margin_');
+    // 마진은 confidence 무관 항상 full strength (사용자가 명시적으로 % 요청하면 즉시 반영)
+    // 나머지는 confidence 단계별 강도
+    const strength = isMargin ? 1.0
+      : rule.confidence === 'high' ? 1.0
+      : rule.confidence === 'medium' ? 0.7
+      : 0.3;
     const current = parseFloat(result[baseKey]);
     if (isNaN(current)) continue;
     const rawNew = current * (1 + (rule.value * strength) / 100);
-    // 마진 변수는 최대 60% 감소 허용 (사용자가 50%+ 요청 가능), 나머지는 40%
-    const isMargin = ruleName.startsWith('margin_');
+    // 마진 변수는 최대 60% 감소 허용, 나머지는 40%
     const minFactor = isMargin ? 0.4 : 0.6;
     const maxFactor = isMargin ? 1.6 : 1.4;
     result[baseKey] = Math.round(Math.max(current * minFactor, Math.min(current * maxFactor, rawNew)) * 10) / 10;
