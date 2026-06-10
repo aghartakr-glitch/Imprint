@@ -2121,7 +2121,7 @@ export default function App() {
 성격: 장르/주제:${profile?.topic||'-'} 문체:${profile?.textForm||'-'} 톤:${profile?.tone||'-'}
 디자인개념:${(structReason?.design_concept||[]).join(',')} 과제:${(structReason?.design_task||[]).join(',')}
 기본수치: 크기${base.bodySize}pt 행간${base.bodyLeading}pt 자간${base.tracking} 여백${base.marginTop}/${base.marginBottom}/${base.marginInner}/${base.marginOuter}mm
-한도:크기±1.5pt(최소7pt),행간±3pt(최소크기×1.3),자간±20,여백±5mm. 불필요하면기본값유지.
+한도:크기±1.5pt(최소7pt),행간±3pt(최소크기×1.3),자간±20,여백±20mm(최소5mm). 불필요하면기본값유지.
 반환JSON:{"bodySize":<n>,"bodyLeading":<n>,"tracking":<n>,"marginTop":<n>,"marginBottom":<n>,"marginInner":<n>,"marginOuter":<n>,"parSkip":<n_or_null>,"reasons":[{"variable":"<항목>","base":"<기본>","adjusted":"<조정>","reason":"<이유10자>"}]}
 parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항목만.`;
 
