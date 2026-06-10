@@ -215,6 +215,19 @@ function getSystemFontStyle() {
   return rule.value; // 'gothic' | 'serif'
 }
 
+// 학습된 % 보정값을 baseValue에 적용 — heading/footnote/column_gap/folio 등 sty 생성 시 직접 호출
+function getLearnedDesignOverride(ruleName, baseValue) {
+  if (!baseValue || isNaN(baseValue)) return baseValue;
+  const rule = loadSystemRules().rules[ruleName];
+  if (!rule || rule.confidence === 'none' || rule.value === null) return baseValue;
+  const strength = rule.confidence === 'high' ? 1.0
+    : rule.confidence === 'medium' ? 0.7
+    : 0.3; // low
+  const adjusted = baseValue * (1 + (rule.value * strength) / 100);
+  // 최소 50%, 최대 200% 범위 제한
+  return Math.round(Math.max(baseValue * 0.5, Math.min(baseValue * 2.0, adjusted)) * 10) / 10;
+}
+
 function buildDesignRules() {
   const exps = loadExperiments();
   if (exps.length === 0) return '';
