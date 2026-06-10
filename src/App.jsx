@@ -2153,10 +2153,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         bl: clamp(parsed.bodyLeading, base.bodyLeading, 3, Math.round(adjSize * 1.3 * 10) / 10),
         bt: clamp(parsed.tracking, base.tracking, 20, -100),
         margins: {
-          상: clamp(parsed.marginTop,    base.marginTop,    5, 8),
-          하: clamp(parsed.marginBottom, base.marginBottom, 5, 8),
-          안: clamp(parsed.marginInner,  base.marginInner,  5, 8),
-          밖: clamp(parsed.marginOuter,  base.marginOuter,  5, 8),
+          상: clamp(parsed.marginTop,    base.marginTop,    20, 5),
+          하: clamp(parsed.marginBottom, base.marginBottom, 20, 5),
+          안: clamp(parsed.marginInner,  base.marginInner,  20, 5),
+          밖: clamp(parsed.marginOuter,  base.marginOuter,  20, 5),
         },
         reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
         // parSkip: AI가 반환한 문단 간격 pt값 (null이면 기본값 유지)
