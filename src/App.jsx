@@ -6005,6 +6005,38 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
               디자인 규칙 파일 저장 (user_design_rules.md)
             </button>
 
+            {/* ── 기존 실험 로그 → 새 학습 시스템 마이그레이션 ── */}
+            {(() => {
+              const expCount = loadExperiments().length;
+              const sr = loadSystemRules();
+              const hasRules = Object.values(sr.rules).some(r => r.confidence !== 'none');
+              if (expCount === 0) return null;
+              return (
+                <button onClick={() => {
+                  const exps = loadExperiments();
+                  let migrated = 0;
+                  for (const e of exps) {
+                    const corrList = Array.isArray(e.corrections) && e.corrections.length > 0
+                      ? e.corrections
+                      : (e.target_variable ? [{ target_variable: e.target_variable, user_pct: e.user_pct }] : []);
+                    if (corrList.length > 0) {
+                      updateSystemRules(corrList, e.satisfaction_score || 3);
+                      migrated++;
+                    }
+                  }
+                  alert(`마이그레이션 완료: ${migrated}개 실험 → 학습 규칙 반영됨\n페이지를 새로고침하면 반영된 규칙이 표시됩니다.`);
+                  window.location.reload();
+                }} style={{ width:'100%', padding:'9px', fontSize:11, fontWeight:600,
+                  border:`1px solid #a0c4e8`, borderRadius:3,
+                  background: hasRules ? '#f5f5f5' : '#eef5fc',
+                  color: hasRules ? T.muted : '#1a6fa8', cursor:'pointer' }}>
+                  {hasRules
+                    ? `↺ 기존 실험 ${expCount}개 재학습 (현재 규칙 덮어쓰기)`
+                    : `▶ 기존 실험 ${expCount}개로 학습 규칙 생성`}
+                </button>
+              );
+            })()}
+
             {/* ── 현재 학습된 시스템 규칙 패널 ── */}
             {(() => {
               const sr = loadSystemRules();
