@@ -1226,7 +1226,7 @@ function wrapNoteTextColumns(noteLatex, noteTextColumns) {
   const n = Number(noteTextColumns || 1);
   if (!noteLatex || !noteLatex.trim()) return '';
   if (n <= 1) return noteLatex;
-  return [`\\begin{multicols}{${n}}`, '', noteLatex.trim(), '', `\\end{multicols}`].join('\n');
+  return [`\\begin{multicols*}{${n}}`, '', noteLatex.trim(), '', `\\end{multicols*}`].join('\n');
 }
 
 // wrapping quote 제거: 전체 원고가 큰따옴표 하나로 감싸진 경우만 제거
