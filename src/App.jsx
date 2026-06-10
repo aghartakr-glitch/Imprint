@@ -3030,7 +3030,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         '\\renewcommand{\\footnoterule}{}',
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
-        `\\newcommand{\\notef}{${p.pn_font === '명조' ? '\\rmfamily' : '\\sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
         // 각주 N단 지원: fields.각주단 >= 2이면 bigfoot 패키지로 다단 각주 구성
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
