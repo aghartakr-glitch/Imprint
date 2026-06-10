@@ -3011,6 +3011,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         hs.h2 = dbSh;
         hs.h3 = Math.round(dbSh * 0.85 * 2) / 2; // h3 = h2 × 0.85
       }
+      // 피드백 학습 보정: heading_h1/h2/h3_size 규칙이 있으면 덮어씀
+      hs.h1 = getLearnedDesignOverride('heading_h1_size', hs.h1);
+      hs.h2 = getLearnedDesignOverride('heading_h2_size', hs.h2);
+      hs.h3 = getLearnedDesignOverride('heading_h3_size', hs.h3);
       const h1Lead = Math.round(hs.h1 * TYPO_BASE.leadingRatio(hs.h1) * 10) / 10;
       const h2Lead = Math.round(hs.h2 * TYPO_BASE.leadingRatio(hs.h2) * 10) / 10;
       const h3Lead = Math.round(hs.h3 * TYPO_BASE.leadingRatio(hs.h3) * 10) / 10;
