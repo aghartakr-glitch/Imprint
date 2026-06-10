@@ -2833,7 +2833,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
             colSetupBlock =
               '% ' + effectiveCols + '-column layout (note-col downgraded: no side-note content)\n' +
               '\\setlength{\\columnsep}{' + colGap + 'mm}\n' +
-              '% \\begin{multicols}{' + effectiveCols + '} ... \\end{multicols}\n';
+              '% \\begin{multicols*}{' + effectiveCols + '} ... \\end{multicols*}\n';
           }
         } else {
           colPackages = '\\usepackage{paracol}\n';
