@@ -1608,7 +1608,7 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   if (/\\begin\{paracol\}/.test(mainTex) && !sty.includes('paracol'))
     errors.push('imprint-style.sty: \\RequirePackage{paracol} 없음 (main.tex에 \\begin{paracol} 사용 중)');
   // multicol 패키지 검사
-  if (/\\begin\{multicols\}/.test(mainTex) && !sty.includes('multicol'))
+  if (/\\begin\{multicols\*?\}/.test(mainTex) && !sty.includes('multicol'))
     errors.push('imprint-style.sty: \\RequirePackage{multicol} 없음 (main.tex에 \\begin{multicols} 사용 중)');
   // imprintlayout 미정의 환경 검사 (→ LaTeX 즉시 오류, post-processing으로 제거되어야 함)
   if (/\\begin\{imprintlayout\}/.test(mainTex))
