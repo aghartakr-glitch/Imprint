@@ -3608,8 +3608,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         }
 
         // 미닫힌 환경 닫기
-        if (bodyContentOnly.includes('\\begin{multicols}') &&
-            !bodyContentOnly.includes('\\end{multicols}')) {
+        if ((bodyContentOnly.includes('\\begin{multicols}') || bodyContentOnly.includes('\\begin{multicols*}')) &&
+            !bodyContentOnly.includes('\\end{multicols}') && !bodyContentOnly.includes('\\end{multicols*}')) {
           bodyContentOnly += '\n\\end{multicols}';
         }
         if (bodyContentOnly.includes('\\begin{paracol}') &&
