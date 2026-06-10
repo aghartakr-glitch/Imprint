@@ -6066,17 +6066,17 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
               </div>
               <div style={{ padding:'8px 12px', display:'flex', flexWrap:'wrap', gap:6 }}>
                 {[
-                  { label:'여백 -25%', rules:[
-                    {target_variable:'margin_top',    user_pct:'-25%'},
-                    {target_variable:'margin_bottom', user_pct:'-25%'},
-                    {target_variable:'margin_inner',  user_pct:'-25%'},
-                    {target_variable:'margin_outer',  user_pct:'-25%'},
-                  ]},
                   { label:'여백 -30%', rules:[
                     {target_variable:'margin_top',    user_pct:'-30%'},
                     {target_variable:'margin_bottom', user_pct:'-30%'},
                     {target_variable:'margin_inner',  user_pct:'-30%'},
                     {target_variable:'margin_outer',  user_pct:'-30%'},
+                  ]},
+                  { label:'여백 -50%', rules:[
+                    {target_variable:'margin_top',    user_pct:'-50%'},
+                    {target_variable:'margin_bottom', user_pct:'-50%'},
+                    {target_variable:'margin_inner',  user_pct:'-50%'},
+                    {target_variable:'margin_outer',  user_pct:'-50%'},
                   ]},
                   { label:'고딕체 고정', rules:[{target_variable:'font_style', user_pct:'gothic'}]},
                   { label:'2단 고정',    rules:[{target_variable:'column_count', user_pct:'2단'}]},
