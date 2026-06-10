@@ -68,6 +68,13 @@ function _defaultSystemRules() {
       margin_inner:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
       margin_outer:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
       tracking:          { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_h1_size:   { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_h2_size:   { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_h3_size:   { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      footnote_size:     { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      footnote_leading:  { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      column_gap:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      folio_size:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
     }
   };
 }
