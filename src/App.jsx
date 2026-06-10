@@ -1367,7 +1367,7 @@ function wrapVariableLayout({
     const rightIndNote = Math.max(0, textW - noteWidthEff - (bottomNoteWidth === 'body' ? leftIndentBody : 0)).toFixed(1);
     const _bnfc = Math.max(1, Number(bottomNoteFlowColumns) || 1);
     const wrappedNote = _bnfc >= 2
-      ? [`\\begin{multicols}{${_bnfc}}`, noteContent, `\\end{multicols}`].join('\n')
+      ? [`\\begin{multicols*}{${_bnfc}}`, noteContent, `\\end{multicols*}`].join('\n')
       : noteContent;
     const noteBlock = [
       `\\begin{adjustwidth}{${leftIndNote}mm}{${rightIndNote}mm}`,
