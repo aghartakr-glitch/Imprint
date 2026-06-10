@@ -2721,8 +2721,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const 구성 = p.c.구성 || '';
       const layoutType = p.layout_type || '';
       const colGap = p.c.간격 || 0;
-      // variable mode gap: styleConfig 우선, DB 기본값 fallback (variable layout 전체에서 통일)
-      const columnGapMm = Number(styleConfig.columnGapMm ?? p.c?.간격 ?? 8);
+      // variable mode gap: styleConfig 우선, DB 기본값 fallback + 학습 보정
+      const columnGapMm = getLearnedDesignOverride('column_gap', Number(styleConfig.columnGapMm ?? p.c?.간격 ?? 8));
 
       const baseColMatch = 구성.match(/(\d+)[단열]/);
       const baseN = baseColMatch ? parseInt(baseColMatch[1]) : 1;
