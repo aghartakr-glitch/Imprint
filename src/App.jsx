@@ -6252,24 +6252,120 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 ) : (
                   /* 생성 후: 피드백 활성화 */
                   <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'4px 0' }}>
-                    {/* 정답 피드백 */}
+                    {/* 정답 피드백: 구조화 폼 */}
                     <div>
                       <label style={{ display:'block', fontSize:11, fontWeight:600,
-                        color:T.ink, marginBottom:5 }}>
-                        정답 피드백
+                        color:T.ink, marginBottom:8 }}>
+                        변수별 수정 요청
                       </label>
-                      <textarea
-                        value={experimentFeedback}
-                        onChange={e => setExperimentFeedback(e.target.value)}
-                        rows={5}
-                        placeholder={"예: 각주 크기는 맞게 줄었지만, 내가 원한 건 크기보다 본문과 각주 사이 간격을 넓히는 것이었다."}
-                        style={{ width:'100%', padding:'9px 11px', fontSize:12,
-                          border:`1px solid ${T.border}`, borderRadius:3,
-                          background:T.bg, color:T.ink, lineHeight:1.6,
-                          resize:'vertical' }}
-                        onFocus={e => e.target.style.borderColor = T.ink}
-                        onBlur={e => e.target.style.borderColor = T.border}
-                      />
+
+                      {/* 변수 선택 + 입력 */}
+                      <div style={{ display:'flex', flexDirection:'column', gap:8,
+                        padding:'10px', background:T.bg, borderRadius:3,
+                        border:`1px solid ${T.border}` }}>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <select value={feedbackCurrentVar} onChange={e => setFeedbackCurrentVar(e.target.value)}
+                            style={{ flex:1, padding:'6px 8px', fontSize:11, border:`1px solid ${T.border}`,
+                              borderRadius:3, background:T.surface }}>
+                            <option value="body_size">본문 크기</option>
+                            <option value="body_leading">본문 행간</option>
+                            <option value="heading_h1_size">제목 크기</option>
+                            <option value="heading_h1_leading">제목 행간 (복수줄)</option>
+                            <option value="heading_h2_size">소제목 크기</option>
+                            <option value="heading_h2_leading">소제목 행간 (복수줄)</option>
+                            <option value="heading_h3_size">소소제목 크기</option>
+                            <option value="heading_h3_leading">소소제목 행간 (복수줄)</option>
+                            <option value="heading_gap">제목↔소제목 간격</option>
+                            <option value="heading_layout">제목 정렬</option>
+                            <option value="margin_top">상 여백</option>
+                            <option value="margin_bottom">하 여백</option>
+                            <option value="margin_inner">안쪽 여백</option>
+                            <option value="margin_outer">바깥쪽 여백</option>
+                            <option value="tracking">자간</option>
+                            <option value="column_count">단 수</option>
+                            <option value="footnote_size">각주 크기</option>
+                            <option value="footnote_leading">각주 행간</option>
+                            <option value="column_gap">단 간격</option>
+                            <option value="folio_size">쪽번호 크기</option>
+                            <option value="font_style">서체 스타일</option>
+                            <option value="paragraph_spacing">문단 간격</option>
+                          </select>
+                        </div>
+
+                        <div style={{ display:'flex', gap:8, fontSize:11 }}>
+                          <div style={{ flex:1 }}>
+                            <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                              시스템이 적용한 값 (예: +8%, 3단)
+                            </label>
+                            <input type="text" value={feedbackCurrentSystemPct}
+                              onChange={e => setFeedbackCurrentSystemPct(e.target.value)}
+                              placeholder="미반영"
+                              style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
+                                borderRadius:3, fontSize:11 }}
+                            />
+                          </div>
+                          <div style={{ flex:1 }}>
+                            <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                              원하는 값 (예: +15%, 2단)
+                            </label>
+                            <input type="text" value={feedbackCurrentUserPct}
+                              onChange={e => setFeedbackCurrentUserPct(e.target.value)}
+                              placeholder="필수"
+                              style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
+                                borderRadius:3, fontSize:11 }}
+                            />
+                          </div>
+                        </div>
+
+                        <button onClick={() => {
+                          if (!feedbackCurrentUserPct.trim()) return;
+                          const newCorr = {
+                            target_variable: feedbackCurrentVar,
+                            system_pct: feedbackCurrentSystemPct.trim() || '미반영',
+                            user_pct: feedbackCurrentUserPct.trim(),
+                            direction_match: feedbackCurrentSystemPct.trim() && feedbackCurrentUserPct.trim()
+                              ? (feedbackCurrentSystemPct.match(/[+-]/)?.[0] === feedbackCurrentUserPct.match(/[+-]/)?.[0])
+                              : false,
+                          };
+                          setFeedbackCorrections([...feedbackCorrections, newCorr]);
+                          setFeedbackCurrentSystemPct('');
+                          setFeedbackCurrentUserPct('');
+                        }}
+                          style={{ padding:'6px 10px', fontSize:11, fontWeight:600,
+                            background:T.ink, color:'#fff', border:'none', borderRadius:3,
+                            cursor:'pointer' }}>
+                          + 변수 추가
+                        </button>
+                      </div>
+
+                      {/* 추가된 변수 리스트 */}
+                      {feedbackCorrections.length > 0 && (
+                        <div style={{ marginTop:8, padding:'8px 10px', background:T.bg,
+                          borderRadius:3, border:`1px solid ${T.border}` }}>
+                          <div style={{ fontSize:10, fontWeight:600, color:T.muted, marginBottom:6 }}>
+                            추가된 항목 ({feedbackCorrections.length})
+                          </div>
+                          {feedbackCorrections.map((c, i) => (
+                            <div key={i} style={{ display:'flex', justifyContent:'space-between',
+                              alignItems:'center', fontSize:11, padding:'4px 0',
+                              borderBottom: i < feedbackCorrections.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                              <div style={{ flex:1 }}>
+                                <span style={{ fontWeight:600, color:T.ink }}>{
+                                  {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'}[c.target_variable] || c.target_variable
+                                }</span>
+                                <span style={{ color:T.muted, marginLeft:8 }}>
+                                  {c.system_pct} → {c.user_pct}
+                                </span>
+                              </div>
+                              <button onClick={() => setFeedbackCorrections(feedbackCorrections.filter((_, j) => i !== j))}
+                                style={{ padding:'2px 8px', fontSize:10, border:`1px solid ${T.border}`,
+                                  background:T.surface, color:T.muted, borderRadius:2, cursor:'pointer' }}>
+                                삭제
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {/* 만족도 5단계 */}
                     <div>
