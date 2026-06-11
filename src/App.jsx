@@ -6400,7 +6400,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     </div>
                     {/* 피드백 전송 버튼 */}
                     {(() => {
-                      const canSubmit = !!experimentFeedback.trim() && satisfactionScore !== null && !experimentLoading;
+                      const canSubmit = feedbackCorrections.length > 0 && satisfactionScore !== null && !experimentLoading;
                       return (
                         <button
                           onClick={analyzeExperiment}
@@ -6410,7 +6410,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             background: canSubmit ? T.ink : T.border,
                             color: canSubmit ? '#fff' : T.muted,
                             cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-                          {experimentLoading ? '분석 중…' : '피드백 분석하기'}
+                          {experimentLoading ? '분석 중…' : '피드백 적용하기'}
                         </button>
                       );
                     })()}
