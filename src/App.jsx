@@ -5034,24 +5034,19 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // nextRule: 규칙 요약
       const nextRule = `${corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
 
-      // ── 일치율 코드 계산 (Claude 주관 숫자 대신 corrections 기반 정확 계산) ──
-      // 방향 일치율: direction_match:true 비율
-      // 달성도: 숫자형은 |system_pct| / |user_pct| 비율 (최대 100%)
+      // ── 일치율 계산 ──
       function calcMatchRate(corrs) {
         if (!corrs.length) return 0;
         let totalScore = 0;
         for (const c of corrs) {
-          // direction_match가 false이거나 system_pct가 "미반영"이면 0점
           if (!c.direction_match) { totalScore += 0; continue; }
           if (/미반영|not applied/i.test(String(c.system_pct || ''))) { totalScore += 0; continue; }
-          // 숫자 달성도
           const sysPct = parseFloat(String(c.system_pct || '').replace(/[^-\d.]/g, ''));
           const usrPct = parseFloat(String(c.user_pct  || '').replace(/[^-\d.]/g, ''));
           if (!isNaN(sysPct) && !isNaN(usrPct) && usrPct !== 0) {
             const achievement = Math.min(1, Math.abs(sysPct) / Math.abs(usrPct));
             totalScore += achievement;
           } else {
-            // 카테고리형: 방향 맞으면 100%
             totalScore += 1;
           }
         }
@@ -5061,9 +5056,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       const analysis = {
         matchRate: computedMatchRate,
-        difference: parsed.difference || '',
-        nextRule: parsed.next_rule || '',
-        corrections,                            // 전체 배열
+        difference,
+        nextRule,
+        corrections,
         targetVariable: primary.target_variable || '',
         directionMatch: primary.direction_match ?? true,
         systemPct: primary.system_pct || '',
@@ -5072,26 +5067,26 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setExperimentAnalysis(analysis);
 
       // 로그 저장
+      const userFeedbackText = corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.user_pct}`).join(', ');
       const exp = {
         experiment_id: `exp_${Date.now()}`,
         timestamp: new Date().toISOString(),
         system_intent: systemIntent,
         system_action: systemAction,
-        user_correct_intent: experimentFeedback,
+        user_correct_intent: userFeedbackText,
         satisfaction_score: satisfactionScore,
         match_rate: analysis.matchRate,
         difference: analysis.difference,
         next_rule: analysis.nextRule,
-        // applyLearnedCorrections가 읽는 필드 — 반드시 저장
         target_variable: analysis.targetVariable || '',
         user_pct: analysis.userPct || '',
         system_pct: analysis.systemPct || '',
-        corrections: analysis.corrections || [],  // 다중 변수 배열
+        corrections: analysis.corrections || [],
       };
       saveExperiment(exp);
 
-      // ── System Rules 업데이트 (새 학습 시스템) ────────────────────────
-      updateSystemRules(analysis.corrections, satisfactionScore, `${experimentFeedback}\n${analysis.nextRule || ''}`);
+      // ── System Rules 업데이트 ────────────────────────
+      updateSystemRules(analysis.corrections, satisfactionScore, userFeedbackText);
 
       // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
       if (ENABLE_GOOGLE_SHEET_LOGGING) {
