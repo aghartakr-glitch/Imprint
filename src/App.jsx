@@ -317,7 +317,7 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
 
     // consensus: 카테고리형은 최다 weighted, 수치형은 가중 평균
-    if (v === 'font_style' || v === 'column_count') {
+    if (v === 'font_style' || v === 'column_count' || v === 'heading_layout') {
       const tally = {};
       for (const h of rule.history) tally[h.value] = (tally[h.value] || 0) + h.weight;
       rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
