@@ -5117,74 +5117,39 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           design_concept: (structuredReason?.design_concept || []).join(', '),
           design_task: (structuredReason?.design_task || []).join(', '),
           visual_element: (structuredReason?.visual_element || []).join(', ') || cl?.text_analysis?.layout_intent || '',
-          // 레퍼런스 반영 내역: style_diff (작업 의도 탭과 동일한 형식)
-          ref_detail: (() => {
-            const diff = structuredReason?.style_diff;
-            if (!diff) return cl?.matching?.semantic_reason || '';
-            const modified = (diff.modified || [])
-              .map(r => `→${r.label} ${r.ref} → ${r.applied}${r.reason ? ` — ${r.reason}` : ''}`)
-              .join('\n');
-            const kept = diff.kept?.length > 0 ? `✓ 유지: ${diff.kept.join(' · ')}` : '';
-            return [modified, kept].filter(Boolean).join('\n');
-          })(),
-          // 본문 근거: evidenceMap 텍스트 인용 (작업 의도 탭과 동일한 형식)
-          body_reason: (() => {
-            if (Array.isArray(evidenceMap) && evidenceMap.length > 0) {
-              return evidenceMap.map(e => `"${e.textSpan}"\n→ ${e.interpretation}`).join('\n');
-            }
-            return cl?.text_analysis?.topic || '';
-          })(),
-          // 레퍼런스 DB의 설계 근거 텍스트 (작업 의도 탭에 표시되는 내용)
+          ref_detail: cl?.matching?.semantic_reason || '',
+          body_reason: Array.isArray(evidenceMap) && evidenceMap.length > 0
+            ? evidenceMap.map(e => `"${e.textSpan}"\n→ ${e.interpretation}`).join('\n')
+            : cl?.text_analysis?.topic || '',
           font_choice: DB[cl?.matching?.selected_reference_id]?.why_font || '',
           margin_design: DB[cl?.matching?.selected_reference_id]?.why_margin || '',
           tracking: DB[cl?.matching?.selected_reference_id]?.why_tracking || '',
           rejected: (cl?.matching?.rejected || []).slice(0,3)
             .map(r => typeof r === 'object' ? `${DB[r.i]?.t?.slice(0,20) || r.i} — ${r.reason}` : String(r))
             .join(' / '),
-          user_feedback: experimentFeedback,
+          user_feedback: userFeedbackText,
           satisfaction: satisfactionScore,
-          // 다중 변수 전체 직렬화 (첫 번째만 아닌 모든 corrections)
-          target_variable: (analysis.corrections||[]).map(c=>c.target_variable).filter(Boolean).join(', ') || analysis.targetVariable || '',
-          system_action:   (analysis.corrections||[]).map(c=>c.system_pct).filter(Boolean).join(', ') || analysis.systemPct || '',
-          user_correct_action: (analysis.corrections||[]).map(c=>c.user_pct).filter(Boolean).join(', ') || analysis.userPct || '',
-          direction_match: analysis.directionMatch ? 'Y' : 'N',
+          target_variable: (analysis.corrections||[]).map(c=>c.target_variable).filter(Boolean).join(', '),
+          system_action: (analysis.corrections||[]).map(c=>c.system_pct).filter(Boolean).join(', '),
+          user_correct_action: (analysis.corrections||[]).map(c=>c.user_pct).filter(Boolean).join(', '),
+          direction_match: (analysis.corrections||[]).every(c => c.direction_match) ? 'Y' : 'N',
           match_rate: analysis.matchRate,
           difference: analysis.difference,
           next_rule: analysis.nextRule,
-          // CSV: 이 실험의 핵심 수치 요약 1줄
-          csv_flag: [
-            exp.experiment_id,
-            exp.timestamp?.slice(0,10),
-            analysis.targetVariable || '',
-            analysis.systemPct || '',
-            analysis.userPct || '',
-            satisfactionScore,
-            analysis.matchRate + '%',
-          ].join(' | '),
-          // MD: 이 실험의 전체 로그
-          md_flag: [
-            `# ${exp.experiment_id}`,
-            `날짜: ${exp.timestamp?.slice(0,10)}`,
-            `피드백: ${experimentFeedback}`,
-            `대상 변수: ${analysis.targetVariable || '-'}`,
-            `시스템: ${analysis.systemPct || '-'} / 정답: ${analysis.userPct || '-'}`,
-            `만족도: ${satisfactionScore}/5`,
-            `일치율: ${analysis.matchRate}%`,
-            `다음 규칙: ${analysis.nextRule}`,
-          ].join('\n'),
-          // 디자인 규칙 파일: 이 시점까지 누적된 전체 규칙
+          csv_flag: [exp.experiment_id, exp.timestamp?.slice(0,10), userFeedbackText, satisfactionScore, analysis.matchRate + '%'].join(' | '),
+          md_flag: [`# ${exp.experiment_id}`, `날짜: ${exp.timestamp?.slice(0,10)}`, `피드백: ${userFeedbackText}`, `만족도: ${satisfactionScore}/5`, `일치율: ${analysis.matchRate}%`].join('\n'),
           design_rules: buildDesignRules() || '(아직 규칙 없음)',
-          // JSON: 이 실험의 전체 데이터 (분석 포함)
-          json_flag: JSON.stringify({
-            ...exp,
-            analysis,
-            satisfaction: satisfactionScore,
-            feedback: experimentFeedback,
-          }, null, 2),
+          json_flag: JSON.stringify({ ...exp, analysis, satisfaction: satisfactionScore, feedback: userFeedbackText }, null, 2),
         });
       }
+
+      // 피드백 폼 초기화
+      setFeedbackCorrections([]);
+      setFeedbackCurrentSystemPct('');
+      setFeedbackCurrentUserPct('');
+      setFeedbackCurrentVar('body_leading');
     } catch (err) {
-      setExperimentAnalysis({ matchRate: 0, difference: `분석 오류: ${err.message}`, nextRule: '' });
+      setExperimentAnalysis({ matchRate: 0, difference: `오류: ${err.message}`, nextRule: '' });
     } finally {
       setExperimentLoading(false);
     }
