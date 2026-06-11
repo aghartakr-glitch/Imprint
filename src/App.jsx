@@ -67,6 +67,72 @@ function setAiCache(namespace, key, value, maxEntries = 40) {
   );
   saveAiCacheStore(store);
 }
+
+function extractBalancedJson(raw = '', openChar = '{', closeChar = '}') {
+  const text = String(raw || '')
+    .replace(/```(?:json)?/gi, '')
+    .replace(/```/g, '')
+    .trim();
+  const start = text.indexOf(openChar);
+  if (start < 0) throw new Error('JSON 시작 문자를 찾지 못했습니다');
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === openChar) depth++;
+    else if (ch === closeChar) {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  throw new Error('JSON 닫는 문자를 찾지 못했습니다');
+}
+
+function repairCommonJson(raw = '') {
+  return String(raw || '')
+    .replace(/,\s*([}\]])/g, '$1')
+    .replace(/}\s*(?=\s*\{)/g, '},')
+    .replace(/]\s*(?=\s*")/g, '],');
+}
+
+function parseLooseJsonObject(raw = '') {
+  const jsonStr = extractBalancedJson(raw, '{', '}');
+  try {
+    return JSON.parse(jsonStr);
+  } catch (firstErr) {
+    try {
+      return JSON.parse(repairCommonJson(jsonStr));
+    } catch {
+      throw firstErr;
+    }
+  }
+}
+
+function buildFallbackExperimentAnalysis(feedbackText = '', raw = '', parseError = null) {
+  const inferred = inferSystemRuleCorrectionsFromText(`${feedbackText}\n${raw}`);
+  const corrections = inferred.map(c => ({
+    target_variable: c.target_variable,
+    system_pct: '미반영',
+    user_pct: c.user_pct,
+    direction_match: false,
+  }));
+  return {
+    difference: corrections.length
+      ? `Claude 분석 JSON 형식 오류로 로컬 규칙 추출을 사용했습니다${parseError?.message ? ` (${parseError.message})` : ''}.`
+      : `Claude 분석 JSON 형식 오류로 피드백 원문을 규칙으로 저장했습니다${parseError?.message ? ` (${parseError.message})` : ''}.`,
+    next_rule: feedbackText.trim(),
+    corrections,
+    _fallback: true,
+  };
+}
 const _LOG_STORE = { logs: [] };
 function saveGenerationLog(log) { _LOG_STORE.logs = [log, ..._LOG_STORE.logs].slice(0, 100); }
 function loadGenerationLogs() { return _LOG_STORE.logs; }
@@ -111,6 +177,9 @@ function _defaultSystemRules() {
       column_gap:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
       folio_size:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
       heading_layout:    { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_gap:       { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_indent:    { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      footnote_marker_format: { value: null, weighted_count: 0, confidence: 'none', history: [] },
     }
   };
 }
@@ -186,12 +255,27 @@ function normalizeSystemRuleTarget(target) {
     subtitle_line_height: 'heading_h2_leading',
     heading_h2_line_height: 'heading_h2_leading',
     heading_h3_line_height: 'heading_h3_leading',
+    heading_spacing: 'heading_gap',
+    heading_gap_pt: 'heading_gap',
+    heading_title_subtitle_gap: 'heading_gap',
+    title_subtitle_gap: 'heading_gap',
+    title_subtitle_spacing: 'heading_gap',
+    heading_indent: 'heading_indent',
+    heading_indentation: 'heading_indent',
+    footnote_marker: 'footnote_marker_format',
+    footnote_number_format: 'footnote_marker_format',
     제목_행간: 'heading_h1_leading',
     제목_줄간격: 'heading_h1_leading',
     부제목_행간: 'heading_h2_leading',
     부제목_줄간격: 'heading_h2_leading',
     소제목_행간: 'heading_h3_leading',
     소제목_줄간격: 'heading_h3_leading',
+    제목_소제목_간격: 'heading_gap',
+    제목_소제목_사이: 'heading_gap',
+    제목_들여쓰기: 'heading_indent',
+    소제목_들여쓰기: 'heading_indent',
+    각주_번호_형식: 'footnote_marker_format',
+    각주_번호표기: 'footnote_marker_format',
     상단_여백: 'margin_top',
     상_여백: 'margin_top',
     하단_여백: 'margin_bottom',
@@ -211,18 +295,40 @@ function inferSystemRuleCorrectionsFromText(text = '') {
   const src = String(text || '');
   if (!src.trim()) return out;
 
-  const explicit = /\b(body_leading|body_size|heading_h[123]_(?:size|leading)|footnote_(?:size|leading)|column_gap|folio_size|tracking|paragraph_spacing|margin_(?:top|bottom|inner|outer))\b[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/gi;
+  const push = (target_variable, user_pct) => {
+    if (!target_variable || !user_pct) return;
+    out.push({ target_variable: normalizeSystemRuleTarget(target_variable), user_pct });
+  };
+  const pctNear = (re, fallback = 10) => {
+    const m = src.match(re);
+    return `${m?.[1] || fallback}%`;
+  };
+
+  const explicit = /\b(body_leading|body_size|heading_h[123]_(?:size|leading)|heading_gap|footnote_(?:size|leading)|column_gap|folio_size|tracking|paragraph_spacing|margin_(?:top|bottom|inner|outer))\b[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/gi;
   let m;
   while ((m = explicit.exec(src)) !== null) {
-    out.push({ target_variable: normalizeSystemRuleTarget(m[1]), user_pct: `${m[2]}%` });
+    push(m[1], `${m[2]}%`);
   }
 
   const h1Leading = out.find(c => c.target_variable === 'heading_h1_leading')?.user_pct;
   if (h1Leading && /\bheading_h2_leading\b[^.\n;。]*(동일\s*비율|같은\s*비율|same\s*ratio)/i.test(src)) {
-    out.push({ target_variable: 'heading_h2_leading', user_pct: h1Leading });
+    push('heading_h2_leading', h1Leading);
   }
   if (h1Leading && /\bheading_h3_leading\b[^.\n;。]*(동일\s*비율|같은\s*비율|same\s*ratio)/i.test(src)) {
-    out.push({ target_variable: 'heading_h3_leading', user_pct: h1Leading });
+    push('heading_h3_leading', h1Leading);
+  }
+
+  if (/(제목|타이틀)[^.\n;。]*(소제목|부제목)[^.\n;。]*(사이|간격|행간|줄간격|수직|띄)/i.test(src)) {
+    push('heading_gap', pctNear(/(?:제목|타이틀)[^.\n;。]*(?:소제목|부제목)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
+  }
+  if (/(각주|주석)[^.\n;。]*(행간|줄간격)[^.\n;。]*(늘|확대|넓|띄|최소|이상|부족)/i.test(src)) {
+    push('footnote_leading', pctNear(/(?:각주|주석)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
+  }
+  if (/(제목|소제목|부제목)[^.\n;。]*(들여쓰기|인덴트|indent)[^.\n;。]*(삭제|제거|없|빼|0)/i.test(src)) {
+    push('heading_indent', 'none');
+  }
+  if (/(각주|주석)[^.\n;。]*(번호|마커|표기|형식)[^.\n;。]*(1\.|\[1\])/i.test(src)) {
+    push('footnote_marker_format', /\[1\]/.test(src) ? '[1]' : '1.');
   }
   return out;
 }
@@ -299,6 +405,12 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
       if (/중앙|가운데|center/i.test(up)) parsedValue = 'center';
       else if (/우측|오른쪽|right/i.test(up)) parsedValue = 'right';
       else if (/좌측|왼쪽|left/i.test(up)) parsedValue = 'left';
+    } else if (v === 'heading_indent') {
+      if (/none|no|삭제|제거|없|빼|0/i.test(up)) parsedValue = 'none';
+      else if (/indent|들여쓰기|들여/i.test(up)) parsedValue = 'indent';
+    } else if (v === 'footnote_marker_format') {
+      if (/\[1\]|bracket|대괄호/i.test(up)) parsedValue = 'bracket';
+      else if (/1\.|dot|period|마침표/i.test(up)) parsedValue = 'dot';
     } else {
       // 수치형: user_pct에서 % 또는 배율(body×N, ×N) 파싱
       const mPct = up.match(/([+-]?\d+(?:\.\d+)?)%/);
@@ -317,7 +429,7 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
 
     // consensus: 카테고리형은 최다 weighted, 수치형은 가중 평균
-    if (v === 'font_style' || v === 'column_count' || v === 'heading_layout') {
+    if (v === 'font_style' || v === 'column_count' || v === 'heading_layout' || v === 'heading_indent' || v === 'footnote_marker_format') {
       const tally = {};
       for (const h of rule.history) tally[h.value] = (tally[h.value] || 0) + h.weight;
       rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
@@ -415,6 +527,18 @@ function getSystemHeadingLayout() {
   const rule = loadSystemRules().rules.heading_layout;
   if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
   return rule.value; // 'left' | 'center' | 'right'
+}
+
+function getSystemHeadingIndent() {
+  const rule = loadSystemRules().rules.heading_indent;
+  if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
+  return rule.value; // 'none' | 'indent'
+}
+
+function getSystemFootnoteMarkerFormat() {
+  const rule = loadSystemRules().rules.footnote_marker_format;
+  if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return 'dot';
+  return rule.value === 'bracket' ? 'bracket' : 'dot';
 }
 
 // 학습된 % 보정값을 baseValue에 적용 — heading/footnote/column_gap/folio 등 sty 생성 시 직접 호출
@@ -1339,24 +1463,25 @@ function parseBodyBlocks(raw) {
   return blocks;
 }
 
-function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false } = {}) {
+function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false, headingGapPt = 10 } = {}) {
   // preserveImpFnMarkers=true: side-note 모드 fallback — \ImpFN{N}은 escape 제외, \footnote 주입 없음
   const esc = preserveImpFnMarkers
     ? t => escapeLatexPreservingImpFN(t || '')
     : t => injectFnIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(t || '')), fnMap, superMap);
+  const gap = Math.max(4, Number(headingGapPt) || 10);
   switch (block.type) {
     case 'h1':
-      return `\\Needspace{6\\baselineskip}\n{\\noindent\\hone ${esc(block.text)}\\par}\n\\vspace{18pt}`;
+      return `\\Needspace{6\\baselineskip}\n{\\noindent\\hone ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 1.5 * 10) / 10}pt}`;
     case 'sectionHeading':
     case 'h2':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{12pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 1.1 * 10) / 10}pt}`;
     case 'author':
-      return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+      return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{${gap}pt}`;
     case 'h3':
     case 'subheading':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{8pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 0.8 * 10) / 10}pt}`;
     case 'preface':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{${gap}pt}`;
     case 'toc':
       return `\\tableofcontents\n\\newpage`;
     case 'dialogue':
@@ -1716,7 +1841,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   ].join('\n');
 }
 
-function buildBodyContent({ title, subtitle, body, footnote, runningHead, preserveImpFnMarkers = false, alignTitle = '', alignSubtitle = '' }) {
+function buildBodyContent({ title, subtitle, body, footnote, runningHead, preserveImpFnMarkers = false, alignTitle = '', alignSubtitle = '', headingGapPt = 12 }) {
   // preserveImpFnMarkers=true: body에 이미 \ImpFN{N} 삽입된 경우 (side-note fallback)
   // → \footnote 주입 없이 \ImpFN{N}만 보존하며 escape
   const { fnMap, superMap } = preserveImpFnMarkers ? { fnMap: {}, superMap: {} } : parseFootnoteMap(footnote);
@@ -1730,6 +1855,7 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   };
   const titleAlignCmd    = toAlignCmd(alignTitle);
   const subtitleAlignCmd = toAlignCmd(alignSubtitle || alignTitle); // 소제목은 별도 필드 없으면 제목과 동일
+  const gap = Math.max(4, Number(headingGapPt) || 12);
   const lines = [];
   lines.push('% ============================================================');
   lines.push('% 문서 본문 시작 — 아래 영역은 직접 수정해도 됩니다');
@@ -1746,20 +1872,20 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   if (t) {
     lines.push('\\Needspace{6\\baselineskip}');
     lines.push(`{\\noindent\\hone${titleAlignCmd ? `\n${titleAlignCmd}` : ''} ${t}\\par}`);
-    lines.push('\\vspace{22pt}');
+    lines.push(`\\vspace{${Math.round(gap * 1.8 * 10) / 10}pt}`);
     lines.push('');
   }
   const st = esc(subtitle);
   if (st) {
     lines.push('\\Needspace{4\\baselineskip}');
     lines.push(`{\\noindent\\htwo${subtitleAlignCmd ? `\n${subtitleAlignCmd}` : ''} ${st}\\par}`);
-    lines.push('\\vspace{16pt}');
+    lines.push(`\\vspace{${Math.round(gap * 1.3 * 10) / 10}pt}`);
     lines.push('');
   }
   if (body && body.trim()) {
     const blocks = parseBodyBlocks(body);
     for (const block of blocks) {
-      const latex = blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers });
+      const latex = blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers, headingGapPt: gap });
       if (latex.trim()) { lines.push(latex); lines.push(''); }
     }
   }
@@ -3281,6 +3407,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const h1Lead = getLearnedDesignOverride('heading_h1_leading', Math.round(hs.h1 * TYPO_BASE.leadingRatio(hs.h1) * 10) / 10);
       const h2Lead = getLearnedDesignOverride('heading_h2_leading', Math.round(hs.h2 * TYPO_BASE.leadingRatio(hs.h2) * 10) / 10);
       const h3Lead = getLearnedDesignOverride('heading_h3_leading', Math.round(hs.h3 * TYPO_BASE.leadingRatio(hs.h3) * 10) / 10);
+      const headingGapPt = getLearnedDesignOverride('heading_gap', Math.round(adjustedBodyLead * 0.75 * 10) / 10);
       const rhLead = Math.round(pnAutoSize * TYPO_BASE.leadingRatio(pnAutoSize) * 10) / 10;
 
       // preamble에 heading 명령 정의 (AI가 반드시 이것을 사용하도록)
@@ -3291,6 +3418,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const bFont = isMixedLayout ? '\\rmfamily'  : '\\normalfont';
       // 학습된 제목 정렬 방향 적용 (medium 이상 confidence일 때만)
       const _learnedHeadingLayout = getSystemHeadingLayout();
+      const _learnedHeadingIndent = getSystemHeadingIndent();
+      const _footnoteMarkerFormat = getSystemFootnoteMarkerFormat();
       const _headingAlign = _learnedHeadingLayout === 'center' ? '\\centering'
         : _learnedHeadingLayout === 'right' ? '\\raggedleft'
         : _learnedHeadingLayout === 'left' ? '\\raggedright'
@@ -3336,6 +3465,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
         `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\newcommand{\\ImpNoteLabel}[1]{${_footnoteMarkerFormat === 'bracket' ? '[#1]\\ ' : '#1.\\ '}}`,
         // 각주 N단 지원: fields.각주단 >= 2이면 bigfoot 패키지로 다단 각주 구성
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
@@ -3536,8 +3666,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
             `%   \\setlength{\\columnsep}{${gap}mm}`,
             `%   \\setcolumnwidth{${bMm}mm,${nMm}mm}`,
             ``,
-            `% 각주 참조 번호 매크로: \\ImpFN{N} → \\textsuperscript{N}`,
+            `% 각주 참조 번호 매크로: \\ImpFN{N} → 본문 위첨자, \\ImpNoteLabel{N} → 주석 번호`,
             `\\newcommand{\\ImpFN}[1]{\\textsuperscript{#1}}`,
+            `\\newcommand{\\ImpNoteLabel}[1]{${_footnoteMarkerFormat === 'bracket' ? '[#1]\\ ' : '#1.\\ '}}`,
             ``,
             `% 본문 폭 / 주석 폭 길이 변수 (치수 참조용)`,
             `\\newlength{\\imprintbodywidth}`,
@@ -3780,14 +3911,14 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         // 비혼합: 크기+bold로 구분 / 혼합: font-family 전환
         '\\hone{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h1 + '/' + h1Lead + 'pt}  \\htwo{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h2 + '/' + h2Lead + 'pt}  \\hthree{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h3 + '/' + h3Lead + 'pt}\n' +
         '\\bodyf{} resets to ' + (isMixedLayout?'serif+':'normal+') + adjustedBodySize + '/' + adjustedBodyLead + 'pt\n' +
-        'HEADING PLACEMENT: \\Needspace{4\\baselineskip}\\par\\vspace{bodyLead}\\noindent{\\hthree 소제목}\\par\\vspace{0.5\\baselineskip}\\bodyf{}\\noindent\n' +
-        'RULE: ①always call \\bodyf{} after each heading. ②NEVER inline heading mid-paragraph. ③Use \\Needspace{4\\baselineskip} before EVERY \\hthree/\\htwo/\\hone to prevent heading stranded at page bottom.\n' +
+        'HEADING PLACEMENT: \\Needspace{4\\baselineskip}\\par\\noindent{\\hthree 소제목}\\par\\vspace{' + headingGapPt + 'pt}\\bodyf{}\\noindent\n' +
+        'RULE: ①always call \\bodyf{} after each heading. ②NEVER inline heading mid-paragraph. ③Use \\Needspace{4\\baselineskip} before EVERY \\hthree/\\htwo/\\hone. ④Never add \\indent, \\hspace, or \\leftskip before headings' + (_learnedHeadingIndent === 'none' ? ' (learned rule: heading indent none)' : '') + '.\n' +
         'LEADING RATIOS: ≤7pt→×1.75 ≤9pt→×1.65 ≤11pt→×1.60 ≤13pt→×1.55 ≤16pt→×1.40 ≤24pt→×1.25 25+pt→×1.15\n' +
         'Any custom \\fontsize{X}{Y}: Y = round(X × ratio above).\n\n' +
         '# CONTENT STRUCTURE ANALYSIS\n' +
         'Read the body text BEFORE generating LaTeX. Apply these rules:\n' +
         '1. 목차(TOC): If body has 3+ numbered list entries or a "목차/차례" label, output \\tableofcontents\\newpage at that location. Do NOT reproduce the TOC list manually.\n' +
-        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\htwo LABEL\\par}\\vspace{10pt} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
+        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\htwo LABEL\\par}\\vspace{' + headingGapPt + 'pt} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
         '3. 소제목(subheadings within body): Short standalone lines (≤30 chars, surrounded by blank lines) → use \\hthree. Longer section labels → \\htwo. Always \\Needspace{4\\baselineskip} before each.\n' +
         '4. Markdown headings (# ## ###): Convert exactly to \\hone / \\htwo / \\hthree with \\Needspace + \\bodyf reset.\n' +
         '5. Regular paragraphs: {\\bodyf\\noindent TEXT\\par}\\vspace{0.5\\baselineskip} for each.\n\n' +
@@ -3819,8 +3950,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         '# SEMANTIC STRUCTURE — MANDATORY\n' +
         'NEVER output the entire body as one {\\bodyf ...} block. Segment into separate LaTeX blocks.\n' +
         'Detect and separately style each of the following:\n' +
-        '  • Work title (short, isolated line) → {\\htwo TITLE\\par}\\vspace{12pt}\n' +
-        '  • Author name after "/" → {\\hthree AUTHOR\\par}\\vspace{10pt}\n' +
+        '  • Work title (short, isolated line) → {\\noindent\\htwo TITLE\\par}\\vspace{' + Math.round(headingGapPt * 1.1 * 10) / 10 + 'pt}\n' +
+        '  • Author name after "/" → {\\noindent\\hthree AUTHOR\\par}\\vspace{' + headingGapPt + 'pt}\n' +
         '  • Chapter/section heading (제N장, numbered, # markdown) → {\\htwo ...\\par} with \\Needspace{4\\baselineskip}\n' +
         '  • Sub-heading (##, ###, short isolated line ≤30 chars) → {\\hthree ...\\par}\n' +
         '  • Preface (서문/머리말/들어가며) label → {\\htwo ...\\par}, body in {\\itshape\\bodyf ...\\par}\n' +
@@ -3946,6 +4077,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
             preserveImpFnMarkers: _willSideNote,
             alignTitle: chosen.p.align_title || '',
             alignSubtitle: chosen.p.align_title || '',
+            headingGapPt,
           });
         } else {
           finalBodyContent = buildMissingBodyPlaceholder();
@@ -4108,7 +4240,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
                   // noteW < 18mm または noteGridUnits === 1 → ragged right で justified 詰め防止
                   const noteNeedsRagged = grid.noteW < 18 || vgEffective.note === 1;
                   const noteLines = sorted.map(n =>
-                    `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\textsuperscript{${n}}~${latexEscFn(stripWrappingQuotes(fnMap[n]))}\\par\\smallskip}`
+                    `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\ImpNoteLabel{${n}}${latexEscFn(stripWrappingQuotes(fnMap[n]))}\\par\\smallskip}`
                   ).join('\n');
                   const allNotesLatex = wrapNoteTextColumns(noteLines, ntc);
 
@@ -4251,7 +4383,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
                       bodyLines.push('');
                       for (const noteN of chunkNoteNums) {
                         if (fnMap[noteN]) {
-                          const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\textsuperscript{${noteN}}~${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
+                          const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\ImpNoteLabel{${noteN}}${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
                           bodyLines.push(ntc >= 2 ? wrapNoteTextColumns(nc, ntc) : nc);
                         }
                       }
@@ -4271,7 +4403,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
                     bodyLines.push('\\switchcolumn');
                     bodyLines.push('');
                     for (const noteN of unemittedNotes) {
-                      const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\textsuperscript{${noteN}}~${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
+                      const nc = `{\\notef${noteNeedsRagged ? '\\raggedright' : ''}\\ImpNoteLabel{${noteN}}${latexEscFn(stripWrappingQuotes(fnMap[noteN]))}\\par\\smallskip}`;
                       bodyLines.push(ntc >= 2 ? wrapNoteTextColumns(nc, ntc) : nc);
                     }
                   }
@@ -6155,15 +6287,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         color:T.ink, marginBottom:5 }}>
                         정답 피드백
                       </label>
-                      <div style={{ fontSize:11, color:T.muted, marginBottom:6, lineHeight:1.7,
-                        padding:'8px 10px', background:'#f9f9f9', borderRadius:3,
-                        border:`1px solid ${T.border}` }}>
-                        <div style={{ fontWeight:600, color:T.ink, marginBottom:4 }}>
-                          피드백 형식: [문제 판단] + [기준값] + [변경 방향] + [변경 비율]
-                        </div>
-                        <div>예: <em>행간이 좁으므로, 기준이 되는 현재 행간의 20%만큼 증가시켜야 함.</em></div>
-                        <div>예: <em>각주가 튀므로, 현재 각주 크기를 12% 줄이고 각주 간격을 50% 늘려야 함.</em></div>
-                      </div>
                       <textarea
                         value={experimentFeedback}
                         onChange={e => setExperimentFeedback(e.target.value)}
