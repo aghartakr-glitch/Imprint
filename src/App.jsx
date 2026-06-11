@@ -4907,7 +4907,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
   "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
   "corrections": [
     {
-      "target_variable": "변수명 (body_leading|body_size|heading_h1_size|heading_h1_leading|heading_h2_size|heading_h2_leading|heading_h3_size|heading_h3_leading|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size|footnote_leading|column_gap|folio_size|font_style|paragraph_spacing)",
+      "target_variable": "변수명 (body_leading|body_size|heading_h1_size|heading_h1_leading|heading_h2_size|heading_h2_leading|heading_h3_size|heading_h3_leading|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size|footnote_leading|column_gap|folio_size|font_style|paragraph_spacing|heading_layout)",
       "system_pct": "시스템이 실제 적용한 값 또는 변경률 (예: +8%, 3단, 21pt). 시스템이 사용자 요청을 구현하지 못했으면 '미반영'으로 표기",
       "user_pct": "사용자가 원하는 값 또는 변경률 (예: +15%, 2단, body×1.15)",
       "direction_match": "system_pct와 user_pct가 같은 방향이면 true, 시스템이 미반영이거나 반대 방향이면 false"
