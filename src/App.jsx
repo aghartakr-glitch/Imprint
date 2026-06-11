@@ -295,6 +295,10 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     } else if (v === 'font_style') {
       if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
       else if (/명조|serif|부리/i.test(up)) parsedValue = 'serif';
+    } else if (v === 'heading_layout') {
+      if (/중앙|가운데|center/i.test(up)) parsedValue = 'center';
+      else if (/우측|오른쪽|right/i.test(up)) parsedValue = 'right';
+      else if (/좌측|왼쪽|left/i.test(up)) parsedValue = 'left';
     } else {
       // 수치형: user_pct에서 % 또는 배율(body×N, ×N) 파싱
       const mPct = up.match(/([+-]?\d+(?:\.\d+)?)%/);
