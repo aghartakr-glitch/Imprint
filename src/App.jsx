@@ -6285,87 +6285,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
             )}
           </div>
 
-          {/* CSV / MD 다운로드 */}
           {experimentAnalysis !== null && (
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => {
-                const exps = loadExperiments();
-                const headers = [
-                  'experiment_id','timestamp','system_intent','system_action',
-                  'user_correct_intent','satisfaction_score','match_rate',
-                  'difference','next_rule'
-                ];
-                const rows = exps.map(e =>
-                  headers.map(h => `"${String(e[h] ?? '').replace(/"/g, '""')}"`).join(',')
-                );
-                const csv = [headers.join(','), ...rows].join('\n');
-                const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                document.body.appendChild(a);
-                a.href = url;
-                a.download = `imprint_experiments_${Date.now()}.csv`;
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }} style={{ flex:1, padding:'8px', fontSize:11, fontWeight:600,
-                border:`1px solid ${T.border}`, borderRadius:3,
-                background:T.surface, color:T.ink, cursor:'pointer' }}>
-                CSV 다운로드
-              </button>
-              <button onClick={() => {
-                const exps = loadExperiments();
-                const md = exps.map(e => `# Experiment Log: ${e.experiment_id ?? ''}
-## Timestamp
-${e.timestamp ?? ''}
-## System Intent
-${e.system_intent ?? ''}
-## System Action
-${e.system_action ?? ''}
-## User Feedback
-${e.user_correct_intent ?? ''}
-## Satisfaction: ${e.satisfaction_score ?? ''}/5
-## Match Rate: ${e.match_rate ?? ''}%
-## Difference
-${e.difference ?? ''}
-## Next Rule
-${e.next_rule ?? ''}`).join('\n\n---\n\n');
-                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                document.body.appendChild(a);
-                a.href = url;
-                a.download = `imprint_experiments_${Date.now()}.md`;
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }} style={{ flex:1, padding:'8px', fontSize:11, fontWeight:600,
-                border:`1px solid ${T.border}`, borderRadius:3,
-                background:T.surface, color:T.ink, cursor:'pointer' }}>
-                MD 다운로드
-              </button>
-            </div>
-            <button onClick={() => {
-              const rules = buildDesignRules();
-              const content = rules
-                ? `# User Design Rules\n\n생성일: ${new Date().toISOString().slice(0,10)}\n실험 수: ${loadExperiments().length}\n\n${rules.split('\n').map(r => r).join('\n')}`
-                : '# User Design Rules\n\n아직 만족도 4+ 실험이 없습니다.';
-              const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              document.body.appendChild(a);
-              a.href = url;
-              a.download = 'user_design_rules.md';
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }} style={{ width:'100%', padding:'8px', fontSize:11, fontWeight:600,
-              border:`1px solid #c8e6c8`, borderRadius:3,
-              background:'#f0f7f0', color:'#2a7', cursor:'pointer' }}>
-              디자인 규칙 파일 저장 (user_design_rules.md)
-            </button>
-
 
             {/* ── 기존 실험 로그 → 새 학습 시스템 마이그레이션 ── */}
             {(() => {
