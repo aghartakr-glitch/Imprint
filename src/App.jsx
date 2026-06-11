@@ -160,13 +160,37 @@ function normalizeSystemRuleTarget(target) {
     horizontal_margin: 'margin_horizontal',
     horizontal_margins: 'margin_horizontal',
     top_margin: 'margin_top',
+    page_margin_top: 'margin_top',
+    margin_top_mm: 'margin_top',
+    upper_margin: 'margin_top',
     bottom_margin: 'margin_bottom',
+    page_margin_bottom: 'margin_bottom',
+    margin_bottom_mm: 'margin_bottom',
+    lower_margin: 'margin_bottom',
     inner_margin: 'margin_inner',
     inside_margin: 'margin_inner',
     left_margin: 'margin_inner',
+    page_margin_inner: 'margin_inner',
+    margin_inner_mm: 'margin_inner',
+    gutter: 'margin_inner',
     outer_margin: 'margin_outer',
     outside_margin: 'margin_outer',
     right_margin: 'margin_outer',
+    page_margin_outer: 'margin_outer',
+    margin_outer_mm: 'margin_outer',
+    title_leading: 'heading_h1_leading',
+    title_line_height: 'heading_h1_leading',
+    heading_h1_line_height: 'heading_h1_leading',
+    subtitle_leading: 'heading_h2_leading',
+    subtitle_line_height: 'heading_h2_leading',
+    heading_h2_line_height: 'heading_h2_leading',
+    heading_h3_line_height: 'heading_h3_leading',
+    제목_행간: 'heading_h1_leading',
+    제목_줄간격: 'heading_h1_leading',
+    부제목_행간: 'heading_h2_leading',
+    부제목_줄간격: 'heading_h2_leading',
+    소제목_행간: 'heading_h3_leading',
+    소제목_줄간격: 'heading_h3_leading',
     상단_여백: 'margin_top',
     상_여백: 'margin_top',
     하단_여백: 'margin_bottom',
@@ -179,6 +203,27 @@ function normalizeSystemRuleTarget(target) {
     여백: 'margin_all',
   };
   return aliases[v] || v;
+}
+
+function inferSystemRuleCorrectionsFromText(text = '') {
+  const out = [];
+  const src = String(text || '');
+  if (!src.trim()) return out;
+
+  const explicit = /\b(body_leading|body_size|heading_h[123]_(?:size|leading)|footnote_(?:size|leading)|column_gap|folio_size|tracking|paragraph_spacing|margin_(?:top|bottom|inner|outer))\b[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/gi;
+  let m;
+  while ((m = explicit.exec(src)) !== null) {
+    out.push({ target_variable: normalizeSystemRuleTarget(m[1]), user_pct: `${m[2]}%` });
+  }
+
+  const h1Leading = out.find(c => c.target_variable === 'heading_h1_leading')?.user_pct;
+  if (h1Leading && /\bheading_h2_leading\b[^.\n;。]*(동일\s*비율|같은\s*비율|same\s*ratio)/i.test(src)) {
+    out.push({ target_variable: 'heading_h2_leading', user_pct: h1Leading });
+  }
+  if (h1Leading && /\bheading_h3_leading\b[^.\n;。]*(동일\s*비율|같은\s*비율|same\s*ratio)/i.test(src)) {
+    out.push({ target_variable: 'heading_h3_leading', user_pct: h1Leading });
+  }
+  return out;
 }
 
 function normalizeSystemRulePct(userPct, feedbackText = '') {
@@ -215,16 +260,30 @@ function expandSystemRuleCorrection(correction) {
 
 // 피드백 분석 결과(corrections[]) → system_rules 업데이트 및 저장
 function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
-  if (!Array.isArray(corrections) || corrections.length === 0) return;
+  const directCorrections = Array.isArray(corrections) ? corrections : [];
+  const inferredCorrections = inferSystemRuleCorrectionsFromText(feedbackText);
+  if (directCorrections.length === 0 && inferredCorrections.length === 0) return;
   const sr = loadSystemRules();
   const weight = _satWeight(satisfactionScore || 3);
   const now = new Date().toISOString();
-  const expandedCorrections = corrections.flatMap(expandSystemRuleCorrection);
+  const expandedCorrections = [
+    ...directCorrections,
+    ...inferredCorrections,
+  ].flatMap(expandSystemRuleCorrection);
+  const seenCorrections = new Set();
 
   for (const c of expandedCorrections) {
-    const v = normalizeSystemRuleTarget(c.target_variable);
+    let v = normalizeSystemRuleTarget(c.target_variable);
+    const context = `${c.user_pct || ''} ${c.system_pct || ''} ${feedbackText || ''}`;
+    const headingSizeAsLeading = v.match(/^heading_h([123])_size$/);
+    if (headingSizeAsLeading && /(행간|줄간격|leading|line\s*height|수직\s*리듬)/i.test(context)) {
+      v = `heading_h${headingSizeAsLeading[1]}_leading`;
+    }
     const up = normalizeSystemRulePct(c.user_pct, feedbackText);
     if (!v || !up || !sr.rules[v]) continue;
+    const dedupeKey = `${v}|${up}`;
+    if (seenCorrections.has(dedupeKey)) continue;
+    seenCorrections.add(dedupeKey);
 
     const rule = sr.rules[v];
     let parsedValue = null;
@@ -4924,7 +4983,7 @@ corrections는 피드백에서 언급된 모든 항목을 각각 항목으로 �
       saveExperiment(exp);
 
       // ── System Rules 업데이트 (새 학습 시스템) ────────────────────────
-      updateSystemRules(analysis.corrections, satisfactionScore, experimentFeedback);
+      updateSystemRules(analysis.corrections, satisfactionScore, `${experimentFeedback}\n${analysis.nextRule || ''}`);
 
       // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
       if (ENABLE_GOOGLE_SHEET_LOGGING) {
@@ -6366,6 +6425,10 @@ ${e.next_rule ?? ''}`).join('\n\n---\n\n');
               const varLabel  = {
                 column_count:'단 수', font_style:'서체 스타일', paragraph_spacing:'문단 간격',
                 body_size:'글자 크기', body_leading:'행간', tracking:'자간',
+                heading_h1_size:'제목 크기', heading_h1_leading:'제목 행간',
+                heading_h2_size:'부제목 크기', heading_h2_leading:'부제목 행간',
+                heading_h3_size:'소제목 크기', heading_h3_leading:'소제목 행간',
+                footnote_size:'각주 크기', footnote_leading:'각주 행간',
                 margin_top:'상 여백', margin_bottom:'하 여백', margin_inner:'안 여백', margin_outer:'밖 여백',
               };
               return (
