@@ -410,6 +410,13 @@ function getSystemFontStyle() {
   return rule.value; // 'gothic' | 'serif'
 }
 
+// 학습된 제목 정렬 방향 반환 — confidence medium 이상
+function getSystemHeadingLayout() {
+  const rule = loadSystemRules().rules.heading_layout;
+  if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
+  return rule.value; // 'left' | 'center' | 'right'
+}
+
 // 학습된 % 보정값을 baseValue에 적용 — heading/footnote/column_gap/folio 등 sty 생성 시 직접 호출
 function getLearnedDesignOverride(ruleName, baseValue) {
   if (!baseValue || isNaN(baseValue)) return baseValue;
