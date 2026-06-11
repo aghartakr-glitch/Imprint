@@ -1745,14 +1745,14 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   const t = esc(title);
   if (t) {
     lines.push('\\Needspace{6\\baselineskip}');
-    lines.push(`{\\hone${titleAlignCmd ? `\n${titleAlignCmd}` : ''} ${t}\\par}`);
-    lines.push('\\vspace{20pt}');
+    lines.push(`{\\noindent\\hone${titleAlignCmd ? `\n${titleAlignCmd}` : ''} ${t}\\par}`);
+    lines.push('\\vspace{22pt}');
     lines.push('');
   }
   const st = esc(subtitle);
   if (st) {
     lines.push('\\Needspace{4\\baselineskip}');
-    lines.push(`{\\htwo${subtitleAlignCmd ? `\n${subtitleAlignCmd}` : ''} ${st}\\par}`);
+    lines.push(`{\\noindent\\htwo${subtitleAlignCmd ? `\n${subtitleAlignCmd}` : ''} ${st}\\par}`);
     lines.push('\\vspace{16pt}');
     lines.push('');
   }
