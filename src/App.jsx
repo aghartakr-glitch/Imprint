@@ -5041,7 +5041,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
   "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
   "corrections": [
     {
-      "target_variable": "변수명 (body_leading|body_size|heading_h1_size|heading_h1_leading|heading_h2_size|heading_h2_leading|heading_h3_size|heading_h3_leading|margin_top|margin_bottom|margin_inner|margin_outer|tracking|column_count|footnote_size|footnote_leading|column_gap|folio_size|font_style|paragraph_spacing|heading_layout)",
+      "target_variable": "아래 변수 중 정확히 하나 선택:\n- body_size: 본문 글자 크기\n- body_leading: 본문 줄간격(행간)\n- heading_h1_size: 제목 글자 크기\n- heading_h1_leading: 제목 자체가 여러 줄일 때 줄간격\n- heading_h2_size: 소제목/부제목 글자 크기\n- heading_h2_leading: 소제목 자체가 여러 줄일 때 줄간격\n- heading_h3_size: 소소제목 글자 크기\n- heading_h3_leading: 소소제목 자체가 여러 줄일 때 줄간격\n- heading_gap: 제목·소제목 블록 뒤의 여백 (제목과 소제목 사이, 소제목과 본문 사이 간격)\n- heading_layout: 제목 정렬 방향 (left/center/right)\n- margin_top|margin_bottom|margin_inner|margin_outer: 각 방향 여백\n- tracking: 자간\n- column_count: 단 수\n- footnote_size: 각주 글자 크기\n- footnote_leading: 각주 줄간격\n- column_gap: 단과 단 사이 간격\n- folio_size: 쪽번호 크기\n- font_style: 서체 스타일\n- paragraph_spacing: 문단 간격",
       "system_pct": "시스템이 실제 적용한 값 또는 변경률 (예: +8%, 3단, 21pt). 시스템이 사용자 요청을 구현하지 못했으면 '미반영'으로 표기",
       "user_pct": "사용자가 원하는 값 또는 변경률 (예: +15%, 2단, body×1.15)",
       "direction_match": "system_pct와 user_pct가 같은 방향이면 true, 시스템이 미반영이거나 반대 방향이면 false"
