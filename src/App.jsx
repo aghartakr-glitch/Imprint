@@ -1346,17 +1346,17 @@ function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false } =
     : t => injectFnIntoEscaped(escapeLatex(sanitizeUnicodeForLatex(t || '')), fnMap, superMap);
   switch (block.type) {
     case 'h1':
-      return `\\Needspace{6\\baselineskip}\n{\\hone ${esc(block.text)}\\par}\n\\vspace{16pt}`;
+      return `\\Needspace{6\\baselineskip}\n{\\noindent\\hone ${esc(block.text)}\\par}\n\\vspace{18pt}`;
     case 'sectionHeading':
     case 'h2':
-      return `\\Needspace{4\\baselineskip}\n{\\htwo ${esc(block.text)}\\par}\n\\vspace{12pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{12pt}`;
     case 'author':
-      return `{\\hthree ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+      return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{10pt}`;
     case 'h3':
     case 'subheading':
-      return `\\Needspace{4\\baselineskip}\n{\\hthree ${esc(block.text)}\\par}\n\\vspace{8pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{8pt}`;
     case 'preface':
-      return `\\Needspace{4\\baselineskip}\n{\\htwo ${esc(block.text)}\\par}\n\\vspace{10pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{10pt}`;
     case 'toc':
       return `\\tableofcontents\n\\newpage`;
     case 'dialogue':
