@@ -3289,11 +3289,18 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // 비혼합: \bfseries 로 소제목 구분 / 혼합: sffamily 전환으로 명조↔고딕 구분
       const hFont = isMixedLayout ? '\\sffamily' : '\\bfseries';
       const bFont = isMixedLayout ? '\\rmfamily'  : '\\normalfont';
+      // 학습된 제목 정렬 방향 적용 (medium 이상 confidence일 때만)
+      const _learnedHeadingLayout = getSystemHeadingLayout();
+      const _headingAlign = _learnedHeadingLayout === 'center' ? '\\centering'
+        : _learnedHeadingLayout === 'right' ? '\\raggedleft'
+        : _learnedHeadingLayout === 'left' ? '\\raggedright'
+        : '';
+      const _ha = _headingAlign ? ' ' + _headingAlign : '';
       const headingCmdsBlock =
         '% Heading sizes — DO NOT OVERRIDE sizes or weights\n' +
-        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont}   % title\n` +
-        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont}   % subtitle/chapter\n` +
-        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont} % section head\n` +
+        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont${_ha}}   % title\n` +
+        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont${_ha}}   % subtitle/chapter\n` +
+        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont${_ha}} % section head\n` +
         `\\newcommand{\\bodyf}{${bFont}\\fontsize{${adjustedBodySize}pt}{${adjustedBodyLead}pt}\\selectfont} % body reset after heading\n`;
 
       const isMultiColLayout = numCols >= 2 || (bodyUnits && noteUnits);
