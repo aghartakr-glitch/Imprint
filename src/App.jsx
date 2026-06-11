@@ -5032,7 +5032,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const difference = `사용자 요청: ${diffVars}. 만족도: ${satisfactionScore}/5`;
 
       // nextRule: 규칙 요약
-      const nextRule = `${correctionsCorrectionsCorrectionss.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
+      const nextRule = `${corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
 
       // ── 일치율 코드 계산 (Claude 주관 숫자 대신 corrections 기반 정확 계산) ──
       // 방향 일치율: direction_match:true 비율
