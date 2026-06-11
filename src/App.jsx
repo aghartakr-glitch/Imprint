@@ -110,6 +110,7 @@ function _defaultSystemRules() {
       footnote_leading:  { value: null, weighted_count: 0, confidence: 'none', history: [] },
       column_gap:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
       folio_size:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_layout:    { value: null, weighted_count: 0, confidence: 'none', history: [] },
     }
   };
 }
