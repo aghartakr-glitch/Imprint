@@ -3608,10 +3608,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           }
           return [
             `\\renewcommand{\\thefootnote}{\\arabic{footnote}}`,
+            `\\setlength{\\footnotesep}{${Math.round(fnLead * 1.2 * 10) / 10}pt}`,
             `\\makeatletter`,
             `\\renewcommand\\@makefntext[1]{%`,
             `  \\parindent\\z@\\hangindent1.5em\\relax`,
-            `  \\noindent\\makebox[1.5em][r]{\\notef\\@thefnmark}\\,{\\notef #1}}`,
+            `  \\noindent\\makebox[1.5em][l]{\\notef\\@thefnmark.}\\,{\\notef #1}}`,
             `\\makeatother`,
           ].join('\n');
         })(),
