@@ -3207,9 +3207,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       hs.h1 = getLearnedDesignOverride('heading_h1_size', hs.h1);
       hs.h2 = getLearnedDesignOverride('heading_h2_size', hs.h2);
       hs.h3 = getLearnedDesignOverride('heading_h3_size', hs.h3);
-      const h1Lead = Math.round(hs.h1 * TYPO_BASE.leadingRatio(hs.h1) * 10) / 10;
-      const h2Lead = Math.round(hs.h2 * TYPO_BASE.leadingRatio(hs.h2) * 10) / 10;
-      const h3Lead = Math.round(hs.h3 * TYPO_BASE.leadingRatio(hs.h3) * 10) / 10;
+      const h1Lead = getLearnedDesignOverride('heading_h1_leading', Math.round(hs.h1 * TYPO_BASE.leadingRatio(hs.h1) * 10) / 10);
+      const h2Lead = getLearnedDesignOverride('heading_h2_leading', Math.round(hs.h2 * TYPO_BASE.leadingRatio(hs.h2) * 10) / 10);
+      const h3Lead = getLearnedDesignOverride('heading_h3_leading', Math.round(hs.h3 * TYPO_BASE.leadingRatio(hs.h3) * 10) / 10);
       const rhLead = Math.round(pnAutoSize * TYPO_BASE.leadingRatio(pnAutoSize) * 10) / 10;
 
       // preamble에 heading 명령 정의 (AI가 반드시 이것을 사용하도록)
