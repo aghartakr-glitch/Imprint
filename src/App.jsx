@@ -2127,8 +2127,12 @@ export default function App() {
   const [step, setStep] = useState(0);
   const [fields, setFields] = useState({ 제목:"", 소제목:"", 본문:"", 면주:"", 각주:"" });
   const [inputTab, setInputTab] = useState('text'); // 'text' | 'experiment'
-  const [experimentFeedback, setExperimentFeedback] = useState(''); // 사용자 정답 피드백
+  const [experimentFeedback, setExperimentFeedback] = useState(''); // 사용자 정답 피드백 (레거시, 유지)
   const [satisfactionScore, setSatisfactionScore] = useState(null); // 1~5 또는 null
+  const [feedbackCorrections, setFeedbackCorrections] = useState([]); // [{target_variable, system_pct, user_pct, direction_match}]
+  const [feedbackCurrentVar, setFeedbackCurrentVar] = useState('body_leading');
+  const [feedbackCurrentSystemPct, setFeedbackCurrentSystemPct] = useState('');
+  const [feedbackCurrentUserPct, setFeedbackCurrentUserPct] = useState('');
   const [experimentAnalysis, setExperimentAnalysis] = useState(null); // 분석 결과 {matchRate, diff, nextRule}
   const [experimentLoading, setExperimentLoading] = useState(false); // 분석 API 호출 중
 
