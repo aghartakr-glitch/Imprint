@@ -5003,85 +5003,36 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
   }
 
   async function analyzeExperiment() {
-    if (!experimentFeedback.trim() || satisfactionScore === null || !apiKey) return;
+    if (feedbackCorrections.length === 0 || satisfactionScore === null) return;
     setExperimentLoading(true);
 
-    // 시스템 결과 요약 구성 (본문 전체 미전송, 의도+매칭만)
-    const systemIntent = [
-      currentLog?.text_analysis?.layout_intent,
-      currentLog?.matching?.semantic_reason,
-    ].filter(Boolean).join(' / ') || '(의도 정보 없음)';
-
-    const systemAction = [
-      currentLog?.matching?.selected_reference_title
-        ? `레퍼런스: ${currentLog.matching.selected_reference_title}`
-        : null,
-      currentLog?.text_analysis?.detected_genre
-        ? `장르: ${currentLog.text_analysis.detected_genre}`
-        : null,
-    ].filter(Boolean).join(', ') || '(행동 정보 없음)';
-
-    const varReasons = structuredReason?.variable_reasons || [];
-    const varSummary = varReasons.length > 0
-      ? varReasons.map(r => {
-          const base = parseFloat(r.base);
-          const adj = parseFloat(r.adjusted);
-          const pct = base > 0 ? Math.round((adj - base) / base * 100) : 0;
-          return `${r.variable}: ${r.base}→${r.adjusted} (${pct >= 0 ? '+' : ''}${pct}%)`;
-        }).join(', ')
-      : systemAction;
-
-    const prompt = `시스템 결과:
-- 의도: ${systemIntent}
-- 디자인 개념: ${(structuredReason?.design_concept||[]).join(', ') || '(없음)'}
-- 적용 수치: ${varSummary}
-
-사용자 피드백: ${experimentFeedback}
-만족도: ${satisfactionScore}/5
-
-아래 JSON만 반환하라 (다른 텍스트 없이):
-{
-  "difference": "차이점 1~2문장",
-  "next_rule": "다음 생성 시 반영할 규칙 (모든 변수 포함)",
-  "corrections": [
-    {
-      "target_variable": "아래 변수 중 정확히 하나 선택:\n- body_size: 본문 글자 크기\n- body_leading: 본문 줄간격(행간)\n- heading_h1_size: 제목 글자 크기\n- heading_h1_leading: 제목 자체가 여러 줄일 때 줄간격\n- heading_h2_size: 소제목/부제목 글자 크기\n- heading_h2_leading: 소제목 자체가 여러 줄일 때 줄간격\n- heading_h3_size: 소소제목 글자 크기\n- heading_h3_leading: 소소제목 자체가 여러 줄일 때 줄간격\n- heading_gap: 제목·소제목 블록 뒤의 여백 (제목과 소제목 사이, 소제목과 본문 사이 간격)\n- heading_layout: 제목 정렬 방향 (left/center/right)\n- margin_top|margin_bottom|margin_inner|margin_outer: 각 방향 여백\n- tracking: 자간\n- column_count: 단 수\n- footnote_size: 각주 글자 크기\n- footnote_leading: 각주 줄간격\n- column_gap: 단과 단 사이 간격\n- folio_size: 쪽번호 크기\n- font_style: 서체 스타일\n- paragraph_spacing: 문단 간격",
-      "system_pct": "시스템이 실제 적용한 값 또는 변경률 (예: +8%, 3단, 21pt). 시스템이 사용자 요청을 구현하지 못했으면 '미반영'으로 표기",
-      "user_pct": "사용자가 원하는 값 또는 변경률 (예: +15%, 2단, body×1.15)",
-      "direction_match": "system_pct와 user_pct가 같은 방향이면 true, 시스템이 미반영이거나 반대 방향이면 false"
-    }
-  ]
-}
-corrections는 피드백에서 언급된 모든 항목을 각각 항목으로 포함하라. system_pct가 '미반영'이면 direction_match는 반드시 false.`;
-
     try {
-      const res = await fetch('/anthropic/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2000,
-          system: 'Return ONLY valid JSON, no other text.',
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(`API ${res.status}: ${errBody?.error?.message ?? res.statusText}`);
-      }
-      const data = await res.json();
-      const raw = data?.content?.[0]?.text?.trim() || '{}';
-      // JSON 파싱 — { } 사이만 추출 (앞뒤 텍스트·코드블록 안전하게 제거)
-      const jsonStr = raw.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-      const parsed = JSON.parse(jsonStr);
+      // 시스템 결과 요약 구성
+      const systemIntent = [
+        currentLog?.text_analysis?.layout_intent,
+        currentLog?.matching?.semantic_reason,
+      ].filter(Boolean).join(' / ') || '(의도 정보 없음)';
 
-      // corrections 배열 처리 (여러 변수 동시 학습)
-      const corrections = Array.isArray(parsed.corrections) ? parsed.corrections : [];
+      const systemAction = [
+        currentLog?.matching?.selected_reference_title
+          ? `레퍼런스: ${currentLog.matching.selected_reference_title}`
+          : null,
+        currentLog?.text_analysis?.detected_genre
+          ? `장르: ${currentLog.text_analysis.detected_genre}`
+          : null,
+      ].filter(Boolean).join(', ') || '(행동 정보 없음)';
+
+      // 사용자 입력 corrections 사용
+      const corrections = feedbackCorrections;
       const primary = corrections[0] || {};
+
+      // difference: 사용자 선택 변수 요약
+      const varNames = {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'};
+      const diffVars = corrections.map(c => `${varNames[c.target_variable] || c.target_variable} (${c.user_pct})`).join(', ');
+      const difference = `사용자 요청: ${diffVars}. 만족도: ${satisfactionScore}/5`;
+
+      // nextRule: 규칙 요약
+      const nextRule = `${correctionsCorrectionsCorrectionss.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
 
       // ── 일치율 코드 계산 (Claude 주관 숫자 대신 corrections 기반 정확 계산) ──
       // 방향 일치율: direction_match:true 비율
