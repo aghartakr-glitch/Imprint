@@ -5116,14 +5116,14 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const nextRule = `${corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
 
       // ── 일치율 계산 ──
-      function calcMatchRate(corrs) {
-        // null = 비교 불가(미반영 등) → 제외하고 계산
-        const comparable = corrs.filter(c => c.direction_match !== null && c.direction_match !== undefined);
-        if (!comparable.length) return 0;
-        const matched = comparable.filter(c => c.direction_match === true).length;
-        return Math.round((matched / comparable.length) * 100);
+      // 의미: 시스템이 사용자 의도와 얼마나 일치했는가
+      // 교정 항목이 하나라도 있으면 100% 불가 — 피드백 = 시스템이 틀린 것
+      // 공식: 교정 없음 → 100% / 있음 → min(95, 만족도×20 - 교정수×5)
+      function calcMatchRate(corrs, sat) {
+        if (!corrs.length) return 100;
+        return Math.max(5, Math.min(95, (sat || 3) * 20 - corrs.length * 5));
       }
-      const computedMatchRate = calcMatchRate(corrections);
+      const computedMatchRate = calcMatchRate(corrections, satisfactionScore);
 
       const analysis = {
         matchRate: computedMatchRate,
