@@ -2449,7 +2449,7 @@ export default function App() {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 200,
+          model: 'claude-haiku-4-5-20251001', max_tokens: 200,
           system: sysPrompt,
           messages: [{ role: 'user', content: '텍스트 분석→JSON: ' + schema + '\n텍스트:' + text.slice(0, 200) }]
         })
