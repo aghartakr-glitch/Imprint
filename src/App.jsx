@@ -2921,6 +2921,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       if (forceIdx !== null) {
         // 고정 스타일 사용 (rerank 건너뜀)
         rerank = { i: forceIdx, structured: { reference_reason:'styleLock', content_match:'', layout_reason:'', typography_reason:'', margin_reason:'', rejected:[], prevUsedForced:false, prevUsedReason:'' } };
+      } else if (patchModeOnly) {
+        // sty 재생성 모드: 현재 선택된 레퍼런스 그대로 유지 (API 호출 없음)
+        rerank = { i: selIdx, structured: { reference_reason:'patch', content_match:'', layout_reason:'', typography_reason:'', margin_reason:'', rejected:[], prevUsedForced:false, prevUsedReason:'' } };
       } else {
         const testCtx = testMode === 'genreCompare' ? { prevStyleId: runMeta?.selectedStyleId } : null;
         rerank = await semanticRerank(matchText, profile, _diverseRanked, h, testCtx);
