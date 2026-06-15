@@ -2343,7 +2343,9 @@ export default function App() {
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineHistory, setRefineHistory] = useState([]); // [{role, content, chatContent, changes}]
   const [streamingText, setStreamingText] = useState('');  // SSE 스트리밍 중 실시간 텍스트
-  const [currentLog, setCurrentLog] = useState(null);     // 현재 generationLog
+  const [currentLog, setCurrentLog] = useState(() => {
+    try { const s = localStorage.getItem('imprint_last_log'); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
   const [allLogs, setAllLogs] = useState([]);              // 세션 내 전체 로그 (인메모리)
   // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
 
