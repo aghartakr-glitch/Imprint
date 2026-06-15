@@ -5135,6 +5135,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // ── System Rules 업데이트 ────────────────────────
       updateSystemRules(analysis.corrections, satisfactionScore, userFeedbackText);
 
+      // ── sty 즉시 재생성 (API 비용 없음) — 학습된 규칙이 반영된 sty 파일 갱신 ──
+      // Sonnet LaTeX 재생성 없이 Haiku 5회 + sty 결정론적 빌드만 실행
+      if (latex) {
+        run({ patchModeOnly: true }).catch(() => {});
+      }
+
       // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
       if (ENABLE_GOOGLE_SHEET_LOGGING) {
         const cl = currentLog;
