@@ -2764,10 +2764,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setRevisionLog([]);
       setEvidenceMap(null);
     }
-    setExperimentFeedback('');
-    setSatisfactionScore(null);
-    setExperimentAnalysis(null);
-    setExperimentLoading(false);
+    if (!patchModeOnly) {
+      setExperimentFeedback('');
+      setSatisfactionScore(null);
+      setExperimentAnalysis(null);
+      setExperimentLoading(false);
+    }
     setDisplayBodySize(null);
     const h = hint;
 
