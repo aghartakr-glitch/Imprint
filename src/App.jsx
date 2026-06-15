@@ -5134,7 +5134,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // 공식: 교정 없음 → 100% / 있음 → min(95, 만족도×20 - 교정수×5)
       function calcMatchRate(corrs, sat) {
         if (!corrs.length) return 100;
-        return Math.max(5, Math.min(95, (sat || 3) * 20 - corrs.length * 5));
+        const penalty = corrs.reduce((acc, c) => {
+          const pct = Math.abs(parseFloat(c.user_pct) || 10);
+          const dirMul = c.direction_match === false ? 2.0 : 1.0;
+          return acc + dirMul * Math.min(3, pct / 10);
+        }, 0);
+        return Math.max(5, Math.min(95, (sat || 3) * 20 - penalty * 3));
       }
       const computedMatchRate = calcMatchRate(corrections, satisfactionScore);
 
