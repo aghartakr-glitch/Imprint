@@ -196,17 +196,17 @@ function saveSystemRules(sr) {
   try { localStorage.setItem('imprint_system_rules', JSON.stringify(sr)); } catch {}
 }
 
-// satisfaction → 학습 가중치 (낮을수록 더 강한 교정 신호)
+// satisfaction → 학습 가중치 (피드백이 있으면 명확한 신호로 취급)
 function _satWeight(sat) {
   if (sat <= 2) return 1.5;
   if (sat === 3) return 1.0;
-  return 0.7; // 4-5: 만족했지만 방향 제시가 있으면 약하게 반영
+  return 1.0; // 4-5: 피드백 자체가 교정 신호 — 만족도와 무관하게 즉시 반영
 }
 
-// weighted_count → confidence 등급
+// weighted_count → confidence 등급 (1회 피드백으로 medium 도달)
 function _calcConfidence(wc) {
-  if (wc >= 3.5) return 'high';
-  if (wc >= 1.5) return 'medium';
+  if (wc >= 2.5) return 'high';
+  if (wc >= 0.9) return 'medium';
   if (wc > 0)    return 'low';
   return 'none';
 }
