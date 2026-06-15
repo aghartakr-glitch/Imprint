@@ -6659,6 +6659,17 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         {/* ── 중앙: 결과 패널 ─────────────────────────────────────── */}
         <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", background:T.bg }}>
 
+          {/* 피드백 반영 완료 토스트 */}
+          {patchToast && (
+            <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)",
+              background:"#1a7f4b", color:"#fff", padding:"10px 20px", borderRadius:6,
+              fontSize:13, fontWeight:500, zIndex:9999, boxShadow:"0 4px 16px rgba(0,0,0,0.18)",
+              display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:16 }}>✓</span>
+              {patchToast}
+            </div>
+          )}
+
           {/* 진행 상태 */}
           {isRunning && runLog.length > 0 && (
             <div style={{ padding:"12px 24px", borderBottom:`1px solid ${T.border}`,
