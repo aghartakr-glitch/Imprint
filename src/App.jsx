@@ -6260,9 +6260,15 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             target_variable: feedbackCurrentVar,
                             system_pct: feedbackCurrentSystemPct.trim() || '미반영',
                             user_pct: feedbackCurrentUserPct.trim(),
-                            direction_match: feedbackCurrentSystemPct.trim() && feedbackCurrentUserPct.trim()
-                              ? (feedbackCurrentSystemPct.match(/[+-]/)?.[0] === feedbackCurrentUserPct.match(/[+-]/)?.[0])
-                              : false,
+                            direction_match: (() => {
+                              const s = feedbackCurrentSystemPct.trim();
+                              const u = feedbackCurrentUserPct.trim();
+                              if (!s || /미반영|not applied/i.test(s)) return null;
+                              const sSign = s.match(/[+-]/)?.[0];
+                              const uSign = u.match(/[+-]/)?.[0];
+                              if (!sSign || !uSign) return null;
+                              return sSign === uSign;
+                            })(),
                           };
                           setFeedbackCorrections([...feedbackCorrections, newCorr]);
                           setFeedbackCurrentSystemPct('');
