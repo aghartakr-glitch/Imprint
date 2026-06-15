@@ -5412,7 +5412,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 6000,
+          max_tokens: 3000,
           stream: true,
           system: systemPrompt,
           messages,
