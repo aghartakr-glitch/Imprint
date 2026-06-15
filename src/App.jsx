@@ -4904,8 +4904,15 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
   // ── Background semantic matching ──────────────────────────────
 
   // ── LaTeX 압축 (refine 전송 전 주석·빈줄 제거) ──────────────────
+  // main.tex의 \begin{document}...\end{document} 본문만 전달 — 프리앰블 제외로 토큰 절감
   function compressLatex(code) {
-    return code
+    // \begin{document} 이후만 추출 (프리앰블은 sty가 담당 — 전송 불필요)
+    const bodyStart = code.indexOf('\\begin{document}');
+    const bodyEnd = code.lastIndexOf('\\end{document}');
+    const bodyOnly = bodyStart >= 0
+      ? code.slice(bodyStart, bodyEnd >= 0 ? bodyEnd + '\\end{document}'.length : undefined)
+      : code;
+    return bodyOnly
       .split('\n')
       .filter(line => !line.trim().startsWith('%'))
       .join('\n')
