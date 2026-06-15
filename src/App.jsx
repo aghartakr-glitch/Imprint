@@ -5147,7 +5147,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           target_variable: (analysis.corrections||[]).map(c=>c.target_variable).filter(Boolean).join(', '),
           system_action: (analysis.corrections||[]).map(c=>c.system_pct).filter(Boolean).join(', '),
           user_correct_action: (analysis.corrections||[]).map(c=>c.user_pct).filter(Boolean).join(', '),
-          direction_match: (analysis.corrections||[]).every(c => c.direction_match) ? 'Y' : 'N',
+          direction_match: (() => { const c = (analysis.corrections||[]).filter(x => x.direction_match !== null && x.direction_match !== undefined); return c.length === 0 ? 'N/A' : c.every(x => x.direction_match) ? 'Y' : 'N'; })(),
           match_rate: analysis.matchRate,
           difference: analysis.difference,
           next_rule: analysis.nextRule,
