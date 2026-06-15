@@ -547,8 +547,8 @@ function getLearnedDesignOverride(ruleName, baseValue) {
   const rule = loadSystemRules().rules[ruleName];
   if (!rule || rule.confidence === 'none' || rule.value === null) return baseValue;
   const strength = rule.confidence === 'high' ? 1.0
-    : rule.confidence === 'medium' ? 0.7
-    : 0.3; // low
+    : rule.confidence === 'medium' ? 1.0  // 1회 피드백으로 medium → 사용자 요청 100% 반영
+    : 0.5; // low
   const adjusted = baseValue * (1 + (rule.value * strength) / 100);
   // 최소 50%, 최대 200% 범위 제한
   return Math.round(Math.max(baseValue * 0.5, Math.min(baseValue * 2.0, adjusted)) * 10) / 10;
