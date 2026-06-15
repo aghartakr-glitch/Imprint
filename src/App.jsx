@@ -4080,6 +4080,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         bodyContentOnly = bodyContentOnly.replace(/^\\(?:use|Require)Package\{[^}]*\}[^\n]*\n?/gm, '');
         // (2) \documentclass — body에 있으면 오류
         bodyContentOnly = bodyContentOnly.replace(/^\\documentclass[^\n]*\n?/gm, '');
+        // (3-ext) mainTexHeader 명령 중복 방지 — Claude가 \begin{document} 직후 재출력하는 경우
+        bodyContentOnly = bodyContentOnly.replace(/^\\XeTeXlinebreaklocale[^\n]*\n?/gm, '');
+        bodyContentOnly = bodyContentOnly.replace(/^\\XeTeXlinebreakskip[^\n]*\n?/gm, '');
+        bodyContentOnly = bodyContentOnly.replace(/^\\renewcommand\{\\imprintrunninghead\}[^\n]*\n?/gm, '');
+        bodyContentOnly = bodyContentOnly.replace(/^\\pagestyle\{imprint\}[^\n]*\n?/gm, '');
         // (3) \begin{imprintlayout}...\end{imprintlayout} → \begin{paracol} 구조로 교체
         //     imprintlayout 환경은 .sty에 정의되지 않음 → XeLaTeX 즉시 오류
         if (bodyContentOnly.includes('\\begin{imprintlayout}')) {
