@@ -5434,7 +5434,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 3000,
           stream: true,
           system: systemPrompt,
