@@ -5138,8 +5138,18 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           next_rule: analysis.nextRule,
           csv_flag: [exp.experiment_id, exp.timestamp?.slice(0,10), userFeedbackText, satisfactionScore, analysis.matchRate + '%'].join(' | '),
           md_flag: [`# ${exp.experiment_id}`, `날짜: ${exp.timestamp?.slice(0,10)}`, `피드백: ${userFeedbackText}`, `만족도: ${satisfactionScore}/5`, `일치율: ${analysis.matchRate}%`].join('\n'),
-          design_rules: buildDesignRules() || '(아직 규칙 없음)',
-          json_flag: JSON.stringify({ ...exp, analysis, satisfaction: satisfactionScore, feedback: userFeedbackText }, null, 2),
+          design_rules: (buildDesignRules() || '(아직 규칙 없음)').slice(0, 5000),
+          json_flag: JSON.stringify({
+            experiment_id: exp.experiment_id,
+            timestamp: exp.timestamp,
+            satisfaction: satisfactionScore,
+            feedback: userFeedbackText,
+            corrections: analysis.corrections,
+            match_rate: analysis.matchRate,
+            direction_match: (analysis.corrections||[]).every(c => c.direction_match),
+            next_rule: analysis.nextRule,
+            system_rules_snapshot: (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules') || '{}'); } catch { return {}; } })(),
+          }, null, 2).slice(0, 45000),
         });
       }
 
