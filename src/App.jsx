@@ -3621,6 +3621,18 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `% Designer:  ${p.designer || '-'}`,
         `% Genre:     ${p.g} / ${p.pub_type}`,
         `% Generated: Imprint v${IMPRINT_VERSION} — ${new Date().toISOString().slice(0,10)}`,
+        (() => {
+          // 활성화된 학습 규칙 요약
+          const sr = loadSystemRules();
+          const activeRules = Object.entries(sr.rules || {})
+            .filter(([, r]) => r.confidence !== 'none' && r.value !== null)
+            .map(([k, r]) => {
+              if (typeof r.value === 'number') return `${k}: ${r.value > 0 ? '+' : ''}${Math.round(r.value)}% [${r.confidence}]`;
+              return `${k}: ${r.value} [${r.confidence}]`;
+            });
+          if (!activeRules.length) return null;
+          return `% 학습된 피드백 규칙 (${activeRules.length}개): ${activeRules.join(', ')}`;
+        })(),
         `% ============================================================`,
         `%`,
         `% 필요한 폰트 파일 (main.tex과 같은 폴더의 fonts/ 하위에 저장):`,
