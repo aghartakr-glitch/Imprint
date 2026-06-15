@@ -2349,6 +2349,23 @@ export default function App() {
   const [allLogs, setAllLogs] = useState([]);              // 세션 내 전체 로그 (인메모리)
   // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
 
+  // 마지막 생성 결과 localStorage 영구 저장 — 새로고침 후에도 피드백 탭 유지
+  useEffect(() => {
+    try { if (latex) localStorage.setItem('imprint_last_latex', latex);
+          else localStorage.removeItem('imprint_last_latex'); } catch {}
+  }, [latex]);
+  useEffect(() => {
+    try { if (styCode) localStorage.setItem('imprint_last_sty', styCode);
+          else localStorage.removeItem('imprint_last_sty'); } catch {}
+  }, [styCode]);
+  useEffect(() => {
+    try { if (currentLog) localStorage.setItem('imprint_last_log', JSON.stringify(currentLog));
+          else localStorage.removeItem('imprint_last_log'); } catch {}
+  }, [currentLog]);
+  useEffect(() => {
+    try { localStorage.setItem('imprint_last_selidx', String(selIdx)); } catch {}
+  }, [selIdx]);
+
   // Evidence Map: latex 생성 완료 시 백그라운드 실행
   useEffect(() => {
     if (!latex || !apiKey) return;
