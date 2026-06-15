@@ -5061,12 +5061,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       // ── 일치율 계산 ──
       function calcMatchRate(corrs) {
-        if (!corrs.length) return 0;
-        let matched = 0;
-        for (const c of corrs) {
-          if (c.direction_match) matched++;
-        }
-        return Math.round((matched / corrs.length) * 100);
+        // null = 비교 불가(미반영 등) → 제외하고 계산
+        const comparable = corrs.filter(c => c.direction_match !== null && c.direction_match !== undefined);
+        if (!comparable.length) return 0;
+        const matched = comparable.filter(c => c.direction_match === true).length;
+        return Math.round((matched / comparable.length) * 100);
       }
       const computedMatchRate = calcMatchRate(corrections);
 
