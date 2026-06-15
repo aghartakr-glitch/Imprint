@@ -1092,7 +1092,7 @@ async function generateRationale(p) {
     const res = await fetch('/anthropic/v1/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6', max_tokens: 180,
+        model: 'claude-haiku-4-5-20251001', max_tokens: 180,
         system: '편집 디자이너. 한국어 3문장. 핵심만.',
         messages: [{ role: 'user', content: prompt }]
       })
