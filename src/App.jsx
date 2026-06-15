@@ -3945,7 +3945,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // main.tex 헤더 (\usepackage{imprint-style} 사용)
       // _fw/_fh: 판형 override 반영 (styleConfig.paperW/H 우선, 없으면 DB 값)
       const mainTexHeader =
-        `\\documentclass[${Math.max(9, p.b.크기)}pt]{memoir}\n` +
+        `\\documentclass[${Math.round(Math.max(9, p.b.크기))}pt]{memoir}\n` +
         `\\setstocksize{${_fh}mm}{${_fw}mm}\n` +
         `\\settrimmedsize{\\stockheight}{\\stockwidth}{*}\n` +
         `\\usepackage{kotex}\n` +
