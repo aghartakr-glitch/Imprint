@@ -5062,20 +5062,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // ── 일치율 계산 ──
       function calcMatchRate(corrs) {
         if (!corrs.length) return 0;
-        let totalScore = 0;
+        let matched = 0;
         for (const c of corrs) {
-          if (!c.direction_match) { totalScore += 0; continue; }
-          if (/미반영|not applied/i.test(String(c.system_pct || ''))) { totalScore += 0; continue; }
-          const sysPct = parseFloat(String(c.system_pct || '').replace(/[^-\d.]/g, ''));
-          const usrPct = parseFloat(String(c.user_pct  || '').replace(/[^-\d.]/g, ''));
-          if (!isNaN(sysPct) && !isNaN(usrPct) && usrPct !== 0) {
-            const achievement = Math.min(1, Math.abs(sysPct) / Math.abs(usrPct));
-            totalScore += achievement;
-          } else {
-            totalScore += 1;
-          }
+          if (c.direction_match) matched++;
         }
-        return Math.round((totalScore / corrs.length) * 100);
+        return Math.round((matched / corrs.length) * 100);
       }
       const computedMatchRate = calcMatchRate(corrections);
 
