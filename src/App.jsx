@@ -2352,6 +2352,7 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [appliedMargins, setAppliedMargins] = useState(null); // corrections.margins from last run()
+  const [patchToast, setPatchToast] = useState(null); // 피드백 반영 완료 토스트
   const [latex, setLatex] = useState(() => {
     try { return localStorage.getItem('imprint_last_latex') || ""; } catch { return ""; }
   });
