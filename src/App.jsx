@@ -5173,9 +5173,14 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       updateSystemRules(analysis.corrections, satisfactionScore, userFeedbackText);
 
       // ── sty 즉시 재생성 (API 비용 없음) — 학습된 규칙이 반영된 sty 파일 갱신 ──
-      // Sonnet LaTeX 재생성 없이 Haiku 5회 + sty 결정론적 빌드만 실행
       if (latex) {
-        run({ patchModeOnly: true }).catch(() => {});
+        const _appliedRules = analysis.corrections
+          .map(c => `${({'heading_gap':'제목간격','footnote_leading':'각주행간','footnote_size':'각주크기','body_size':'본문크기','body_leading':'본문행간','column_gap':'단간격','folio_size':'쪽번호'})[c.target_variable] || c.target_variable} ${c.user_pct}`)
+          .join(', ');
+        run({ patchModeOnly: true }).then(() => {
+          setPatchToast(`스타일 파일 업데이트 완료 — ${_appliedRules}`);
+          setTimeout(() => setPatchToast(null), 5000);
+        }).catch(() => {});
       }
 
       // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
