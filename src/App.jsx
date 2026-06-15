@@ -5133,9 +5133,6 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           design_task: (structuredReason?.design_task || []).join(', '),
           visual_element: (structuredReason?.visual_element || []).join(', ') || cl?.text_analysis?.layout_intent || '',
           ref_detail: cl?.matching?.semantic_reason || '',
-          body_reason: Array.isArray(evidenceMap) && evidenceMap.length > 0
-            ? evidenceMap.map(e => `"${e.textSpan}"\n→ ${e.interpretation}`).join('\n')
-            : cl?.text_analysis?.topic || '',
           font_choice: DB[cl?.matching?.selected_reference_id]?.why_font || '',
           margin_design: DB[cl?.matching?.selected_reference_id]?.why_margin || '',
           tracking: DB[cl?.matching?.selected_reference_id]?.why_tracking || '',
