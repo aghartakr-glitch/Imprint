@@ -4882,10 +4882,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         pushLog('rationale', '레이아웃 해설', 'running', '편집 근거 생성 중');
         // rationale만 백그라운드 (semantic은 이미 foreground에서 완료)
         const cachedRat = rationaleCache.current[chosen.i];
-        (cachedRat ? Promise.resolve(cachedRat) : generateRationale(p))
-          .then(rat => {
-            if (rat) { rationaleCache.current[chosen.i] = rat; setRationale(rat); pushLog('rationale', '레이아웃 해설', 'done'); }
-          });
+        if (!patchModeOnly) {
+          (cachedRat ? Promise.resolve(cachedRat) : generateRationale(p))
+            .then(rat => {
+              if (rat) { rationaleCache.current[chosen.i] = rat; setRationale(rat); pushLog('rationale', '레이아웃 해설', 'done'); }
+            });
+        }
       } catch (e) {
         setErr(e.name === 'AbortError' ? 'LaTeX generation timed out (3min). Try splitting into smaller sections.' : 'Error: ' + e.message);
       } finally {
