@@ -4088,6 +4088,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         bodyContentOnly = bodyContentOnly.replace(/^\\XeTeXlinebreakskip[^\n]*\n?/gm, '');
         bodyContentOnly = bodyContentOnly.replace(/^\\renewcommand\{\\imprintrunninghead\}[^\n]*\n?/gm, '');
         bodyContentOnly = bodyContentOnly.replace(/^\\pagestyle\{imprint\}[^\n]*\n?/gm, '');
+        // (4) 정렬 명령 충돌 방지 — justified일 때 Claude가 \RaggedRight 추가하면 undefined control sequence 오류
+        if (alignResult.alignment !== 'ragged') {
+          bodyContentOnly = bodyContentOnly.replace(/^\\RaggedRight[^\n]*\n?/gm, '');
+          bodyContentOnly = bodyContentOnly.replace(/^\\raggedright[^\n]*\n?/gm, '');
+        }
         // (3) \begin{imprintlayout}...\end{imprintlayout} → \begin{paracol} 구조로 교체
         //     imprintlayout 환경은 .sty에 정의되지 않음 → XeLaTeX 즉시 오류
         if (bodyContentOnly.includes('\\begin{imprintlayout}')) {
