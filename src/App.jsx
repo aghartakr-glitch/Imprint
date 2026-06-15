@@ -2323,12 +2323,18 @@ export default function App() {
   const [evidenceMap, setEvidenceMap] = useState(null);
   const [revisionLog, setRevisionLog] = useState([]); // Revision Trajectory [{id, type, ...}]
   const [textProfile, setTextProfile] = useState(null); // analyzeText 결과
-  const [selIdx, setSelIdx] = useState(0);
+  const [selIdx, setSelIdx] = useState(() => {
+    try { return Number(localStorage.getItem('imprint_last_selidx') || 0); } catch { return 0; }
+  });
   const [loading, setLoading] = useState(false);
   const [appliedMargins, setAppliedMargins] = useState(null); // corrections.margins from last run()
-  const [latex, setLatex] = useState("");
-  const [styCode, setStyCode] = useState(""); // imprint-style.sty 내용
-  const [requiredFonts, setRequiredFonts] = useState([]); // 필요한 폰트 파일 목록
+  const [latex, setLatex] = useState(() => {
+    try { return localStorage.getItem('imprint_last_latex') || ""; } catch { return ""; }
+  });
+  const [styCode, setStyCode] = useState(() => {
+    try { return localStorage.getItem('imprint_last_sty') || ""; } catch { return ""; }
+  });
+  const [requiredFonts, setRequiredFonts] = useState([]);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
   const [copied, setCopied] = useState(false);
