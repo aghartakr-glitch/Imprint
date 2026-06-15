@@ -3924,6 +3924,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setRequiredFonts(_fontFiles);
       setStyCode(styContent);
 
+      // patchModeOnly: sty 재생성만 하고 Sonnet LaTeX 재생성 건너뜀 (비용 절감)
+      if (patchModeOnly) {
+        setMatching(false);
+        return;
+      }
+
       const preambleSummary =
         `\\documentclass[${Math.max(9, p.b.크기)}pt]{memoir} % ${p.f.w}×${p.f.h}mm\n` +
         `\\geometry{top=${corrections.margins.상}mm,bottom=${corrections.margins.하}mm,inner=${corrections.margins.안}mm,outer=${corrections.margins.밖}mm,includehead=true}\n` +
