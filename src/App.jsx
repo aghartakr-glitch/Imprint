@@ -5414,10 +5414,10 @@ ${outputRules}
 현재 LaTeX:
 ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : ''}${compressedLatex}`;
 
-    // ── 멀티턴 대화 히스토리 구성 ────────────────────────────────
+    // ── 멀티턴 대화 히스토리 구성 (최근 6턴만 유지하여 비용 절감) ──────────
     // assistant 메시지는 chatContent(자연어 부분)만 전달 — LaTeX 코드 제외
     const messages = [
-      ...refineHistory.map(m => ({
+      ...refineHistory.slice(-6).map(m => ({
         role: m.role,
         content: m.role === 'user'
           ? m.content
