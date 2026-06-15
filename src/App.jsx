@@ -6305,9 +6305,14 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                               const s = feedbackCurrentSystemPct.trim();
                               const u = feedbackCurrentUserPct.trim();
                               if (!s || /미반영|not applied/i.test(s)) return null;
-                              const sSign = s.match(/[+-]/)?.[0];
                               const uSign = u.match(/[+-]/)?.[0];
-                              if (!sSign || !uSign) return null;
+                              if (!uSign) return null;
+                              // 정성적 표현 → 수정 방향 추론
+                              // "넓음/큼/높음..." = 현재 값이 크다 → 줄여야 함 → 정답이 '-'이면 일치
+                              if (/넓음|큼|높음|많음|두꺼움|진함|강함/.test(s)) return uSign === '-';
+                              if (/좁음|작음|낮음|적음|얇음|연함|약함/.test(s)) return uSign === '+';
+                              const sSign = s.match(/[+-]/)?.[0];
+                              if (!sSign) return null;
                               return sSign === uSign;
                             })(),
                           };
