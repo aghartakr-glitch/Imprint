@@ -2953,20 +2953,23 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setAppliedMargins(corrections.margins);
 
       // ── Stage 3c: AI 타이포그래피 미세조정 ───────────────────────
-      pushLog('typo', '타이포 조정', 'running', 'AI 기반 수치 미세조정 중');
-      const typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
-      if (typoAdj) {
-        corrections.bs = typoAdj.bs;
-        corrections.bl = typoAdj.bl;
-        corrections.bt = typoAdj.bt;
-        corrections.margins = typoAdj.margins;
-        setAppliedMargins(typoAdj.margins);
-        if (typoAdj.reasons?.length > 0) {
-          setStructuredReason(prev => prev ? { ...prev, variable_reasons: typoAdj.reasons } : { variable_reasons: typoAdj.reasons });
+      // patchModeOnly: AI 호출 건너뜀 — 학습 규칙만 적용, 본문 행간 안정화
+      if (!patchModeOnly) {
+        pushLog('typo', '타이포 조정', 'running', 'AI 기반 수치 미세조정 중');
+        const typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
+        if (typoAdj) {
+          corrections.bs = typoAdj.bs;
+          corrections.bl = typoAdj.bl;
+          corrections.bt = typoAdj.bt;
+          corrections.margins = typoAdj.margins;
+          setAppliedMargins(typoAdj.margins);
+          if (typoAdj.reasons?.length > 0) {
+            setStructuredReason(prev => prev ? { ...prev, variable_reasons: typoAdj.reasons } : { variable_reasons: typoAdj.reasons });
+          }
         }
+        pushLog('typo', '타이포 조정', 'done',
+          typoAdj?.reasons?.length > 0 ? `${typoAdj.reasons.length}개 수치 조정` : '기본값 유지');
       }
-      pushLog('typo', '타이포 조정', 'done',
-        typoAdj?.reasons?.length > 0 ? `${typoAdj.reasons.length}개 수치 조정` : '기본값 유지');
 
       // ── Stage 3b: alignment 확정 ────────────────────────────────
       // isLengthCompare: 이전 runMeta의 alignment 고정
