@@ -122,7 +122,7 @@ function buildFallbackExperimentAnalysis(feedbackText = '', raw = '', parseError
     target_variable: c.target_variable,
     system_pct: '미반영',
     user_pct: c.user_pct,
-    direction_match: false,
+    direction_match: null,
   }));
   return {
     difference: corrections.length
