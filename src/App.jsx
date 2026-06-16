@@ -3370,7 +3370,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // 주석/각주 글자 크기는 본문 이하로 강제 (rule 1)
       if (fnSize > adjustedBodySize) {
         fnSize = adjustedBodySize;
-        fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
+        // 크기 클램프 후 행간 재계산 — 단, 학습 규칙은 재적용
+        fnLead = getLearnedDesignOverride('footnote_leading',
+          Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10);
       }
       // 보정된 글자 크기 기반 행간 재계산
       const adjustedBodyLead = Math.max(11, adjustedBodySize !== bodySize
