@@ -428,15 +428,15 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     rule.history = [...(rule.history || []), { value: parsedValue, weight, timestamp: now }].slice(-10);
     rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
 
-    // consensus: 카테고리형은 최다 weighted, 수치형은 가중 평균
+    // 카테고리형은 최다 weighted, 수치형은 최신값 우선 (즉시 반영)
     if (v === 'font_style' || v === 'column_count' || v === 'heading_layout' || v === 'heading_indent' || v === 'footnote_marker_format') {
       const tally = {};
       for (const h of rule.history) tally[h.value] = (tally[h.value] || 0) + h.weight;
       rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
       if (v === 'column_count') rule.value = parseInt(rule.value);
     } else {
-      const totalW = rule.history.reduce((s, h) => s + h.weight, 0);
-      rule.value = totalW > 0 ? rule.history.reduce((s, h) => s + h.value * h.weight, 0) / totalW : null;
+      // 최신 피드백값 즉시 반영 — 가중 평균 대신 최신값으로 교체
+      rule.value = parsedValue;
     }
 
     rule.confidence = _calcConfidence(rule.weighted_count);
