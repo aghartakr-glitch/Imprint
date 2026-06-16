@@ -2799,6 +2799,24 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     ].filter(Boolean).join('\n\n');
 
     try {
+      // patchModeOnly: Stage 1~2 완전 스킵 — 현재 선택된 레퍼런스로 바로 sty 재생성
+      if (patchModeOnly) {
+        const pRef = DB[selIdx];
+        if (!pRef) { setMatching(false); return; }
+        const chosen = { i: selIdx, p: pRef };
+        const structReason = { reference_reason: 'patch', content_match: '', layout_reason: '', typography_reason: '', margin_reason: '', rejected: [], prevUsedForced: false, prevUsedReason: '' };
+        setStructuredReason(structReason);
+        const corrections = applyTextCorrections(pRef, matchText, fields.각주);
+        setAppliedMargins(corrections.margins);
+        const numColsEst = (() => { const m = (pRef.c.구성 || '').match(/(\d+)[단열]/); return m ? parseInt(m[1]) : 1; })();
+        const alignResult = inferAlignment(pRef, numColsEst);
+        // sty 재생성 (전체 sty 생성 블록으로 점프)
+        // eslint-disable-next-line no-use-before-define
+        await _buildAndSetSty({ chosen, corrections, structReason, alignResult, patchModeOnly: true });
+        setMatching(false);
+        return;
+      }
+
       // ── Stage 1: 텍스트 분석 + 후보 추출 (병렬) ───────────────────
       // hint 있을 때: DB를 장르/출판형태로 먼저 필터 → 그 안에서 content 스코어링
       // hint 없을 때: 전체 DB에서 content 스코어링
