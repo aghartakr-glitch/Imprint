@@ -5118,26 +5118,45 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       // 사용자 입력 corrections 사용
       const corrections = feedbackCorrections;
-      const primary = corrections[0] || {};
 
       // difference: 사용자 선택 변수 요약
       const varNames = {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'};
       const diffVars = corrections.map(c => `${varNames[c.target_variable] || c.target_variable} (${c.user_pct})`).join(', ');
       const difference = `사용자 요청: ${diffVars}. 만족도: ${satisfactionScore}/5`;
 
-      // nextRule: 규칙 요약
-      const nextRule = `${corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${c.direction_match ? '방향일치' : '미반영'})`).join('; ')}`;
+      const directionLabel = v => v === true ? '방향일치' : v === false ? '방향불일치' : '방향미상';
+      const summarizeDirectionMatch = corrs => {
+        if (!corrs.length) return null;
+        const vals = corrs.map(c => c.direction_match);
+        if (vals.some(v => v === false)) return false;
+        if (vals.some(v => v !== true)) return null;
+        return true;
+      };
+      const parseCorrectionValue = (value, missing = null) => {
+        const raw = String(value ?? '').trim();
+        if (!raw || /미반영|not applied/i.test(raw)) return missing;
+        const pct = raw.match(/([+-]?\d+(?:\.\d+)?)\s*%/);
+        if (pct) return parseFloat(pct[1]);
+        const num = raw.match(/[+-]?\d+(?:\.\d+)?/);
+        return num ? parseFloat(num[0]) : null;
+      };
+      const correctionDiff = c => {
+        const userVal = parseCorrectionValue(c.user_pct);
+        if (!Number.isFinite(userVal)) return 10;
+        const sysVal = parseCorrectionValue(c.system_pct, 0);
+        if (!Number.isFinite(sysVal)) return Math.abs(userVal) || 10;
+        return Math.abs(userVal - sysVal);
+      };
 
-      // ── 일치율 계산 ──
-      // 의미: 시스템이 사용자 의도와 얼마나 일치했는가
-      // 교정 항목이 하나라도 있으면 100% 불가 — 피드백 = 시스템이 틀린 것
-      // 공식: 교정 없음 → 100% / 있음 → min(95, 만족도×20 - 교정수×5)
+      // nextRule: 규칙 요약
+      const nextRule = corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${directionLabel(c.direction_match)})`).join('; ');
+
       function calcMatchRate(corrs, sat) {
         if (!corrs.length) return 100;
         const penalty = corrs.reduce((acc, c) => {
-          const pct = Math.abs(parseFloat(c.user_pct) || 10);
-          const dirMul = c.direction_match === false ? 2.0 : 1.0;
-          return acc + dirMul * Math.min(3, pct / 10);
+          const diff = correctionDiff(c);
+          const dirMul = c.direction_match === false ? 2.0 : c.direction_match === true ? 1.0 : 1.25;
+          return acc + dirMul * Math.min(3, diff / 10);
         }, 0);
         return Math.max(5, Math.min(95, (sat || 3) * 20 - penalty * 3));
       }
@@ -5148,10 +5167,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         difference,
         nextRule,
         corrections,
-        targetVariable: primary.target_variable || '',
-        directionMatch: primary.direction_match ?? true,
-        systemPct: primary.system_pct || '',
-        userPct: primary.user_pct || '',
+        targetVariable: corrections.map(c => c.target_variable).filter(Boolean).join(', '),
+        directionMatch: summarizeDirectionMatch(corrections),
+        systemPct: corrections.map(c => c.system_pct).filter(Boolean).join(', '),
+        userPct: corrections.map(c => c.user_pct).filter(Boolean).join(', '),
       };
       setExperimentAnalysis(analysis);
 
