@@ -4033,7 +4033,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         // 비혼합: 크기+bold로 구분 / 혼합: font-family 전환
         '\\hone{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h1 + '/' + h1Lead + 'pt}  \\htwo{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h2 + '/' + h2Lead + 'pt}  \\hthree{}={' + (isMixedLayout?'sans':'bold') + ' ' + hs.h3 + '/' + h3Lead + 'pt}\n' +
         '\\bodyf{} resets to ' + (isMixedLayout?'serif+':'normal+') + adjustedBodySize + '/' + adjustedBodyLead + 'pt\n' +
-        'HEADING PLACEMENT: \\Needspace{4\\baselineskip}\\par\\noindent{\\hthree 소제목}\\par\\vspace{\\imprintheadinggap}\\bodyf{}\\noindent\n' +
+        'HEADING PLACEMENT: heading→heading: {\\hone TITLE\\par}\\vspace{\\imprintheadinggap}{\\htwo SUBTITLE\\par}\\vspace{\\imprintbodygap}\\bodyf{}\\noindent  |  heading→body: {\\hthree 소제목\\par}\\vspace{\\imprintbodygap}\\bodyf{}\\noindent\n' +
         'RULE: ①always call \\bodyf{} after each heading. ②NEVER inline heading mid-paragraph. ③Use \\Needspace{4\\baselineskip} before EVERY \\hthree/\\htwo/\\hone. ④Never add \\indent, \\hspace, or \\leftskip before headings' + (_learnedHeadingIndent === 'none' ? ' (learned rule: heading indent none)' : '') + '.\n' +
         'LEADING RATIOS: ≤7pt→×1.75 ≤9pt→×1.65 ≤11pt→×1.60 ≤13pt→×1.55 ≤16pt→×1.40 ≤24pt→×1.25 25+pt→×1.15\n' +
         'Any custom \\fontsize{X}{Y}: Y = round(X × ratio above).\n\n' +
