@@ -3955,11 +3955,15 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // patchModeOnly: sty 재생성 + main.tex heading_gap 패치 (Sonnet 재생성 건너뜀)
       if (patchModeOnly) {
         // 기존 main.tex 본문의 heading 인접 \vspace{Xpt}를 \vspace{\imprintheadinggap}으로 교체
-        // {\htwo TITLE\par}\vspace{Xpt} → {\htwo TITLE\par}\vspace{\imprintheadinggap}
-        setLatex(prev => prev
-          ? prev.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintheadinggap}')
-          : prev
-        );
+        // 헤딩 뒤 간격을 \imprintheadinggap으로 통일
+        // 케이스 1: {\hX TEXT\par}\vspace{Xpt} → \vspace{\imprintheadinggap}
+        // 케이스 2: {\hX TEXT\par}\n\n (빈 줄) → \vspace{\imprintheadinggap} 삽입
+        setLatex(prev => {
+          if (!prev) return prev;
+          return prev
+            .replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintheadinggap}')
+            .replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintheadinggap}\n\n');
+        });
         setMatching(false);
         return;
       }
