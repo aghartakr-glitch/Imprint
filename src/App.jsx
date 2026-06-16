@@ -3974,9 +3974,18 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         // 케이스 2: {\hX TEXT\par}\n\n (빈 줄) → \vspace{\imprintheadinggap} 삽입
         setLatex(prev => {
           if (!prev) return prev;
-          return prev
-            .replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintheadinggap}')
-            .replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintheadinggap}\n\n');
+          let s = prev;
+          // 헤딩↔헤딩: \par}\vspace{Xpt} 다음에 또 헤딩(\noindent{\h) 이 오는 경우
+          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*\n\s*\\noindent\{\\h)/g, '\\par}\\vspace{\\imprintheadinggap}$1');
+          // 헤딩↔본문: \par}\vspace{Xpt} 다음에 본문(\begin{multicols, \bodyf, 빈줄+본문)
+          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
+          // \imprintheadinggap이 이미 있는데 본문 앞인 경우 교체
+          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*\n\s*(?!\\noindent\{\\h))/g, '\\vspace{\\imprintbodygap}$1');
+          // 빈 줄만 있는 케이스: 헤딩↔헤딩
+          s = s.replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*\\noindent\{\\h)/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
+          // 빈 줄만 있는 케이스: 헤딩↔본문
+          s = s.replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
+          return s;
         });
         setMatching(false);
         return;
