@@ -2956,9 +2956,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       // ── Stage 3c: AI 타이포그래피 미세조정 ───────────────────────
       // patchModeOnly: AI 호출 건너뜀 — 학습 규칙만 적용, 본문 행간 안정화
+      let typoAdj = null;
       if (!patchModeOnly) {
         pushLog('typo', '타이포 조정', 'running', 'AI 기반 수치 미세조정 중');
-        const typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
+        typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
         if (typoAdj) {
           corrections.bs = typoAdj.bs;
           corrections.bl = typoAdj.bl;
