@@ -5163,7 +5163,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const corrections = feedbackCorrections;
 
       // difference: 사용자 선택 변수 요약
-      const varNames = {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'};
+      const varNames = {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목↔소제목간격','body_gap':'제목↔본문간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'};
       const diffVars = corrections.map(c => `${varNames[c.target_variable] || c.target_variable} (${c.user_pct})`).join(', ');
       const difference = `사용자 요청: ${diffVars}. 만족도: ${satisfactionScore}/5`;
 
