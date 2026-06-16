@@ -381,6 +381,8 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
   const seenCorrections = new Set();
 
   for (const c of expandedCorrections) {
+    // 기타(자연어) 항목은 system_rules 직접 저장 대상 아님 — 피드백 텍스트로만 전달
+    if (c.target_variable === '__custom__') continue;
     let v = normalizeSystemRuleTarget(c.target_variable);
     const context = `${c.user_pct || ''} ${c.system_pct || ''} ${feedbackText || ''}`;
     const headingSizeAsLeading = v.match(/^heading_h([123])_size$/);
