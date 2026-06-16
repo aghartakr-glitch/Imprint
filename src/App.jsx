@@ -3993,6 +3993,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
                 }
               } else if (n > 1) {
                 // 1단 → N단: 첫 \bodyf 앞에 래퍼 삽입
+                // 기존에 고아 \end{multicols*}가 있으면 제거 후 재삽입
+                const hasOrphanEnd = /\\end\{multicols\*?\}/.test(s);
+                if (hasOrphanEnd) {
+                  s = s.replace(/\\end\{multicols\*?\}\s*\n?/g, '');
+                }
                 s = s.replace(/^(\s*\\bodyf)/m, `\\begin{multicols*}{${n}}\n\n$1`);
                 s = s.replace(/(\\end\{document\})/, `\\end{multicols*}\n\n$1`);
               }
