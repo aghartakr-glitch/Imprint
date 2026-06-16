@@ -6361,6 +6361,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             <option value="heading_h3_size">소소제목 크기</option>
                             <option value="heading_h3_leading">소소제목 행간 (복수줄)</option>
                             <option value="heading_gap">제목↔소제목 간격</option>
+                            <option value="body_gap">제목/소제목↔본문 간격</option>
                             <option value="heading_layout">제목 정렬</option>
                             <option value="margin_top">상 여백</option>
                             <option value="margin_bottom">하 여백</option>
