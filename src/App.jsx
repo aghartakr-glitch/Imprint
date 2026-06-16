@@ -3948,8 +3948,16 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setRequiredFonts(_fontFiles);
       setStyCode(styContent);
 
-      // patchModeOnly: sty 재생성만 하고 Sonnet LaTeX 재생성 건너뜀 (비용 절감)
+      // patchModeOnly: sty 재생성 + main.tex heading_gap 패치 (Sonnet 재생성 건너뜀)
       if (patchModeOnly) {
+        // 기존 main.tex 본문의 heading 인접 \vspace{Xpt}를 \vspace{\imprintheadinggap}으로 교체
+        setLatex(prev => prev
+          ? prev.replace(
+              /(\\(?:hone|htwo|hthree)\b[^}]*\}\\par\s*\\vspace\{)[\d.]+pt(\})/g,
+              '$1\\imprintheadinggap$2'
+            )
+          : prev
+        );
         setMatching(false);
         return;
       }
