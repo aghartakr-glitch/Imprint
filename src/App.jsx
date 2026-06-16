@@ -3975,11 +3975,30 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         setLatex(prev => {
           if (!prev) return prev;
           let s = prev;
-          // 헤딩↔헤딩: \par}\vspace{Xpt} 다음에 또 헤딩(\noindent{\h) 이 오는 경우
+
+          // ── 단 수 패치 ──────────────────────────────────────────────
+          const colRule = loadSystemRules().rules['column_count'];
+          if (colRule?.confidence !== 'none' && colRule?.value !== null) {
+            const n = parseInt(colRule.value);
+            if (n >= 1 && n <= 4) {
+              // multicols* 또는 multicols의 단 수 교체
+              s = s.replace(/\\begin\{multicols\*?\}\{(\d+)\}/g, (m, cur) =>
+                m.replace(`{${cur}}`, `{${n}}`)
+              );
+              // 1단: multicols 래퍼 제거 (본문을 단순 \bodyf 블록으로 변환)
+              if (n === 1) {
+                s = s.replace(/\\begin\{multicols\*?\}\{\d+\}\s*\n/g, '');
+                s = s.replace(/\\end\{multicols\*?\}\s*\n?/g, '');
+              }
+            }
+          }
+
+          // ── 헤딩 간격 패치 ─────────────────────────────────────────
+          // 헤딩↔헤딩: \par}\vspace{Xpt} 다음에 또 헤딩
           s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*\n\s*\\noindent\{\\h)/g, '\\par}\\vspace{\\imprintheadinggap}$1');
-          // 헤딩↔본문: \par}\vspace{Xpt} 다음에 본문(\begin{multicols, \bodyf, 빈줄+본문)
+          // 헤딩↔본문: 나머지 \par}\vspace{Xpt}
           s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
-          // \imprintheadinggap이 이미 있는데 본문 앞인 경우 교체
+          // 이미 \imprintheadinggap인데 본문 앞인 경우
           s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*\n\s*(?!\\noindent\{\\h))/g, '\\vspace{\\imprintbodygap}$1');
           // 빈 줄만 있는 케이스: 헤딩↔헤딩
           s = s.replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*\\noindent\{\\h)/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
