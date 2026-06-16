@@ -6406,7 +6406,16 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             <option value="folio_size">쪽번호 크기</option>
                             <option value="font_style">서체 스타일</option>
                             <option value="paragraph_spacing">문단 간격</option>
+                            <option value="__custom__">기타 (직접 입력)</option>
                           </select>
+                          {feedbackCurrentVar === '__custom__' && (
+                            <input type="text" value={feedbackCustomVarText}
+                              onChange={e => setFeedbackCustomVarText(e.target.value)}
+                              placeholder="예: 제목 크기를 10% 늘려줘"
+                              style={{ marginTop:6, width:'100%', padding:'6px 8px',
+                                border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}
+                            />
+                          )}
                         </div>
 
                         <div style={{ display:'flex', gap:8, fontSize:11 }}>
