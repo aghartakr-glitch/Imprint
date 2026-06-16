@@ -5215,10 +5215,15 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         const _appliedRules = analysis.corrections
           .map(c => `${({'heading_gap':'제목간격','footnote_leading':'각주행간','footnote_size':'각주크기','body_size':'본문크기','body_leading':'본문행간','column_gap':'단간격','folio_size':'쪽번호'})[c.target_variable] || c.target_variable} ${c.user_pct}`)
           .join(', ');
-        run({ patchModeOnly: true }).then(() => {
+        try {
+          await run({ patchModeOnly: true });
           setPatchToast(`스타일 파일 업데이트 완료 — ${_appliedRules}`);
           setTimeout(() => setPatchToast(null), 5000);
-        }).catch(() => {});
+        } catch (e) {
+          console.error('[patchModeOnly] sty 업데이트 실패:', e);
+          setPatchToast('스타일 파일 업데이트 실패');
+          setTimeout(() => setPatchToast(null), 4000);
+        }
       }
 
       // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
