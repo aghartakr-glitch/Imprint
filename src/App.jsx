@@ -6509,10 +6509,11 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                               borderBottom: i < feedbackCorrections.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                               <div style={{ flex:1 }}>
                                 <span style={{ fontWeight:600, color:T.ink }}>{
-                                  {'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'}[c.target_variable] || c.target_variable
+                                  c.target_variable === '__custom__' ? '기타' :
+                                  ({'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','body_gap':'제목↔본문간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'}[c.target_variable] || c.target_variable)
                                 }</span>
                                 <span style={{ color:T.muted, marginLeft:8 }}>
-                                  {c.system_pct} → {c.user_pct}
+                                  {c.target_variable === '__custom__' ? c.custom_text : `${c.system_pct} → ${c.user_pct}`}
                                 </span>
                               </div>
                               <button onClick={() => setFeedbackCorrections(feedbackCorrections.filter((_, j) => i !== j))}
