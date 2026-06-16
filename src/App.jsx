@@ -2158,6 +2158,7 @@ export default function App() {
   const [feedbackCurrentVar, setFeedbackCurrentVar] = useState('body_leading');
   const [feedbackCurrentSystemPct, setFeedbackCurrentSystemPct] = useState('');
   const [feedbackCurrentUserPct, setFeedbackCurrentUserPct] = useState('');
+  const [feedbackCustomVarText, setFeedbackCustomVarText] = useState('');
   const [experimentAnalysis, setExperimentAnalysis] = useState(null); // 분석 결과 {matchRate, diff, nextRule}
   const [experimentLoading, setExperimentLoading] = useState(false); // 분석 API 호출 중
 
