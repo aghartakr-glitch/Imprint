@@ -5251,7 +5251,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       setExperimentAnalysis(analysis);
 
       // 로그 저장
-      const userFeedbackText = corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.user_pct}`).join(', ');
+      const customTexts = corrections.filter(c => c.target_variable === '__custom__').map(c => c.custom_text || '').filter(Boolean);
+      const userFeedbackText = [
+        ...corrections.filter(c => c.target_variable !== '__custom__').map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.user_pct}`),
+        ...customTexts,
+      ].join(', ');
       const exp = {
         experiment_id: `exp_${Date.now()}`,
         timestamp: new Date().toISOString(),
