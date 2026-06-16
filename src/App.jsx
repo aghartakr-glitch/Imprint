@@ -3981,14 +3981,20 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           if (colRule?.confidence !== 'none' && colRule?.value !== null) {
             const n = parseInt(colRule.value);
             if (n >= 1 && n <= 4) {
-              // multicols* 또는 multicols의 단 수 교체
-              s = s.replace(/\\begin\{multicols\*?\}\{(\d+)\}/g, (m, cur) =>
-                m.replace(`{${cur}}`, `{${n}}`)
-              );
-              // 1단: multicols 래퍼 제거 (본문을 단순 \bodyf 블록으로 변환)
-              if (n === 1) {
-                s = s.replace(/\\begin\{multicols\*?\}\{\d+\}\s*\n/g, '');
-                s = s.replace(/\\end\{multicols\*?\}\s*\n?/g, '');
+              const hasMulticols = /\\begin\{multicols\*?\}\{\d+\}/.test(s);
+              if (hasMulticols) {
+                if (n === 1) {
+                  // N단 → 1단: multicols 래퍼 제거
+                  s = s.replace(/\\begin\{multicols\*?\}\{\d+\}\s*\n?/g, '');
+                  s = s.replace(/\\end\{multicols\*?\}\s*\n?/g, '');
+                } else {
+                  // N단 → M단: 숫자만 교체
+                  s = s.replace(/\\begin\{(multicols\*?)\}\{\d+\}/g, `\\begin{$1}{${n}}`);
+                }
+              } else if (n > 1) {
+                // 1단 → N단: 첫 \bodyf 앞에 래퍼 삽입
+                s = s.replace(/^(\s*\\bodyf)/m, `\\begin{multicols*}{${n}}\n\n$1`);
+                s = s.replace(/(\\end\{document\})/, `\\end{multicols*}\n\n$1`);
               }
             }
           }
