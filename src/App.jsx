@@ -178,6 +178,7 @@ function _defaultSystemRules() {
       folio_size:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
       heading_layout:    { value: null, weighted_count: 0, confidence: 'none', history: [] },
       heading_gap:       { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      body_gap:          { value: null, weighted_count: 0, confidence: 'none', history: [] },
       heading_indent:    { value: null, weighted_count: 0, confidence: 'none', history: [] },
       footnote_marker_format: { value: null, weighted_count: 0, confidence: 'none', history: [] },
     }
