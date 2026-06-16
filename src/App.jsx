@@ -6444,6 +6444,21 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         </div>
 
                         <button onClick={() => {
+                          const isCustom = feedbackCurrentVar === '__custom__';
+                          if (isCustom) {
+                            if (!feedbackCustomVarText.trim()) return;
+                            const newCorr = {
+                              target_variable: '__custom__',
+                              custom_text: feedbackCustomVarText.trim(),
+                              system_pct: feedbackCurrentSystemPct.trim() || '미반영',
+                              user_pct: feedbackCustomVarText.trim(),
+                              direction_match: null,
+                            };
+                            setFeedbackCorrections([...feedbackCorrections, newCorr]);
+                            setFeedbackCurrentSystemPct('');
+                            setFeedbackCustomVarText('');
+                            return;
+                          }
                           if (!feedbackCurrentUserPct.trim()) return;
                           const newCorr = {
                             target_variable: feedbackCurrentVar,
