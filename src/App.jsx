@@ -2934,6 +2934,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       if (rerank) {
         chosen = { i: rerank.i, p: DB[rerank.i] };
         structReason = rerank.structured;
+        // patchModeOnly: p가 없으면 (selIdx 무효) 중단
+        if (!chosen.p) { setMatching(false); return; }
         setSelIdx(rerank.i);
         setMatchMethod('semantic');
         setChosenReason(structReason.reference_reason || '');
