@@ -3774,6 +3774,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `% 본문에서 \\hone \\htwo \\hthree \\bodyf 사용`,
         headingCmdsBlock.trim(),
         ``,
+        `% ── 제목↔소제목 간격 (피드백 규칙 반영) ────────────────────────`,
+        `\\newlength{\\imprintheadinggap}`,
+        `\\setlength{\\imprintheadinggap}{${headingGapPt}pt}`,
+        ``,
         `% ── 각주 ──────────────────────────────────────────────────────`,
         `% 크기: ${p.footnote || '-'} / 정렬: ${p.align_note || '-'}`,
         `\\feetbelowfloat`, // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
