@@ -5368,7 +5368,6 @@ ${customTexts.join('\n')}`;
       setExperimentAnalysis(analysis);
 
       // 로그 저장
-      const customTexts = corrections.filter(c => c.target_variable === '__custom__').map(c => c.custom_text || '').filter(Boolean);
       const userFeedbackText = [
         ...corrections.filter(c => c.target_variable !== '__custom__').map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.user_pct}`),
         ...customTexts,
