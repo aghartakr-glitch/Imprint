@@ -5245,11 +5245,52 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     }
   }
 
+  async function parseCustomFeedbackWithHaiku(customTexts) {
+    if (!customTexts.length || !apiKey) return [];
+    const varList = `body_size, body_leading, heading_h1_size, heading_h1_leading, heading_h2_size, heading_h2_leading, heading_h3_size, heading_h3_leading, heading_gap, body_gap, margin_top, margin_bottom, margin_inner, margin_outer, tracking, column_count, footnote_size, footnote_leading, column_gap, folio_size, font_style, paragraph_spacing`;
+    const prompt = `아래 편집 디자인 피드백 텍스트를 분석해서 JSON 배열로만 응답해.
+각 항목: {"target_variable": "<변수명>", "user_pct": "<값>"}
+사용 가능한 변수: ${varList}
+- 수치형 변수는 user_pct를 "+10%", "-20%", "0%" 형식으로
+- font_style은 user_pct를 "명조" 또는 "고딕"으로
+- column_count는 user_pct를 "2단", "1단" 등으로
+- 파악 불가능한 항목은 제외
+- JSON 배열만 출력, 설명 없음
+
+피드백:
+${customTexts.join('\n')}`;
+    try {
+      const res = await fetch('/anthropic/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data?.content?.[0]?.text || '[]';
+      const match = text.match(/\[[\s\S]*\]/);
+      if (!match) return [];
+      return JSON.parse(match[0]).filter(c => c.target_variable && c.user_pct);
+    } catch (e) {
+      console.warn('[parseCustomFeedback] Haiku 파싱 실패:', e.message);
+      return [];
+    }
+  }
+
   async function analyzeExperiment() {
     if (feedbackCorrections.length === 0 || satisfactionScore === null) return;
     setExperimentLoading(true);
 
     try {
+      // 기타(자연어) 항목을 Haiku로 파싱해서 구조화 corrections로 변환
+      const customTexts = feedbackCorrections
+        .filter(c => c.target_variable === '__custom__' && c.custom_text)
+        .map(c => c.custom_text);
+      const parsedCustom = await parseCustomFeedbackWithHaiku(customTexts);
+
       // 시스템 결과 요약 구성
       const systemIntent = [
         currentLog?.text_analysis?.layout_intent,
