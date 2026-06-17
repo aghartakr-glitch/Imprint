@@ -351,20 +351,18 @@ function inferSystemRuleCorrectionsFromText(text = '') {
   }
 
   // ── 서체 (font_style) ──────────────────────────────────────────
-  // "본문 명조", "본문 서체 명조", "serif로", "고딕체로" 등 다양한 표현 지원
-  // 혼합 레이아웃 "본문(명조)" 패턴: 본문 쪽 서체 기준으로 font_style 결정
-  const serifMatch = /(본문|바디|body)[^.\n;。]*(명조|세리프|serif|부리|바탕|궁서|신명조|나눔명조|noto\s*serif)/i.test(src)
-    || /(명조|세리프|serif|부리)[^.\n;。]*(본문|바디|body)/i.test(src)
-    || /^(명조|세리프|serif)/.test(src.trim());
-  const gothicMatch = /(본문|바디|body)[^.\n;。]*(고딕|산스|sans|gothic|돋움|굴림|pretendard|noto\s*sans)/i.test(src)
-    || /(고딕|산스|sans|gothic)[^.\n;。]*(본문|바디|body)/i.test(src)
-    || /^(고딕|산스|sans|gothic)/.test(src.trim());
-  // 혼합 패턴: "본문(명조), 제목+소제목(고딕)" → 본문 기준
-  const mixedSerifBody = /본문[^,.\n]*[(\[](명조|serif|세리프|부리)/i.test(src);
-  const mixedGothicBody = /본문[^,.\n]*[(\[](고딕|gothic|sans|산스)/i.test(src);
-  if (mixedSerifBody || (!mixedGothicBody && serifMatch && !gothicMatch)) {
+  // 본문 기준 우선: "본문 명조, 제목 고딕" 같은 혼합 표현도 본문 쪽으로 결정
+  const bodyIsSerif = /(본문|바디|body)[^,.\n;。]{0,20}(명조|serif|세리프|부리|바탕|궁서|신명조|나눔명조|noto\s*serif)/i.test(src)
+    || /(명조|세리프|serif|부리|바탕)[^,.\n;。]{0,20}(본문|바디|body)/i.test(src);
+  const bodyIsGothic = /(본문|바디|body)[^,.\n;。]{0,20}(고딕|산스|sans|gothic|돋움|굴림|pretendard|noto\s*sans)/i.test(src)
+    || /(고딕|산스|sans|gothic|돋움)[^,.\n;。]{0,20}(본문|바디|body)/i.test(src);
+  if (bodyIsSerif) {
     push('font_style', '명조');
-  } else if (mixedGothicBody || (!mixedSerifBody && gothicMatch && !serifMatch)) {
+  } else if (bodyIsGothic) {
+    push('font_style', '고딕');
+  } else if (/명조|serif|세리프|부리/i.test(src)) {
+    push('font_style', '명조');
+  } else if (/고딕|gothic|sans|산스/i.test(src)) {
     push('font_style', '고딕');
   }
 
