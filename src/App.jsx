@@ -2802,6 +2802,26 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     return null;
   }
 
+  // ── patchModeOnly: 현재 sty에서 실제 적용값 추출 ───────────────
+  function extractCurrentStyValues(styCode) {
+    if (!styCode) return null;
+    const bodyM = styCode.match(/\\AtBeginDocument\{\\fontsize\{([\d.]+)pt\}/);
+    const topM = styCode.match(/top=([\d.]+)mm/);
+    const botM = styCode.match(/bottom=([\d.]+)mm/);
+    const innM = styCode.match(/inner=([\d.]+)mm/);
+    const outM = styCode.match(/outer=([\d.]+)mm/);
+    if (!bodyM && !topM) return null;
+    return {
+      bs: bodyM ? parseFloat(bodyM[1]) : null,
+      margins: {
+        상: topM ? parseFloat(topM[1]) : null,
+        하: botM ? parseFloat(botM[1]) : null,
+        안: innM ? parseFloat(innM[1]) : null,
+        밖: outM ? parseFloat(outM[1]) : null,
+      }
+    };
+  }
+
   // ── Combined: analyze + auto-select + generate ─────────────────
   async function run({ patchModeOnly = false } = {}) {
     // wrapping quote 제거: 전체 원고가 큰따옴표 하나로 감싸진 경우
