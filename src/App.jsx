@@ -349,6 +349,39 @@ function inferSystemRuleCorrectionsFromText(text = '') {
   if (/(각주|주석)[^.\n;。]*(번호|마커|표기|형식)[^.\n;。]*(1\.|\[1\])/i.test(src)) {
     push('footnote_marker_format', /\[1\]/.test(src) ? '[1]' : '1.');
   }
+
+  // ── 서체 (font_style) ──────────────────────────────────────────
+  // "본문 명조", "본문 서체 명조", "serif로", "고딕체로" 등 다양한 표현 지원
+  // 혼합 레이아웃 "본문(명조)" 패턴: 본문 쪽 서체 기준으로 font_style 결정
+  const serifMatch = /(본문|바디|body)[^.\n;。]*(명조|세리프|serif|부리|바탕|궁서|신명조|나눔명조|noto\s*serif)/i.test(src)
+    || /(명조|세리프|serif|부리)[^.\n;。]*(본문|바디|body)/i.test(src)
+    || /^(명조|세리프|serif)/.test(src.trim());
+  const gothicMatch = /(본문|바디|body)[^.\n;。]*(고딕|산스|sans|gothic|돋움|굴림|pretendard|noto\s*sans)/i.test(src)
+    || /(고딕|산스|sans|gothic)[^.\n;。]*(본문|바디|body)/i.test(src)
+    || /^(고딕|산스|sans|gothic)/.test(src.trim());
+  // 혼합 패턴: "본문(명조), 제목+소제목(고딕)" → 본문 기준
+  const mixedSerifBody = /본문[^,.\n]*[(\[](명조|serif|세리프|부리)/i.test(src);
+  const mixedGothicBody = /본문[^,.\n]*[(\[](고딕|gothic|sans|산스)/i.test(src);
+  if (mixedSerifBody || (!mixedGothicBody && serifMatch && !gothicMatch)) {
+    push('font_style', '명조');
+  } else if (mixedGothicBody || (!mixedSerifBody && gothicMatch && !serifMatch)) {
+    push('font_style', '고딕');
+  }
+
+  // ── 단 수 (column_count) 자연어 ──────────────────────────────────
+  const colMatch = src.match(/(\d+)\s*단/);
+  if (colMatch) push('column_count', `${colMatch[1]}단`);
+
+  // ── 여백 방향별 자연어 ────────────────────────────────────────────
+  if (/(상단|위)\s*(여백|마진)[^.\n;。]*(좁|줄|감소|작게)/i.test(src))
+    push('margin_top', `-${pctNear(/(\d+(?:\.\d+)?)\s*%/, 10)}`);
+  if (/(하단|아래)\s*(여백|마진)[^.\n;。]*(좁|줄|감소|작게)/i.test(src))
+    push('margin_bottom', `-${pctNear(/(\d+(?:\.\d+)?)\s*%/, 10)}`);
+  if (/(좌우|안쪽|내측|gutter)[^.\n;。]*(여백|마진)[^.\n;。]*(좁|줄|감소|작게)/i.test(src))
+    push('margin_inner', `-${pctNear(/(\d+(?:\.\d+)?)\s*%/, 10)}`);
+  if (/(바깥|외측|outer)[^.\n;。]*(여백|마진)[^.\n;。]*(좁|줄|감소|작게)/i.test(src))
+    push('margin_outer', `-${pctNear(/(\d+(?:\.\d+)?)\s*%/, 10)}`);
+
   return out;
 }
 
