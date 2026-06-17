@@ -3593,9 +3593,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const _ha = _headingAlign ? ' ' + _headingAlign : '';
       const headingCmdsBlock =
         '% Heading sizes — DO NOT OVERRIDE sizes or weights\n' +
-        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont${_ha}}   % title\n` +
-        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont${_ha}}   % subtitle/chapter\n` +
-        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont${_ha}} % section head\n` +
+        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont${_ha}\\vspace{${headingGapPt}pt}}   % title + gap\n` +
+        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont${_ha}\\vspace{${headingGapPt}pt}}   % subtitle/chapter + gap\n` +
+        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont${_ha}\\vspace{${bodyGapPt}pt}} % section head + gap\n` +
         `\\newcommand{\\bodyf}{${bFont}\\fontsize{${adjustedBodySize}pt}{${adjustedBodyLead}pt}\\selectfont} % body reset after heading\n`;
 
       const isMultiColLayout = numCols >= 2 || (bodyUnits && noteUnits);
@@ -5375,19 +5375,62 @@ ${customTexts.join('\n')}`;
       // nextRule: 규칙 요약
       const nextRule = corrections.map(c => `${varNames[c.target_variable] || c.target_variable}: ${c.system_pct} → ${c.user_pct} (${directionLabel(c.direction_match)})`).join('; ');
 
+      const fmtPct = v => Number.isFinite(v)
+        ? `${v > 0 ? '+' : ''}${Math.round(v * 10) / 10}%`
+        : '숫자 없음';
       function calcMatchRate(corrs, sat) {
-        if (!corrs.length) return 100;
-        const penalty = corrs.reduce((acc, c) => {
-          const diff = correctionDiff(c);
-          const dirMul = c.direction_match === false ? 2.0 : c.direction_match === true ? 1.0 : 1.25;
-          return acc + dirMul * Math.min(3, diff / 10);
-        }, 0);
-        return Math.max(5, Math.min(95, (sat || 3) * 20 - penalty * 3));
+        if (!corrs.length) {
+          return {
+            score: 100,
+            formula: '피드백 항목 없음 → 100%',
+            rows: [],
+          };
+        }
+        const base = Math.round((sat || 3) * 20 * 10) / 10;
+        const rows = corrs.map(c => {
+          const label = varNames[c.target_variable] || c.target_variable || '항목';
+          const userVal = parseCorrectionValue(c.user_pct);
+          const sysRaw = parseCorrectionValue(c.system_pct, 0);
+          const sysVal = Number.isFinite(sysRaw) ? sysRaw : 0;
+          const diff = Number.isFinite(userVal) ? Math.abs(userVal - sysVal) : correctionDiff(c);
+          const capped = Math.min(3, diff / 10);
+          const directionFactor = c.direction_match === false ? 2.0 : c.direction_match === true ? 1.0 : 1.25;
+          const penalty = Math.round(capped * 3 * directionFactor * 10) / 10;
+          return {
+            label,
+            system: c.system_pct || '—',
+            systemBasis: Number.isFinite(sysRaw) ? fmtPct(sysVal) : '숫자 아님 → 0% 기준',
+            user: c.user_pct || '—',
+            userBasis: fmtPct(userVal),
+            diff: Math.round(diff * 10) / 10,
+            direction: directionLabel(c.direction_match),
+            directionFactor,
+            penalty,
+          };
+        });
+        const totalPenalty = Math.round(rows.reduce((sum, r) => sum + r.penalty, 0) * 10) / 10;
+        const score = Math.round(Math.max(5, Math.min(95, base - totalPenalty)));
+        const rowLines = rows.map(r =>
+          `- ${r.label}: |정답 ${r.userBasis} - 시스템 ${r.systemBasis}| = ${r.diff}%p, 방향계수 ${r.directionFactor} → -${r.penalty}점`
+        );
+        return {
+          score,
+          rows,
+          formula: [
+            `기본점수 = 만족도 ${sat || 3}/5 × 20 = ${base}점`,
+            `항목별 차감 = min(3, 차이%p ÷ 10) × 3 × 방향계수`,
+            `방향계수 = 방향일치 1 / 방향미상 1.25 / 방향불일치 2`,
+            ...rowLines,
+            `최종 일치율 = ${base}점 - ${totalPenalty}점 = ${score}%`,
+          ].join('\n'),
+        };
       }
-      const computedMatchRate = calcMatchRate(corrections, satisfactionScore);
+      const matchCalc = calcMatchRate(corrections, satisfactionScore);
 
       const analysis = {
-        matchRate: computedMatchRate,
+        matchRate: matchCalc.score,
+        matchFormula: matchCalc.formula,
+        matchBreakdown: matchCalc.rows,
         difference,
         nextRule,
         corrections,
@@ -5484,8 +5527,9 @@ ${customTexts.join('\n')}`;
           match_rate: analysis.matchRate,
           difference: analysis.difference,
           next_rule: analysis.nextRule,
+          match_formula: analysis.matchFormula || '',
           csv_flag: [exp.experiment_id, exp.timestamp?.slice(0,10), userFeedbackText, satisfactionScore, analysis.matchRate + '%'].join(' | '),
-          md_flag: [`# ${exp.experiment_id}`, `날짜: ${exp.timestamp?.slice(0,10)}`, `피드백: ${userFeedbackText}`, `만족도: ${satisfactionScore}/5`, `일치율: ${analysis.matchRate}%`].join('\n'),
+          md_flag: [`# ${exp.experiment_id}`, `날짜: ${exp.timestamp?.slice(0,10)}`, `피드백: ${userFeedbackText}`, `만족도: ${satisfactionScore}/5`, `일치율: ${analysis.matchRate}%`, `계산식:\n${analysis.matchFormula || ''}`].join('\n'),
           design_rules: (buildDesignRules() || '(아직 규칙 없음)').slice(0, 5000),
           json_flag: JSON.stringify({
             experiment_id: exp.experiment_id,
@@ -5494,6 +5538,8 @@ ${customTexts.join('\n')}`;
             feedback: userFeedbackText,
             corrections: analysis.corrections,
             match_rate: analysis.matchRate,
+            match_formula: analysis.matchFormula,
+            match_breakdown: analysis.matchBreakdown,
             direction_match: (analysis.corrections||[]).every(c => c.direction_match),
             next_rule: analysis.nextRule,
             system_rules_snapshot: (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules') || '{}'); } catch { return {}; } })(),
@@ -6734,6 +6780,17 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                           </span>
                           <span style={{ color:T.muted }}>일치율</span>
                         </div>
+                        {experimentAnalysis.matchFormula && (
+                          <div style={{ background:T.surface, border:`1px solid ${T.border}`,
+                            borderRadius:3, padding:'8px 10px' }}>
+                            <div style={{ fontSize:10, fontWeight:600, color:T.muted,
+                              letterSpacing:1, marginBottom:5 }}>계산식</div>
+                            <pre style={{ margin:0, whiteSpace:'pre-wrap', fontFamily:T.mono,
+                              fontSize:11, lineHeight:1.55, color:T.ink }}>
+                              {experimentAnalysis.matchFormula}
+                            </pre>
+                          </div>
+                        )}
                         {/* 비교 테이블 */}
                         {experimentAnalysis.targetVariable && (
                           <div style={{ background:T.surface, border:`1px solid ${T.border}`,
