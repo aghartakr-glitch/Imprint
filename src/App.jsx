@@ -338,6 +338,11 @@ function inferSystemRuleCorrectionsFromText(text = '') {
   if (/(각주|주석)[^.\n;。]*(행간|줄간격)[^.\n;。]*(늘|확대|넓|띄|최소|이상|부족)/i.test(src)) {
     push('footnote_leading', pctNear(/(?:각주|주석)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
   }
+  // 각주 행간 = 본문과 동일 → 현재 보정을 0으로 리셋
+  if (/(각주|주석)[^.\n;。]*(행간|줄간격|크기|사이즈)[^.\n;。]*(동일|같|맞춰|본문처럼|본문과\s*같|body)/i.test(src)) {
+    push('footnote_leading', '0%');
+    push('footnote_size', '0%');
+  }
   if (/(제목|소제목|부제목)[^.\n;。]*(들여쓰기|인덴트|indent)[^.\n;。]*(삭제|제거|없|빼|0)/i.test(src)) {
     push('heading_indent', 'none');
   }
