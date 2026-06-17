@@ -3039,6 +3039,19 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const corrections = applyTextCorrections(chosen.p, matchText, fields.각주);
       setAppliedMargins(corrections.margins);
 
+      // patchModeOnly: 현재 sty 값으로 bs/margins 고정 (AI 재계산 방지)
+      if (patchModeOnly) {
+        const cur = extractCurrentStyValues(styCode);
+        if (cur) {
+          if (cur.bs != null) corrections.bs = cur.bs;
+          if (cur.margins.상 != null) corrections.margins.상 = cur.margins.상;
+          if (cur.margins.하 != null) corrections.margins.하 = cur.margins.하;
+          if (cur.margins.안 != null) corrections.margins.안 = cur.margins.안;
+          if (cur.margins.밖 != null) corrections.margins.밖 = cur.margins.밖;
+          setAppliedMargins(corrections.margins);
+        }
+      }
+
       // ── Stage 3c: AI 타이포그래피 미세조정 ───────────────────────
       // patchModeOnly: AI 호출 건너뜀 — 학습 규칙만 적용, 본문 행간 안정화
       let typoAdj = null;
