@@ -261,6 +261,12 @@ function normalizeSystemRuleTarget(target) {
     heading_title_subtitle_gap: 'heading_gap',
     title_subtitle_gap: 'heading_gap',
     title_subtitle_spacing: 'heading_gap',
+    body_gap: 'body_gap',
+    body_spacing: 'body_gap',
+    heading_body_gap: 'body_gap',
+    heading_to_body_gap: 'body_gap',
+    title_body_gap: 'body_gap',
+    title_to_body_gap: 'body_gap',
     heading_indent: 'heading_indent',
     heading_indentation: 'heading_indent',
     footnote_marker: 'footnote_marker_format',
@@ -273,6 +279,10 @@ function normalizeSystemRuleTarget(target) {
     소제목_줄간격: 'heading_h3_leading',
     제목_소제목_간격: 'heading_gap',
     제목_소제목_사이: 'heading_gap',
+    제목_본문_간격: 'body_gap',
+    제목_본문_사이: 'body_gap',
+    소제목_본문_간격: 'body_gap',
+    소제목_본문_사이: 'body_gap',
     제목_들여쓰기: 'heading_indent',
     소제목_들여쓰기: 'heading_indent',
     각주_번호_형식: 'footnote_marker_format',
@@ -305,7 +315,7 @@ function inferSystemRuleCorrectionsFromText(text = '') {
     return `${m?.[1] || fallback}%`;
   };
 
-  const explicit = /\b(body_leading|body_size|heading_h[123]_(?:size|leading)|heading_gap|footnote_(?:size|leading)|column_gap|folio_size|tracking|paragraph_spacing|margin_(?:top|bottom|inner|outer))\b[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/gi;
+  const explicit = /\b(body_leading|body_size|heading_h[123]_(?:size|leading)|heading_gap|body_gap|footnote_(?:size|leading)|column_gap|folio_size|tracking|paragraph_spacing|margin_(?:top|bottom|inner|outer))\b[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/gi;
   let m;
   while ((m = explicit.exec(src)) !== null) {
     push(m[1], `${m[2]}%`);
@@ -321,6 +331,9 @@ function inferSystemRuleCorrectionsFromText(text = '') {
 
   if (/(제목|타이틀)[^.\n;。]*(소제목|부제목)[^.\n;。]*(사이|간격|행간|줄간격|수직|띄)/i.test(src)) {
     push('heading_gap', pctNear(/(?:제목|타이틀)[^.\n;。]*(?:소제목|부제목)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
+  }
+  if (/(제목|타이틀|소제목|부제목)[^.\n;。]*(본문)[^.\n;。]*(사이|간격|행간|줄간격|수직|띄)/i.test(src)) {
+    push('body_gap', pctNear(/(?:제목|타이틀|소제목|부제목)[^.\n;。]*(?:본문)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
   }
   if (/(각주|주석)[^.\n;。]*(행간|줄간격)[^.\n;。]*(늘|확대|넓|띄|최소|이상|부족)/i.test(src)) {
     push('footnote_leading', pctNear(/(?:각주|주석)[^.\n;。]*?([+-]?\d+(?:\.\d+)?)\s*%/i, 10));
@@ -2809,51 +2822,57 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       pushLog('analyze', '텍스트 분석', 'running');
       pushLog('kw', '후보 추출', 'running');
 
-      const [profile, ranked] = await Promise.all([
-        analyzeText(matchText),
-        Promise.resolve((() => {
-          if (h) {
-            // 장르 선택 → g 필드만으로 엄격히 필터
-            // 출판형태(pub_type)는 책의 속성 정보일 뿐, 필터 기준으로 사용하지 않음
-            const RELATED_GENRE = {
-              '문학':          ['인문·사회','아트이론·비평'],
-              '아트이론·비평': ['현대미술','전시·큐레이션','문학'],
-              '현대미술':      ['전시·큐레이션','아트이론·비평'],
-              '건축·공간':     ['그래픽디자인','타이포그래피'],
-              '타이포그래피':  ['그래픽디자인','아트이론·비평'],
-              '그래픽디자인':  ['타이포그래피','전시·큐레이션'],
-              '인문·사회':     ['문학','아트이론·비평'],
-              '전시·큐레이션': ['현대미술','아트이론·비평'],
-              '시각문화·매체': ['아트이론·비평','그래픽디자인'],
-              '사진':          ['아트이론·비평','현대미술'],
-              '기타':          ['아트이론·비평','인문·사회'],
-            };
+      const buildRankedCandidates = () => {
+        if (h) {
+          // 장르 선택 → g 필드만으로 엄격히 필터
+          // 출판형태(pub_type)는 책의 속성 정보일 뿐, 필터 기준으로 사용하지 않음
+          const RELATED_GENRE = {
+            '문학':          ['인문·사회','아트이론·비평'],
+            '아트이론·비평': ['현대미술','전시·큐레이션','문학'],
+            '현대미술':      ['전시·큐레이션','아트이론·비평'],
+            '건축·공간':     ['그래픽디자인','타이포그래피'],
+            '타이포그래피':  ['그래픽디자인','아트이론·비평'],
+            '그래픽디자인':  ['타이포그래피','전시·큐레이션'],
+            '인문·사회':     ['문학','아트이론·비평'],
+            '전시·큐레이션': ['현대미술','아트이론·비평'],
+            '시각문화·매체': ['아트이론·비평','그래픽디자인'],
+            '사진':          ['아트이론·비평','현대미술'],
+            '기타':          ['아트이론·비평','인문·사회'],
+          };
 
-            // 1차: g 필드가 선택 장르와 일치하는 항목만
-            const primary = DB
+          // 1차: g 필드가 선택 장르와 일치하는 항목만
+          const primary = DB
+            .map((p, i) => ({ i, p }))
+            .filter(({ p }) => p.g.includes(h));
+
+          let pool = primary;
+          if (primary.length < 5) {
+            // 모수 부족(사진 4건 등) → 연관 장르로 확장
+            const related = (RELATED_GENRE[h] || []);
+            const extended = DB
               .map((p, i) => ({ i, p }))
-              .filter(({ p }) => p.g.includes(h));
-
-            let pool = primary;
-            if (primary.length < 5) {
-              // 모수 부족(사진 4건 등) → 연관 장르로 확장
-              const related = (RELATED_GENRE[h] || []);
-              const extended = DB
-                .map((p, i) => ({ i, p }))
-                .filter(({ p }) => related.some(r => p.g.includes(r)));
-              pool = [...primary, ...extended.filter(e => !primary.find(pr => pr.i === e.i))];
-              if (pool.length < 5) pool = DB.map((p,i)=>({i,p})); // 최후 수단
-            }
-            return pool
-              .map(({ i, p }) => ({ i, s: scoreKw(p, matchText, h), p }))
-              .sort((a, b) => b.s - a.s);
-          } else {
-            return DB
-              .map((p, i) => ({ i, s: scoreKw(p, matchText, ''), p }))
-              .sort((a, b) => b.s - a.s);
+              .filter(({ p }) => related.some(r => p.g.includes(r)));
+            pool = [...primary, ...extended.filter(e => !primary.find(pr => pr.i === e.i))];
+            if (pool.length < 5) pool = DB.map((p,i)=>({i,p})); // 최후 수단
           }
-        })())
-      ]);
+          return pool
+            .map(({ i, p }) => ({ i, s: scoreKw(p, matchText, h), p }))
+            .sort((a, b) => b.s - a.s);
+        }
+        return DB
+          .map((p, i) => ({ i, s: scoreKw(p, matchText, ''), p }))
+          .sort((a, b) => b.s - a.s);
+      };
+
+      const [profile, ranked] = patchModeOnly
+        ? [
+            textProfile || currentLog?.text_analysis || {},
+            DB[selIdx] ? [{ i: selIdx, s: 999, p: DB[selIdx] }] : buildRankedCandidates(),
+          ]
+        : await Promise.all([
+            analyzeText(matchText),
+            Promise.resolve(buildRankedCandidates())
+          ]);
 
       setTextProfile(profile);
       // analyzeText가 감지한 genre를 hint 없을 때 자동 활용
@@ -2939,7 +2958,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         chosen = { i: rerank.i, p: DB[rerank.i] };
         structReason = rerank.structured;
         // patchModeOnly: p가 없으면 (selIdx 무효) 중단
-        if (!chosen.p) { setMatching(false); return; }
+        if (!chosen.p) {
+          setMatching(false);
+          setLoading(false);
+          return;
+        }
         setSelIdx(rerank.i);
         setMatchMethod('semantic');
         setChosenReason(structReason.reference_reason || '');
@@ -4013,19 +4036,26 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           }
 
           // ── 헤딩 간격 패치 ─────────────────────────────────────────
+          // 실제 생성 패턴: {\noindent\hone...\par}\vspace{...}\n{\noindent\htwo...}
+          // legacy 패턴: \noindent{\hone...} 도 함께 지원
           // 헤딩↔헤딩: \par}\vspace{Xpt} 다음에 또 헤딩
-          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*\n\s*\\noindent\{\\h)/g, '\\par}\\vspace{\\imprintheadinggap}$1');
-          // 헤딩↔본문: 나머지 \par}\vspace{Xpt}
+          // 헤딩↔헤딩: 같은 줄 또는 줄바꿈 모두 지원 (\s*가 \n 포함)
+          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\par}\\vspace{\\imprintheadinggap}$1');
+          // 기존 body gap 매크로가 헤딩 앞에 있으면 heading gap으로 승격
+          s = s.replace(/\\vspace\{\\imprintbodygap\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\vspace{\\imprintheadinggap}$1');
+          // 헤딩↔본문: 나머지 \par}\vspace{Xpt} (hardcoded pt값 → \imprintbodygap)
           s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
           // 이미 \imprintheadinggap인데 본문 앞인 경우
-          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*\n\s*(?!\\noindent\{\\h))/g, '\\vspace{\\imprintbodygap}$1');
+          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*(?!(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h)))/g, '\\vspace{\\imprintbodygap}$1');
           // 빈 줄만 있는 케이스: 헤딩↔헤딩
-          s = s.replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*\\noindent\{\\h)/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
+          s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*(?:\\Needspace\{[^}]+\}\s*\n\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
           // 빈 줄만 있는 케이스: 헤딩↔본문
-          s = s.replace(/(\{\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
+          s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
           return s;
         });
+        pushLog('latex', 'LaTeX 생성', 'done', '학습 규칙으로 sty/main.tex 패치 완료');
         setMatching(false);
+        setLoading(false);
         return;
       }
 
@@ -6419,40 +6449,43 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             <option value="paragraph_spacing">문단 간격</option>
                             <option value="__custom__">기타 (직접 입력)</option>
                           </select>
-                          {feedbackCurrentVar === '__custom__' && (
-                            <input type="text" value={feedbackCustomVarText}
-                              onChange={e => setFeedbackCustomVarText(e.target.value)}
-                              placeholder="예: 제목 크기를 10% 늘려줘"
-                              style={{ marginTop:6, width:'100%', padding:'6px 8px',
-                                border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}
-                            />
-                          )}
                         </div>
 
-                        <div style={{ display:'flex', gap:8, fontSize:11 }}>
-                          <div style={{ flex:1 }}>
-                            <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
-                              시스템이 적용한 값 (예: +8%, 3단)
-                            </label>
-                            <input type="text" value={feedbackCurrentSystemPct}
-                              onChange={e => setFeedbackCurrentSystemPct(e.target.value)}
-                              placeholder="미반영"
-                              style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
-                                borderRadius:3, fontSize:11 }}
-                            />
+                        {feedbackCurrentVar === '__custom__' && (
+                          <input type="text" value={feedbackCustomVarText}
+                            onChange={e => setFeedbackCustomVarText(e.target.value)}
+                            placeholder="예: 제목 크기를 10% 늘려줘"
+                            style={{ width:'100%', padding:'6px 8px',
+                              border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}
+                          />
+                        )}
+
+                        {feedbackCurrentVar !== '__custom__' && (
+                          <div style={{ display:'flex', gap:8, fontSize:11 }}>
+                            <div style={{ flex:1 }}>
+                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                                시스템이 적용한 값 (예: +8%, 3단)
+                              </label>
+                              <input type="text" value={feedbackCurrentSystemPct}
+                                onChange={e => setFeedbackCurrentSystemPct(e.target.value)}
+                                placeholder="미반영"
+                                style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
+                                  borderRadius:3, fontSize:11 }}
+                              />
+                            </div>
+                            <div style={{ flex:1 }}>
+                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                                원하는 값 (예: +15%, 2단)
+                              </label>
+                              <input type="text" value={feedbackCurrentUserPct}
+                                onChange={e => setFeedbackCurrentUserPct(e.target.value)}
+                                placeholder="필수"
+                                style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
+                                  borderRadius:3, fontSize:11 }}
+                              />
+                            </div>
                           </div>
-                          <div style={{ flex:1 }}>
-                            <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
-                              원하는 값 (예: +15%, 2단)
-                            </label>
-                            <input type="text" value={feedbackCurrentUserPct}
-                              onChange={e => setFeedbackCurrentUserPct(e.target.value)}
-                              placeholder="필수"
-                              style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
-                                borderRadius:3, fontSize:11 }}
-                            />
-                          </div>
-                        </div>
+                        )}
 
                         <button onClick={() => {
                           const isCustom = feedbackCurrentVar === '__custom__';
@@ -6461,7 +6494,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             const newCorr = {
                               target_variable: '__custom__',
                               custom_text: feedbackCustomVarText.trim(),
-                              system_pct: feedbackCurrentSystemPct.trim() || '미반영',
+                              system_pct: '미반영',
                               user_pct: feedbackCustomVarText.trim(),
                               direction_match: null,
                             };
@@ -6689,6 +6722,8 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                 heading_h2_size:'부제목 크기', heading_h2_leading:'부제목 행간',
                 heading_h3_size:'소제목 크기', heading_h3_leading:'소제목 행간',
                 footnote_size:'각주 크기', footnote_leading:'각주 행간',
+                heading_gap:'제목↔소제목 간격', body_gap:'제목/소제목↔본문 간격',
+                heading_indent:'제목 들여쓰기', footnote_marker_format:'각주 번호 형식',
                 margin_top:'상 여백', margin_bottom:'하 여백', margin_inner:'안 여백', margin_outer:'밖 여백',
               };
               return (
