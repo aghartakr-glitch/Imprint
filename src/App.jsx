@@ -3124,10 +3124,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const bodyLead = (dbLead && dbLead / bodySize >= 1.3) ? dbLead : minLead;
       const hasFootnote = p.footnote && p.footnote !== '-';
       let fnSize = hasFootnote ? parseFloat(p.footnote.replace('pt','')) : 8;
-      fnSize = getLearnedDesignOverride('footnote_size', fnSize);
       // 각주는 본문보다 작으므로 행간 비율 더 크게
       let fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
+      // 규칙 적용: fnLead 먼저 적용 → fnSize 적용 (의존성 끊기)
       fnLead = getLearnedDesignOverride('footnote_leading', fnLead);
+      fnSize = getLearnedDesignOverride('footnote_size', fnSize);
       // 면주 크기: 판형 높이 기준으로 자동 산출
       const pnAutoSize = TYPO_BASE.runningHeadSize(p.f.h);
       // ── 서체 선택 (v1.2: 가용 5개 폰트군 완전 매핑) ───────────────
