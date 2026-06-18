@@ -440,6 +440,84 @@ function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore
   return payload;
 }
 
+// ── Sheet Header Definitions ──────────────────────────────────────────────
+// 각 탭의 헤더 순서를 명시적으로 정의. buildRow()는 이 배열 기준으로 rowValues를 생성.
+const SHEET_HEADERS = {
+  '01-Raw Experiment Log': [
+    'raw_id','experiment_id','timestamp','source','input_title','input_subtitle',
+    'input_body','input_footnote','genre_hint','user_intent_raw','selected_reference',
+    'system_intent','generated_pdf_path','generated_tex_path','generated_sty_path',
+    'user_feedback_raw','satisfaction_score','original_match_rate','system_adjustment_raw',
+    'user_target_raw','next_rule_raw','md_log_path','csv_log_path','json_log_path','notes',
+  ],
+  '02-Experiment Summary': [
+    'experiment_id','date','timestamp','session_id','test_round','text_id','version_id',
+    'input_title','input_genre','experiment_goal','selected_reference','reference_reason',
+    'generated_pdf_path','generated_tex_path','generated_sty_path',
+    'feedback_count','patch_count','satisfaction_score','overall_match_score','overall_status',
+    'main_success','main_failure','research_note',
+  ],
+  '03-Feedback Unit Log': [
+    'feedback_unit_id','experiment_id','raw_id','feedback_order','user_feedback_raw',
+    'feedback_snippet','feedback_type','design_issue_area','user_language_type',
+    'is_numeric_feedback','numeric_value_raw','numeric_unit','intended_change_summary',
+    'ambiguity_level','needs_user_confirmation',
+  ],
+  '04-Variable Patch Log': [
+    'patch_id','experiment_id','feedback_unit_id','patch_order','feedback_snippet',
+    'interpreted_variable_by_claude','intended_variable_by_user','actual_changed_variable',
+    'saved_rule_variable','variable_group','variable_scope','before_value',
+    'system_planned_value','actual_after_value','user_target_value','unit',
+    'direction_requested','direction_interpreted','direction_applied','direction_match',
+    'magnitude_requested','magnitude_applied','magnitude_match',
+    'patch_success','patch_status','failure_type','confidence_score','research_memo',
+  ],
+  '06-Revision Log': [
+    'revision_id','experiment_id','timestamp','user_request','intent','entity','value',
+    'before_value','after_value','success','note',
+  ],
+  '07-Score Breakdown': [
+    'score_id','experiment_id','feedback_unit_id','patch_id','satisfaction_score',
+    'variable_match_score','direction_match_score','magnitude_match_score',
+    'lock_success_score','actual_patch_score','rule_application_score',
+    'overall_match_score','score_formula','score_reason',
+  ],
+  '08-Failure Analysis': [
+    'failure_id','experiment_id','feedback_unit_id','patch_id','failure_type',
+    'failure_stage','description','example_user_feedback','wrong_system_interpretation',
+    'expected_behavior','actual_behavior','severity','fix_required','related_rule_id',
+    'resolved','resolution_note',
+  ],
+  '09-Rule Memory': [
+    'rule_id','variable_name','variable_group','rule_condition','rule_action',
+    'current_rule_value','source_feedback_count','success_count','failure_count',
+    'confidence','last_updated','example_feedback','rule_description','risk_note','active_status',
+  ],
+};
+
+// buildRow: headers 배열 순서대로 data 객체에서 값을 꺼냄
+// 값이 없으면 fallbackValue()로 채움 (undefined/null → 'unknown' or 'not_verified')
+function _sheetFallback(key) {
+  const notVerified = ['generated_pdf_path','generated_tex_path','generated_sty_path',
+    'before_value','actual_after_value','original_match_rate','overall_match_score',
+    'overall_status','patch_count','lock_success_score','actual_patch_score',
+    'rule_application_score','magnitude_applied','direction_applied',
+    'actual_changed_variable','confidence_score','reference_reason','resolution_note',
+    'score_formula'];
+  if (notVerified.includes(key)) return 'not_verified';
+  return 'unknown';
+}
+function buildRow(headers, data) {
+  const row = headers.map(h => {
+    const v = data[h];
+    return (v === undefined || v === null || v === '') ? _sheetFallback(h) : v;
+  });
+  if (row.length !== headers.length) {
+    console.error(`[buildRow] length mismatch: headers=${headers.length} row=${row.length}`);
+  }
+  return row;
+}
+
 // ── Sheet Payload Sender: Google Sheets에 데이터 기록 ───────────────────
 // 생성된 payload를 /api/sheet-record 엔드포인트를 통해 Google Sheets로 전송
 // 14개 탭에 구조화된 형태로 append/upsert 모드로 기록
