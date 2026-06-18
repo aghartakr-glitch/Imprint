@@ -538,6 +538,11 @@ async function sendPayloadToSheet(payload) {
   for (const config of sheetRecordOrder) {
     try {
       const row = convertPayloadToRow(config.data, config.sheetName);
+      if (!row) {
+        console.error(`[sendPayloadToSheet] 컬럼 수 불일치로 전송 취소: ${config.sheetName}`);
+        results.push({ status: 'error', sheet: config.sheetName, error: 'length_mismatch' });
+        continue;
+      }
       await postSheetPayload({
         sheetName: config.sheetName,
         rowValues: row,
