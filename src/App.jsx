@@ -2345,6 +2345,12 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
 // Expose utility functions to window for testing
 if (typeof window !== 'undefined') {
   window.normalizePercentage = normalizePercentage;
+  window.parseFeedbackUnits = parseFeedbackUnits;
+  window.detectFeedbackType = detectFeedbackType;
+  window.detectDesignArea = detectDesignArea;
+  window.detectLanguageType = detectLanguageType;
+  window.extractNumeric = extractNumeric;
+  window.extractUnit = extractUnit;
 }
 
 // Imprint 1.0.0 — App Component
