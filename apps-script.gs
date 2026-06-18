@@ -173,6 +173,88 @@ function getNextAppendRowByKey(sheet, keyColumnIndex) {
   return lastDataRow + 1;
 }
 
+function writeToSheet(sheetName, rowValues, mode, keyValue, keyColumnIndex) {
+  try {
+    // Input validation
+    if (!sheetName || !rowValues || rowValues.length === 0) {
+      return {
+        status: 'error',
+        message: 'Missing sheetName or rowValues',
+        sheet: sheetName
+      };
+    }
+
+    if (mode !== 'append' && mode !== 'upsert') {
+      return {
+        status: 'error',
+        message: 'Invalid mode: ' + mode + ' (expected "append" or "upsert")',
+        sheet: sheetName
+      };
+    }
+
+    // Get spreadsheet and sheet
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = getOrCreateSheet(ss, sheetName);
+
+    // Default keyColumnIndex to 1 if not provided
+    if (!keyColumnIndex) keyColumnIndex = 1;
+
+    // Append mode
+    if (mode === 'append') {
+      var nextRow = getNextAppendRowByKey(sheet, keyColumnIndex);
+      sheet.getRange(nextRow, 1, 1, rowValues.length).setValues([rowValues]);
+      return {
+        status: 'success',
+        sheet: sheetName,
+        row: nextRow,
+        mode: 'append'
+      };
+    }
+
+    // Upsert mode
+    if (mode === 'upsert') {
+      if (!keyValue && keyValue !== 0) {
+        return {
+          status: 'error',
+          message: 'upsert mode requires keyValue parameter',
+          sheet: sheetName
+        };
+      }
+
+      // Try to find existing row with keyValue
+      var existingRow = findUpsertRow(sheet, keyColumnIndex, keyValue);
+
+      if (existingRow > 0) {
+        // Update existing row
+        sheet.getRange(existingRow, 1, 1, rowValues.length).setValues([rowValues]);
+        return {
+          status: 'success',
+          sheet: sheetName,
+          row: existingRow,
+          mode: 'upsert-update'
+        };
+      } else {
+        // Append as new row
+        var nextRow = getNextAppendRowByKey(sheet, keyColumnIndex);
+        sheet.getRange(nextRow, 1, 1, rowValues.length).setValues([rowValues]);
+        return {
+          status: 'success',
+          sheet: sheetName,
+          row: nextRow,
+          mode: 'upsert-append'
+        };
+      }
+    }
+
+  } catch (error) {
+    return {
+      status: 'error',
+      message: error.toString(),
+      sheet: sheetName
+    };
+  }
+}
+
 function getOrCreateSheet(ss, name) {
   var s = ss.getSheetByName(name);
   if (!s) s = ss.insertSheet(name);
