@@ -433,6 +433,80 @@ function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore
   return payload;
 }
 
+// ── Sheet Payload Sender: Google Sheets에 데이터 기록 ───────────────────
+// 생성된 payload를 /api/sheet-record 엔드포인트를 통해 Google Sheets로 전송
+// 14개 탭에 구조화된 형태로 append/upsert 모드로 기록
+
+async function sendPayloadToSheet(payload) {
+  if (!payload || !payload.experiment_id) {
+    console.error('Invalid payload');
+    return { status: 'error', message: 'Invalid payload' };
+  }
+
+  const sheetRecordOrder = [
+    { sheetName: '01-Raw Experiment Log', data: payload.raw_log, mode: 'append' },
+    { sheetName: '02-Experiment Summary', data: payload.experiment_summary, mode: 'upsert', keyValue: payload.experiment_id, keyColumnIndex: 1 },
+  ];
+
+  const results = [];
+
+  for (const config of sheetRecordOrder) {
+    try {
+      const row = convertPayloadToRow(config.data, config.sheetName);
+      const result = await fetch('/api/sheet-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sheetName: config.sheetName,
+          rowValues: row,
+          mode: config.mode,
+          keyValue: config.keyValue,
+          keyColumnIndex: config.keyColumnIndex
+        })
+      });
+      const response = await result.json();
+      results.push(response);
+      console.log(`Sheet record: ${config.sheetName} - ${response.status}`);
+    } catch (error) {
+      console.error(`Sheet record error (${config.sheetName}):`, error);
+      results.push({ status: 'error', sheet: config.sheetName, error: error.toString() });
+    }
+  }
+
+  return { status: results.every(r => r.status === 'success') ? 'success' : 'partial', results };
+}
+
+function convertPayloadToRow(data, sheetName) {
+  // Convert object values to array in consistent column order
+  if (!data) return [];
+
+  // For 01-Raw: [raw_id, experiment_id, timestamp, source, ...]
+  if (sheetName === '01-Raw Experiment Log') {
+    return [
+      data.raw_id, data.experiment_id, data.timestamp, data.source,
+      data.input_title, data.input_subtitle, data.input_body, data.input_footnote,
+      data.genre_hint, '', data.selected_reference, '',
+      data.generated_pdf_path, data.generated_tex_path, data.generated_sty_path,
+      data.user_feedback_raw, data.satisfaction_score, '',
+      '', '', '', '', '', '', data.notes
+    ];
+  }
+
+  // For 02-Experiment Summary: [experiment_id, date, timestamp, ...]
+  if (sheetName === '02-Experiment Summary') {
+    const date = data.timestamp ? new Date(data.timestamp).toLocaleDateString() : '';
+    return [
+      data.experiment_id, date, data.timestamp, '', '', '', '',
+      data.input_title, data.input_genre, '', '', '',
+      '', '', '',
+      data.feedback_count, '', data.satisfaction_score,
+      data.overall_match_score, data.overall_status
+    ];
+  }
+
+  return [];
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
