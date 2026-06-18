@@ -3595,9 +3595,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const _ha = _headingAlign ? ' ' + _headingAlign : '';
       const headingCmdsBlock =
         '% Heading sizes — DO NOT OVERRIDE sizes or weights\n' +
-        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont${_ha}\\par\\vspace{${headingGapPt}pt}}   % title + gap\n` +
-        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont${_ha}\\par\\vspace{${headingGapPt}pt}}   % subtitle/chapter + gap\n` +
-        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont${_ha}\\par\\vspace{${bodyGapPt}pt}} % section head + gap\n` +
+        `\\newcommand{\\hone}{${hFont}\\fontsize{${hs.h1}pt}{${h1Lead}pt}\\selectfont${_ha}}   % title\n` +
+        `\\newcommand{\\htwo}{${hFont}\\fontsize{${hs.h2}pt}{${h2Lead}pt}\\selectfont${_ha}}   % subtitle/chapter\n` +
+        `\\newcommand{\\hthree}{${hFont}\\fontsize{${hs.h3}pt}{${h3Lead}pt}\\selectfont${_ha}} % section head\n` +
         `\\newcommand{\\bodyf}{${bFont}\\fontsize{${adjustedBodySize}pt}{${adjustedBodyLead}pt}\\selectfont} % body reset after heading\n`;
 
       const isMultiColLayout = numCols >= 2 || (bodyUnits && noteUnits);
