@@ -863,7 +863,7 @@ function validateIDFormat(id, format) {
  * @returns {Object} Report with pass/fail counts
  */
 function runValidationTests() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var report = {
     timestamp: new Date().toISOString(),
     sheets: [],
