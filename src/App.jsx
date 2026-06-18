@@ -4101,7 +4101,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         '\\renewcommand{\\footnoterule}{}',
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
-        `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\newcommand{\\notef}{${getSystemFootnoteFont()==='serif'?'\\rmfamily':'\\sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
         `\\providecommand{\\foottextfont}{\\footnotesize}`,
         `\\renewcommand{\\foottextfont}{\\notef}`,
         `\\newcommand{\\ImpNoteLabel}[1]{${_footnoteMarkerFormat === 'bracket' ? '[#1]\\ ' : '#1.\\ '}}`,
@@ -4365,7 +4365,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `\\feetbelowfloat`, // memoir: 각주를 float 아래 고정 (페이지별 배치 보장)
         `\\renewcommand{\\footnoterule}{}`,
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
-        `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\newcommand{\\notef}{${getSystemFootnoteFont()==='serif'?'\\rmfamily':'\\sffamily'}\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
         `\\providecommand{\\foottextfont}{\\footnotesize}`,
         `\\renewcommand{\\foottextfont}{\\notef}`,
         // 각주 N단: fields.각주단 >= 2이면 bigfoot(sty 내 \RequirePackage), 아니면 1단
