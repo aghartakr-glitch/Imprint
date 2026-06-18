@@ -557,34 +557,20 @@ async function sendPayloadToSheet(payload) {
 }
 
 function convertPayloadToRow(data, sheetName) {
-  // Convert object values to array in consistent column order
   if (!data) return [];
-
-  // For 01-Raw: [raw_id, experiment_id, timestamp, source, ...]
-  if (sheetName === '01-Raw Experiment Log') {
-    return [
-      data.raw_id, data.experiment_id, data.timestamp, data.source,
-      data.input_title, data.input_subtitle, data.input_body, data.input_footnote,
-      data.genre_hint, '', data.selected_reference, '',
-      data.generated_pdf_path, data.generated_tex_path, data.generated_sty_path,
-      data.user_feedback_raw, data.satisfaction_score, '',
-      '', '', '', '', '', '', data.notes
-    ];
+  const headers = SHEET_HEADERS[sheetName];
+  if (!headers) return [];
+  // 02-Experiment Summary의 date는 timestamp에서 파생
+  if (sheetName === '02-Experiment Summary' && !data.date && data.timestamp) {
+    data = { ...data, date: data.timestamp.slice(0, 10) };
   }
-
-  // For 02-Experiment Summary: [experiment_id, date, timestamp, ...]
-  if (sheetName === '02-Experiment Summary') {
-    const date = data.timestamp ? new Date(data.timestamp).toLocaleDateString() : '';
-    return [
-      data.experiment_id, date, data.timestamp, '', '', '', '',
-      data.input_title, data.input_genre, '', '', '',
-      '', '', '',
-      data.feedback_count, '', data.satisfaction_score,
-      data.overall_match_score, data.overall_status
-    ];
+  const row = buildRow(headers, data);
+  console.log(`[convertPayloadToRow] sheetName=${sheetName} headers=${headers.length} row=${row.length}`);
+  if (row.length !== headers.length) {
+    console.error(`[convertPayloadToRow] length mismatch! 전송 취소`);
+    return null;
   }
-
-  return [];
+  return row;
 }
 
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
