@@ -1531,9 +1531,9 @@ function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false, he
       return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{\\imprintbodygap}`;
     case 'h3':
     case 'subheading':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 0.8 * 10) / 10}pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{\\imprintbodygap}`;
     case 'preface':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{${gap}pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{\\imprintheadinggap}`;
     case 'toc':
       return `\\tableofcontents\n\\newpage`;
     case 'dialogue':
