@@ -845,7 +845,7 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
 
     // 카테고리형은 최다 weighted, 수치형은 최신값 우선 (즉시 반영)
-    if (v === 'font_style' || v === 'column_count' || v === 'heading_layout' || v === 'heading_indent' || v === 'footnote_marker_format') {
+    if (v === 'font_style' || v === 'footnote_font' || v === 'running_head_font' || v === 'heading_font' || v === 'column_count' || v === 'heading_layout' || v === 'heading_indent' || v === 'footnote_marker_format') {
       const tally = {};
       for (const h of rule.history) tally[h.value] = (tally[h.value] || 0) + h.weight;
       rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
