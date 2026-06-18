@@ -1009,6 +1009,7 @@ async function sendToSheet(payload) {
     // Apps Script doPost에서 e.postData.contents로 JSON 수신
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     });
