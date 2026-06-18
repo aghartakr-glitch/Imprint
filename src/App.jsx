@@ -5500,170 +5500,199 @@ ${customTexts.join('\n')}`;
         }
       }
 
-      // ── Google Sheets 02-Feedback Test Log 로깅 ──────────────
+      // ── Google Sheets 14탭 리서치 데이터베이스 로깅 ──────────────
       if (ENABLE_GOOGLE_SHEET_LOGGING) {
         const cl = currentLog;
-        const sc = styleConfig;
+        const rawId = `raw_${exp.experiment_id}`;
+        const matchRate = Math.round(analysis.matchRate);
+        const overallStatus = matchRate >= 70 ? 'success' : matchRate >= 50 ? 'partial_success' : matchRate >= 30 ? 'partial_failure' : 'failure';
+
+        // ── 01-Raw Experiment Log ─────────────────────────────────────
         sendToSheet({
-          sheet: 'feedback',
-          date: cl?.created_at?.slice(0,10) || new Date().toISOString().slice(0,10),
-          title: fields.제목 || '',
-          subtitle: fields.소제목 || '',
-          body: (fields.본문 || '').slice(0, 500),
-          footnote: fields.각주 || '',
-          running_head: fields.면주 || '',
-          mode: selectionMode === 'auto' ? '자동 추천' : selectionMode === 'genre-forced' ? '장르 강제' : '레퍼런스 고정',
-          genre: hint || '',
-          col_auto: sc.columnMode === 'auto' ? '자동' : '',
-          col_fixed: sc.columnMode === 'fixed' ? sc.fixedColumns : '',
-          col_var_total: sc.columnMode === 'variable' ? (sc.variableGrid?.total ?? '') : '',
-          col_body: sc.columnMode === 'variable' ? (sc.variableGrid?.body ?? '') : '',
-          col_note: sc.columnMode === 'variable' ? (sc.variableGrid?.note ?? '') : '',
-          col_gap_mm: sc.columnGapMm || '',
-          note_position: sc.notePosition || '',
-          body_columns: sc.bodyTextColumns || 1,
-          note_columns: sc.noteTextColumns || 1,
-          select_mode: cl?.matching?.match_mode || '',
-          reference: cl?.matching?.selected_reference_title || '',
-          content_match: (cl?.matching?.top_candidates || []).slice(0,3).map(c => c.title).filter(Boolean).join(', '),
-          design_concept: (structuredReason?.design_concept || []).join(', '),
-          design_task: (structuredReason?.design_task || []).join(', '),
-          visual_element: (structuredReason?.visual_element || []).join(', ') || cl?.text_analysis?.layout_intent || '',
-          ref_detail: cl?.matching?.semantic_reason || '',
-          font_choice: DB[cl?.matching?.selected_reference_id]?.why_font || '',
-          margin_design: DB[cl?.matching?.selected_reference_id]?.why_margin || '',
-          tracking: DB[cl?.matching?.selected_reference_id]?.why_tracking || '',
-          rejected: (cl?.matching?.rejected || []).slice(0,3)
-            .map(r => typeof r === 'object' ? `${DB[r.i]?.t?.slice(0,20) || r.i} — ${r.reason}` : String(r))
-            .join(' / '),
-          user_feedback: userFeedbackText,
-          satisfaction: satisfactionScore,
-          target_variable: (analysis.corrections||[]).map(c=>c.target_variable).filter(Boolean).join(', '),
-          system_action: (analysis.corrections||[]).map(c=>c.system_pct).filter(Boolean).join(', '),
-          user_correct_action: (analysis.corrections||[]).map(c=>c.user_pct).filter(Boolean).join(', '),
-          direction_match: (() => { const c = (analysis.corrections||[]).filter(x => x.direction_match !== null && x.direction_match !== undefined); return c.length === 0 ? 'N/A' : c.every(x => x.direction_match) ? 'Y' : 'N'; })(),
-          match_rate: analysis.matchRate,
-          difference: analysis.difference,
-          next_rule: analysis.nextRule,
-          match_formula: analysis.matchFormula || '',
-          csv_flag: [exp.experiment_id, exp.timestamp?.slice(0,10), userFeedbackText, satisfactionScore, analysis.matchRate + '%'].join(' | '),
-          md_flag: [`# ${exp.experiment_id}`, `날짜: ${exp.timestamp?.slice(0,10)}`, `피드백: ${userFeedbackText}`, `만족도: ${satisfactionScore}/5`, `일치율: ${analysis.matchRate}%`, `계산식:\n${analysis.matchFormula || ''}`].join('\n'),
-          design_rules: (buildDesignRules() || '(아직 규칙 없음)').slice(0, 5000),
-          json_flag: JSON.stringify({
-            experiment_id: exp.experiment_id,
-            timestamp: exp.timestamp,
-            satisfaction: satisfactionScore,
-            feedback: userFeedbackText,
-            corrections: analysis.corrections,
-            match_rate: analysis.matchRate,
-            match_formula: analysis.matchFormula,
-            match_breakdown: analysis.matchBreakdown,
-            direction_match: (analysis.corrections||[]).every(c => c.direction_match),
-            next_rule: analysis.nextRule,
-            system_rules_snapshot: (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules') || '{}'); } catch { return {}; } })(),
-          }, null, 2).slice(0, 45000),
+          sheet: 'raw_log',
+          raw_id: rawId,
+          experiment_id: exp.experiment_id,
+          timestamp: exp.timestamp || '',
+          source: 'imprint_app',
+          input_title: fields.제목 || '',
+          input_subtitle: fields.소제목 || '',
+          input_body: (fields.본문 || '').slice(0, 500),
+          input_footnote: fields.각주 || '',
+          genre_hint: hint || '',
+          user_intent_raw: userFeedbackText,
+          selected_reference: cl?.matching?.selected_reference_title || '',
+          system_intent: (structuredReason?.design_concept || []).join(', '),
+          user_feedback_raw: userFeedbackText,
+          satisfaction_score: satisfactionScore,
+          original_match_rate: matchRate + '%',
+          system_adjustment_raw: (analysis.corrections||[]).map(c=>c.system_pct).filter(Boolean).join(', '),
+          user_target_raw: (analysis.corrections||[]).map(c=>c.user_pct).filter(Boolean).join(', '),
+          next_rule_raw: analysis.nextRule || '',
+          json_log_path: exp.experiment_id,
+          notes: '',
         });
 
-        // ── 03-Experiment Summary: 실험 1회 = 1행 ────────────────────────
+        // ── 02-Experiment Summary ─────────────────────────────────────
+        const patchCount = (analysis.corrections||[]).filter(c => c.target_variable !== '__custom__').length;
         sendToSheet({
-          sheet: 'experiment_summary',
+          sheet: 'exp_summary',
           experiment_id: exp.experiment_id,
           date: exp.timestamp?.slice(0,10) || '',
           timestamp: exp.timestamp || '',
           input_title: fields.제목 || '',
-          input_subtitle: fields.소제목 || '',
-          genre: hint || currentLog?.text_analysis?.detected_genre || '',
-          mode: selectionMode === 'auto' ? '자동 추천' : selectionMode === 'genre-forced' ? '장르 강제' : '레퍼런스 고정',
-          reference_selected: currentLog?.matching?.selected_reference_title || '',
-          reference_candidates: (currentLog?.matching?.top_candidates||[]).slice(0,3).map(c=>c.title).join(', '),
-          design_concept: (structuredReason?.design_concept||[]).join(', '),
-          design_task: (structuredReason?.design_task||[]).join(', '),
-          visual_elements: (structuredReason?.visual_element||[]).join(', '),
-          user_feedback_raw: userFeedbackText,
+          input_genre: hint || cl?.text_analysis?.detected_genre || '',
+          selected_reference: cl?.matching?.selected_reference_title || '',
+          reference_reason: cl?.matching?.semantic_reason || '',
+          feedback_count: 1,
+          patch_count: patchCount,
           satisfaction_score: satisfactionScore,
-          overall_match_score: Math.round(analysis.matchRate) + '%',
-          overall_status: analysis.matchRate >= 70 ? 'pass' : analysis.matchRate >= 40 ? 'partial' : 'fail',
+          overall_match_score: matchRate + '%',
+          overall_status: overallStatus,
+          main_success: matchRate >= 70 ? (analysis.nextRule || 'direction_match') : 'none',
+          main_failure: matchRate < 70 ? (analysis.difference || 'partial_mismatch') : 'none',
           research_note: analysis.nextRule || '',
         });
 
-        // ── 04-Variable Patch Log: 변수 1개 = 1행 ─────────────────────────
+        // ── 03-Feedback Unit / 04-Variable Patch / 07-Score Breakdown / 08-Failure Analysis ──
         (analysis.corrections || []).forEach((c, idx) => {
           if (c.target_variable === '__custom__') return;
+          const fuId = `fu_${exp.experiment_id}_${String(idx+1).padStart(2,'0')}`;
           const patchId = `${exp.experiment_id}_p${String(idx+1).padStart(2,'0')}`;
+          const scoreId = `score_${exp.experiment_id}_${String(idx+1).padStart(2,'0')}`;
           const dirLabel = c.direction_match === true ? 'match' : c.direction_match === false ? 'mismatch' : 'unknown';
-          const failureType = !c.direction_match && c.direction_match !== null ? 'direction_mismatch'
+          const failureType = c.direction_match === false ? 'direction_mismatch'
             : (c.system_pct === '미반영' || !c.system_pct) ? 'no_actual_patch' : '';
           const userVal = parseFloat((c.user_pct||'').match(/([+-]?\d+(?:\.\d+)?)/)?.[1]||'0');
           const sysVal  = parseFloat((c.system_pct||'').match(/([+-]?\d+(?:\.\d+)?)/)?.[1]||'0');
           const magMatch = !isNaN(userVal) && !isNaN(sysVal) && userVal !== 0
             ? Math.abs(1 - Math.abs(sysVal) / Math.abs(userVal)) < 0.3 ? 'close' : 'far' : 'unknown';
+          const isPct = /[+-]?\d+%/.test(c.user_pct || '');
+          const unitStr = c.user_pct?.includes('pt') ? 'pt' : c.user_pct?.includes('mm') ? 'mm' : c.user_pct?.includes('%') ? '%' : 'unknown';
+
+          // 03-Feedback Unit Log
+          sendToSheet({
+            sheet: 'feedback_unit',
+            feedback_unit_id: fuId,
+            experiment_id: exp.experiment_id,
+            raw_id: rawId,
+            feedback_order: idx + 1,
+            user_feedback_raw: userFeedbackText,
+            feedback_snippet: `${c.target_variable}: ${c.user_pct}`,
+            feedback_type: isPct ? 'direct_numeric' : 'problem_description',
+            design_issue_area: c.target_variable,
+            user_language_type: isPct ? 'direct_numeric' : 'problem_description',
+            is_numeric_feedback: isPct ? 'TRUE' : 'FALSE',
+            numeric_value_raw: c.user_pct || '',
+            numeric_unit: unitStr,
+            intended_change_summary: `${c.target_variable}: ${c.user_pct}`,
+            ambiguity_level: isPct ? 'low' : 'medium',
+            needs_user_confirmation: 'FALSE',
+          });
+
+          // 04-Variable Patch Log
           sendToSheet({
             sheet: 'variable_patch',
             patch_id: patchId,
             experiment_id: exp.experiment_id,
-            date: exp.timestamp?.slice(0,10) || '',
-            feedback_snippet: userFeedbackText,
-            feedback_type: 'structured_form',
+            feedback_unit_id: fuId,
+            patch_order: idx + 1,
+            feedback_snippet: `${c.target_variable}: ${c.user_pct}`,
             interpreted_variable_by_claude: c.target_variable,
             intended_variable_by_user: c.target_variable,
-            actual_changed_variable: c.target_variable,
+            actual_changed_variable: 'not_verified',
+            saved_rule_variable: c.target_variable,
             variable_group: c.target_variable.split('_')[0],
+            variable_scope: 'single_variable',
             before_value: 'not_verified',
             system_planned_value: c.system_pct || '미반영',
             actual_after_value: 'not_verified',
             user_target_value: c.user_pct || '',
-            unit: c.user_pct?.includes('%') ? 'percent' : c.user_pct?.includes('pt') ? 'pt' : c.user_pct?.includes('mm') ? 'mm' : 'unknown',
+            unit: unitStr,
             direction_requested: userVal > 0 ? 'increase' : userVal < 0 ? 'decrease' : 'unknown',
-            direction_applied: sysVal > 0 ? 'increase' : sysVal < 0 ? 'decrease' : 'unknown',
+            direction_interpreted: sysVal > 0 ? 'increase' : sysVal < 0 ? 'decrease' : 'unknown',
+            direction_applied: 'not_verified',
             direction_match: dirLabel,
+            magnitude_requested: c.user_pct || '',
+            magnitude_applied: c.system_pct || 'not_verified',
             magnitude_match: magMatch,
-            locked_variables: 'not_verified',
-            unintended_changed_variables: 'not_verified',
-            lock_success: 'not_verified',
-            patch_status: failureType ? 'fail' : 'applied',
+            patch_success: failureType ? 'FALSE' : 'not_verified',
+            patch_status: failureType ? 'failure' : 'not_verified',
             failure_type: failureType || '',
-            next_rule: `${c.target_variable}: ${c.system_pct||'미반영'} → ${c.user_pct}`,
+            confidence_score: 'not_verified',
             research_memo: '',
           });
 
-          // ── 06-Failure Analysis: 실패 케이스만 ─────────────────────────
+          // 07-Score Breakdown
+          const dirScore = dirLabel === 'match' ? 75 : dirLabel === 'mismatch' ? 25 : 50;
+          const varScore = dirLabel !== 'unknown' ? 75 : 50;
+          const magScore = magMatch === 'close' ? 75 : magMatch === 'far' ? 25 : 50;
+          sendToSheet({
+            sheet: 'score_breakdown',
+            score_id: scoreId,
+            experiment_id: exp.experiment_id,
+            feedback_unit_id: fuId,
+            patch_id: patchId,
+            satisfaction_score: satisfactionScore,
+            variable_match_score: varScore + '%',
+            direction_match_score: dirScore + '%',
+            magnitude_match_score: magScore + '%',
+            lock_success_score: 'not_verified',
+            actual_patch_score: 'not_verified',
+            rule_application_score: 'not_verified',
+            overall_match_score: matchRate + '%',
+            score_formula: analysis.matchFormula || '',
+            score_reason: `변수: ${c.target_variable}, 방향: ${dirLabel}, 크기: ${magMatch}`,
+          });
+
+          // 08-Failure Analysis (실패만)
           if (failureType) {
             sendToSheet({
               sheet: 'failure_analysis',
               failure_id: `fail_${patchId}`,
               experiment_id: exp.experiment_id,
+              feedback_unit_id: fuId,
               patch_id: patchId,
               failure_type: failureType,
+              failure_stage: failureType === 'no_actual_patch' ? 'latex_application' : 'variable_mapping',
               description: `${c.target_variable}: 사용자 ${c.user_pct}, 시스템 ${c.system_pct||'미반영'}`,
               example_user_feedback: userFeedbackText,
               wrong_system_interpretation: c.system_pct || '미반영',
               expected_behavior: c.user_pct,
               actual_behavior: c.system_pct || '미반영',
-              severity: analysis.matchRate < 40 ? 'high' : 'medium',
+              severity: matchRate < 40 ? 'high' : 'medium',
               fix_required: failureType === 'no_actual_patch' ? 'rule_application_bug' : 'direction_logic',
+              related_rule_id: `rule_${c.target_variable}`,
+              resolved: 'FALSE',
+              resolution_note: '',
             });
           }
         });
 
-        // ── 05-Rule Summary: 현재 누적 규칙 스냅샷 ────────────────────────
+        // ── 09-Rule Memory: 현재 누적 규칙 스냅샷 ────────────────────────
         (() => {
           const sr = (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules')||'{}'); } catch { return {}; } })();
           Object.entries(sr.rules || {}).forEach(([ruleName, rule]) => {
             if (rule.confidence === 'none' || rule.value === null) return;
+            const ruleVal = typeof rule.value === 'number'
+              ? `${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}%`
+              : String(rule.value);
             sendToSheet({
-              sheet: 'rule_summary',
+              sheet: 'rule_memory',
               rule_id: `rule_${ruleName}`,
               variable_name: ruleName,
               variable_group: ruleName.split('_')[0],
-              current_rule_value: typeof rule.value === 'number' ? `${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}%` : String(rule.value),
-              confidence: rule.confidence,
-              evidence_count: (rule.history||[]).length,
+              rule_condition: 'genre = any',
+              rule_action: `${ruleName} ${ruleVal}`,
+              current_rule_value: ruleVal,
+              source_feedback_count: (rule.history||[]).length,
               success_count: 'not_tracked',
               failure_count: 'not_tracked',
+              confidence: rule.confidence,
               last_updated: exp.timestamp?.slice(0,10) || '',
               example_feedback: userFeedbackText,
-              rule_description: `${ruleName}: ${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}% [${rule.confidence}]`,
+              rule_description: `${ruleName}: ${ruleVal} [${rule.confidence}]`,
               risk_note: '',
+              active_status: 'active',
             });
           });
         })();
