@@ -1005,13 +1005,19 @@ function buildDesignRules() {
 }
 async function sendToSheet(payload) {
   try {
-    // Content-Type: text/plain → CORS preflight 없이 전송 가능
-    // Apps Script doPost에서 e.postData.contents로 JSON 수신
+    const sheetNameMap = {
+      'raw_log': '01-Raw Experiment Log',
+      'exp_summary': '02-Experiment Summary',
+      'revision': '06-Revision Log',
+    };
+    const { sheet, ...fields } = payload;
+    const sheetName = sheetNameMap[sheet] || sheet;
+    const rowValues = Object.values(fields);
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ sheetName, rowValues }),
     });
   } catch { /* silent fail — logging must not break the app */ }
 }
