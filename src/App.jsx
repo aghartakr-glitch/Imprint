@@ -815,7 +815,7 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     if (v === 'column_count') {
       const m = up.match(/(\d+)/);
       if (m) parsedValue = parseInt(m[1]);
-    } else if (v === 'font_style') {
+    } else if (v === 'font_style' || v === 'footnote_font' || v === 'running_head_font' || v === 'heading_font') {
       if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
       else if (/명조|serif|부리/i.test(up)) parsedValue = 'serif';
     } else if (v === 'heading_layout') {
