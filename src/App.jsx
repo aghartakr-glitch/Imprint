@@ -1523,12 +1523,12 @@ function blockToLatex(block, fnMap, superMap, { preserveImpFnMarkers = false, he
   const gap = Math.max(4, Number(headingGapPt) || 10);
   switch (block.type) {
     case 'h1':
-      return `\\Needspace{6\\baselineskip}\n{\\noindent\\hone ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 1.5 * 10) / 10}pt}`;
+      return `\\Needspace{6\\baselineskip}\n{\\noindent\\hone ${esc(block.text)}\\par}\n\\vspace{\\imprintheadinggap}`;
     case 'sectionHeading':
     case 'h2':
-      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 1.1 * 10) / 10}pt}`;
+      return `\\Needspace{4\\baselineskip}\n{\\noindent\\htwo ${esc(block.text)}\\par}\n\\vspace{\\imprintheadinggap}`;
     case 'author':
-      return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{${gap}pt}`;
+      return `{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{\\imprintbodygap}`;
     case 'h3':
     case 'subheading':
       return `\\Needspace{4\\baselineskip}\n{\\noindent\\hthree ${esc(block.text)}\\par}\n\\vspace{${Math.round(gap * 0.8 * 10) / 10}pt}`;
