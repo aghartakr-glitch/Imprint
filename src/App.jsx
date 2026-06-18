@@ -147,6 +147,66 @@ function saveExperiment(exp) {
   try { localStorage.setItem('imprint_experiments', JSON.stringify(_EXPERIMENT_STORE.experiments)); } catch {}
 }
 function loadExperiments() { return _EXPERIMENT_STORE.experiments; }
+
+// ── ID 생성 유틸리티 ─────────────────────────────────────────────────────
+// 모든 기록의 핵심: 동일한 experiment에서 생성된 모든 데이터는 experiment_id로 연결
+
+function generateExperimentId() {
+  const now = new Date();
+  const yyyymmdd = String(now.getFullYear()) +
+                   String(now.getMonth() + 1).padStart(2, '0') +
+                   String(now.getDate()).padStart(2, '0');
+  const hhmmss = String(now.getHours()).padStart(2, '0') +
+                 String(now.getMinutes()).padStart(2, '0') +
+                 String(now.getSeconds()).padStart(2, '0');
+  return `exp_${yyyymmdd}_${hhmmss}`;
+}
+
+function generateRawId(experimentId) {
+  // raw_20260622_153000 (removes 'exp_' prefix)
+  return `raw_${experimentId.substring(4)}`;
+}
+
+function generateFeedbackUnitId(experimentId, unitIndex) {
+  // exp_20260622_153000_fu01, fu02, ...
+  return `${experimentId}_fu${String(unitIndex + 1).padStart(2, '0')}`;
+}
+
+function generatePatchId(experimentId, feedbackUnitIndex, patchIndex) {
+  // exp_20260622_153000_p01_01, p01_02, p02_01, ...
+  return `${experimentId}_p${String(feedbackUnitIndex + 1).padStart(2, '0')}_${String(patchIndex + 1).padStart(2, '0')}`;
+}
+
+function generateValueCheckId(experimentId, unitIndex) {
+  // exp_20260622_153000_v01, v02, ...
+  return `${experimentId}_v${String(unitIndex + 1).padStart(2, '0')}`;
+}
+
+function generateLockCheckId(experimentId, unitIndex) {
+  // exp_20260622_153000_l01, l02, ...
+  return `${experimentId}_l${String(unitIndex + 1).padStart(2, '0')}`;
+}
+
+function generateScoreId(experimentId, unitIndex) {
+  // exp_20260622_153000_s01, s02, ...
+  return `${experimentId}_s${String(unitIndex + 1).padStart(2, '0')}`;
+}
+
+function generateFailureId(experimentId, failureIndex) {
+  // exp_20260622_153000_f01, f02, ...
+  return `${experimentId}_f${String(failureIndex + 1).padStart(2, '0')}`;
+}
+
+function generateCodingId(experimentId, unitIndex) {
+  // exp_20260622_153000_c01, c02, ...
+  return `${experimentId}_c${String(unitIndex + 1).padStart(2, '0')}`;
+}
+
+function generateRuleApplicationId(experimentId, applicationIndex) {
+  // exp_20260622_153000_ra01, ra02, ...
+  return `${experimentId}_ra${String(applicationIndex + 1).padStart(2, '0')}`;
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
