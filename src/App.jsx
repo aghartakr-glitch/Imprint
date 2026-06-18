@@ -458,7 +458,7 @@ async function sendPayloadToSheet(payload) {
   for (const config of sheetRecordOrder) {
     try {
       const row = convertPayloadToRow(config.data, config.sheetName);
-      const result = await fetch('https://script.google.com/macros/s/AKfycbwiQEnEKMYqZyIUJ_8fxCG4JSajs6MShbPWG6YhoFRKJXeErKtAUcA_SiXDgFObYTIYGA/exec', {
+      const result = await fetch('https://script.google.com/macros/s/AKfycbyRBcWDn_OCM3aakKwDJlepJnnT8dUXJ9tZ6bZUyOVJ0IiqVCw3ct-akZM-vvduVfqrBg/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
