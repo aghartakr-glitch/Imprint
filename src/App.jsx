@@ -4230,9 +4230,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         'Detect and separately style each of the following:\n' +
         '  • Work title (short, isolated line) → {\\noindent\\htwo TITLE\\par}\\vspace{\\imprintbodygap}\n' +
         '  • Author name after "/" → {\\noindent\\hthree AUTHOR\\par}\\vspace{\\imprintbodygap}\n' +
-        '  • Chapter/section heading (제N장, numbered, # markdown) → {\\htwo ...\\par} with \\Needspace{4\\baselineskip}\n' +
-        '  • Sub-heading (##, ###, short isolated line ≤30 chars) → {\\hthree ...\\par}\n' +
-        '  • Preface (서문/머리말/들어가며) label → {\\htwo ...\\par}, body in {\\itshape\\bodyf ...\\par}\n' +
+        '  • Chapter/section heading (제N장, numbered, # markdown) → {\\noindent\\htwo ...\\par} with \\Needspace{4\\baselineskip}\n' +
+        '  • Sub-heading (##, ###, short isolated line ≤30 chars) → {\\noindent\\hthree ...\\par}\n' +
+        '  • Preface (서문/머리말/들어가며) label → {\\noindent\\htwo ...\\par}, body in {\\itshape\\bodyf ...\\par}\n' +
         '  • Each paragraph → separate {\\bodyf\n\\noindent TEXT\\par\n} block\n' +
         '  • Dialogue (「...」, 『...』, "...") → \\begin{imprintdialogue}\\n TEXT\\n\\end{imprintdialogue}\n' +
         '  • Block quotation, letter, verse → \\begin{imprintquote}\\n TEXT\\n\\end{imprintquote}\n' +
