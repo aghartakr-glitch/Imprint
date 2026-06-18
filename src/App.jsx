@@ -2280,6 +2280,11 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   return { errors, warnings };
 }
 
+// Expose utility functions to window for testing
+if (typeof window !== 'undefined') {
+  window.normalizePercentage = normalizePercentage;
+}
+
 // Imprint 1.0.0 — App Component
 // UI: Split-panel layout (Left: Input / Right: Package + Output)
 export default function App() {
