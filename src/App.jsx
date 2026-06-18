@@ -4116,8 +4116,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           s = s.replace(/\\vspace\{\\imprintbodygap\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\vspace{\\imprintheadinggap}$1');
           // 헤딩↔본문: 나머지 \par}\vspace{Xpt} (hardcoded pt값 → \imprintbodygap)
           s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
-          // 이미 \imprintheadinggap인데 본문 앞인 경우
-          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*(?!(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h)))/g, '\\vspace{\\imprintbodygap}$1');
+          // 이미 \imprintheadinggap인데 본문 앞인 경우 (blank line 포함 — \s* lookahead 필수)
+          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*(?!\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h)))/g, '\\vspace{\\imprintbodygap}$1');
           // 빈 줄만 있는 케이스: 헤딩↔헤딩
           s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*(?:\\Needspace\{[^}]+\}\s*\n\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
           // 빈 줄만 있는 케이스: 헤딩↔본문
