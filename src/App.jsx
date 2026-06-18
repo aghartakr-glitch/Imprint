@@ -4196,8 +4196,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         '# CONTENT STRUCTURE ANALYSIS\n' +
         'Read the body text BEFORE generating LaTeX. Apply these rules:\n' +
         '1. 목차(TOC): If body has 3+ numbered list entries or a "목차/차례" label, output \\tableofcontents\\newpage at that location. Do NOT reproduce the TOC list manually.\n' +
-        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\htwo LABEL\\par}\\vspace{\\imprintbodygap} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
-        '3. 소제목(subheadings within body): Short standalone lines (≤30 chars, surrounded by blank lines) → use \\hthree. Longer section labels → \\htwo. Always \\Needspace{4\\baselineskip} before each.\n' +
+        '2. 서문/머리말/들어가며: If there is a preface section label, use {\\noindent\\htwo LABEL\\par}\\vspace{\\imprintbodygap} then {\\itshape\\bodyf\\noindent TEXT...\\par} to visually distinguish it.\n' +
+        '3. 소제목(subheadings within body): Short standalone lines (≤30 chars, surrounded by blank lines) → use \\noindent\\hthree. Longer section labels → \\noindent\\htwo. Always \\Needspace{4\\baselineskip} before each.\n' +
         '4. Markdown headings (# ## ###): Convert exactly to \\hone / \\htwo / \\hthree with \\Needspace + \\bodyf reset.\n' +
         '5. Regular paragraphs: {\\bodyf\\noindent TEXT\\par}\\vspace{0.5\\baselineskip} for each.\n\n' +
         '# PAGE NUMBER: ' + p.pn +
