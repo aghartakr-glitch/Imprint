@@ -1948,11 +1948,14 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
 
 function normalizeHeadingGapVspaces(latex = '') {
   let s = String(latex || '');
-  const nextHeading = /^(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/;
+  // \noindent inside heading braces is optional — Claude sometimes omits it
+  const _hPat = '(?:\\{(?:\\\\noindent)?\\\\h(?:one|two|three)|\\\\noindent\\{\\\\h)';
+  const _hRe  = new RegExp('^(\\s*(?:\\\\Needspace\\{[^}]+\\}\\s*)?' + _hPat + ')');
+  const nextHeading = _hRe;
 
   // Heading -> heading: hardcoded pt or body-gap macro must become heading-gap macro.
-  s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\par}\\vspace{\\imprintheadinggap}$1');
-  s = s.replace(/\\vspace\{\\imprintbodygap\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\vspace{\\imprintheadinggap}$1');
+  s = s.replace(new RegExp('\\\\par\\}\\\\vspace\\{[\\d.]+pt\\}(\\s*(?:\\\\Needspace\\{[^}]+\\}\\s*)?' + _hPat + ')', 'g'), '\\par}\\vspace{\\imprintheadinggap}$1');
+  s = s.replace(new RegExp('\\\\vspace\\{\\\\imprintbodygap\\}(\\s*(?:\\\\Needspace\\{[^}]+\\}\\s*)?' + _hPat + ')', 'g'), '\\vspace{\\imprintheadinggap}$1');
 
   // Heading -> body: all remaining hardcoded heading vspaces become body-gap macro.
   s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
@@ -1964,7 +1967,7 @@ function normalizeHeadingGapVspaces(latex = '') {
   });
 
   // Empty-line-only gaps after heading blocks.
-  s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*(?:\\Needspace\{[^}]+\}\s*\n\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
+  s = s.replace(new RegExp('(\\{(?:\\\\noindent)?\\\\(?:hone|htwo|hthree)[^}]*\\\\par\\})\\n\\n(\\s*(?:\\\\Needspace\\{[^}]+\\}\\s*\\n\\s*)?' + _hPat + ')', 'g'), '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
   s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
 
   return s;
