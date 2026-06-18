@@ -937,6 +937,21 @@ function getSystemFontStyle() {
   if (!rule || rule.confidence === 'none' || rule.confidence === 'low') return null;
   return rule.value; // 'gothic' | 'serif'
 }
+function getSystemFootnoteFont() {
+  const rule = loadSystemRules().rules.footnote_font;
+  if (!rule || rule.confidence === 'none') return null;
+  return rule.value; // 'gothic' | 'serif'
+}
+function getSystemRunningHeadFont() {
+  const rule = loadSystemRules().rules.running_head_font;
+  if (!rule || rule.confidence === 'none') return null;
+  return rule.value;
+}
+function getSystemHeadingFont() {
+  const rule = loadSystemRules().rules.heading_font;
+  if (!rule || rule.confidence === 'none') return null;
+  return rule.value;
+}
 
 // 학습된 제목 정렬 방향 반환 — confidence medium 이상
 function getSystemHeadingLayout() {
