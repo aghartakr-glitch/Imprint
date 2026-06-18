@@ -3657,8 +3657,15 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const _learnedRhFont = getSystemRunningHeadFont();
       const _learnedHFont  = getSystemHeadingFont();
       const serifFont = bodyIsSerif ? mainFont : 'NotoSerif';
-      const fnFont = _learnedFnFont === 'serif' ? serifFont : 'NotoSans';
-      const rhFont = _learnedRhFont === 'serif' ? serifFont : 'NotoSans';
+      const _resolveFont = (learned, defaultFont) => {
+        if (learned === 'same_as_body') return mainFont;
+        if (learned === 'same_as_heading') return isMixedLayout ? sansFont : mainFont;
+        if (learned === 'serif') return serifFont;
+        if (learned === 'gothic') return 'NotoSans';
+        return defaultFont;
+      };
+      const fnFont = _resolveFont(_learnedFnFont, 'NotoSans');
+      const rhFont = _resolveFont(_learnedRhFont, 'NotoSans');
 
       // ── FONT_MANIFEST ──────────────────────────────────────────────
       // 사용자 폴더에 실제 존재하는 폰트만 등록. 이 목록 외 폰트는 절대 출력 안 됨.
