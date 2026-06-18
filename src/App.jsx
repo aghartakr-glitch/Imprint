@@ -213,7 +213,7 @@ function generateRuleApplicationId(experimentId, applicationIndex) {
 function normalizePercentage(value) {
   // Handle string inputs
   if (typeof value === 'string') {
-    const match = value.match(/-?\d+(?:\.\d+)?/);
+    const match = value.match(/-?\d+(?:\.\d+)?%?/);
     if (!match) return 'unknown';
     value = parseFloat(match[0]);
   } else if (typeof value === 'number') {
