@@ -3737,7 +3737,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         (isMixedLayout
           ? `% 혼합 레이아웃: 본문=\\rmfamily, 제목/소제목=\\sffamily\n`
           : '') +
-        ((mixedFnOnly || mixedRhOnly) && fnFont !== mainFont
+        ((mixedFnOnly || mixedRhOnly || _learnedFnFont) && fnFont !== mainFont
           ? fontspecCmd('newfontfamily\\fnfont', fnFont) + ' % 각주/면주 전용\n'
           : '');
       // ── 단 구성 분석 ─────────────────────────────────────────────
