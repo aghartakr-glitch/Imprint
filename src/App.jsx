@@ -461,9 +461,8 @@ async function sendPayloadToSheet(payload) {
       await fetch('https://script.google.com/macros/s/AKfycbwiQEnEKMYqZyIUJ_8fxCG4JSajs6MShbPWG6YhoFRKJXeErKtAUcA_SiXDgFObYTIYGA/exec', {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          path: '/api/sheet-record',
           sheetName: config.sheetName,
           rowValues: row,
           mode: config.mode,
