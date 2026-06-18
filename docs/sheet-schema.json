@@ -1,0 +1,423 @@
+{
+  "version": "3.0",
+  "project": "Imprint Record — 14-tab Research Database",
+  "last_updated": "2026-06-18",
+  "description": "Complete schema definition for all 14 sheets in the Imprint research database",
+  "sheets": [
+    {
+      "name": "01-Raw Experiment Log",
+      "mode": "append_only",
+      "key_column": "raw_id",
+      "description": "Complete raw data capture from feedback submission. Never updated or overwritten.",
+      "fields": [
+        { "col": 1, "name": "raw_id", "type": "string", "required": true, "format": "raw_YYYYMMDD_HHMMSS", "description": "Unique ID for this raw record" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "format": "exp_YYYYMMDD_HHMMSS", "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "timestamp", "type": "string", "format": "ISO8601", "description": "When feedback was submitted" },
+        { "col": 4, "name": "source", "type": "string", "required": true, "allowed_values": ["feedback_apply_button", "migrated_from_02"], "description": "Where this record came from" },
+        { "col": 5, "name": "input_title", "type": "string", "description": "User input: document title" },
+        { "col": 6, "name": "input_subtitle", "type": "string", "description": "User input: subtitle" },
+        { "col": 7, "name": "input_body", "type": "string", "description": "User input: body text (first 500 chars)" },
+        { "col": 8, "name": "input_footnote", "type": "string", "description": "User input: footnote text" },
+        { "col": 9, "name": "genre_hint", "type": "string", "description": "User input: genre/design style" },
+        { "col": 10, "name": "user_intent_raw", "type": "string", "description": "User input: why they chose this style" },
+        { "col": 11, "name": "selected_reference", "type": "string", "description": "User selected reference design" },
+        { "col": 12, "name": "system_intent", "type": "string", "description": "System interpreted intent" },
+        { "col": 13, "name": "generated_pdf_path", "type": "string", "description": "Path to generated PDF" },
+        { "col": 14, "name": "generated_tex_path", "type": "string", "description": "Path to generated .tex file" },
+        { "col": 15, "name": "generated_sty_path", "type": "string", "description": "Path to generated .sty file" },
+        { "col": 16, "name": "user_feedback_raw", "type": "string", "required": true, "description": "Complete unmodified user feedback text" },
+        { "col": 17, "name": "satisfaction_score", "type": "number", "range": [1, 5], "description": "User satisfaction (1=very unsatisfied, 5=very satisfied)" },
+        { "col": 18, "name": "original_match_rate", "type": "string", "format": "percentage", "description": "Initial match score (e.g., '75%')" },
+        { "col": 19, "name": "system_adjustment_raw", "type": "string", "description": "System proposed adjustment" },
+        { "col": 20, "name": "user_target_raw", "type": "string", "description": "User specified target behavior" },
+        { "col": 21, "name": "next_rule_raw", "type": "string", "description": "Suggested next rule" },
+        { "col": 22, "name": "md_log_path", "type": "string", "description": "Path to markdown log (if generated)" },
+        { "col": 23, "name": "csv_log_path", "type": "string", "description": "Path to CSV log (if generated)" },
+        { "col": 24, "name": "json_log_path", "type": "string", "description": "Path to JSON log (if generated)" },
+        { "col": 25, "name": "notes", "type": "string", "description": "Additional notes or metadata" }
+      ]
+    },
+    {
+      "name": "02-Experiment Summary",
+      "mode": "upsert",
+      "key_column": "experiment_id",
+      "description": "High-level summary of each experiment. Can be updated if new feedback adds to count.",
+      "fields": [
+        { "col": 1, "name": "experiment_id", "type": "string", "required": true, "unique": true, "format": "exp_YYYYMMDD_HHMMSS", "description": "Unique experiment ID (primary key)" },
+        { "col": 2, "name": "date", "type": "string", "format": "YYYY-MM-DD", "description": "Date of experiment" },
+        { "col": 3, "name": "timestamp", "type": "string", "format": "ISO8601", "description": "Timestamp of first feedback" },
+        { "col": 4, "name": "session_id", "type": "string", "description": "Session identifier if applicable" },
+        { "col": 5, "name": "test_round", "type": "number", "description": "Which round of testing" },
+        { "col": 6, "name": "text_id", "type": "string", "description": "Document identifier" },
+        { "col": 7, "name": "version_id", "type": "string", "description": "Version of generated design" },
+        { "col": 8, "name": "input_title", "type": "string", "description": "Document title from raw log" },
+        { "col": 9, "name": "input_genre", "type": "string", "description": "Genre/style from raw log" },
+        { "col": 10, "name": "experiment_goal", "type": "string", "description": "Goal of this experiment" },
+        { "col": 11, "name": "selected_reference", "type": "string", "description": "Reference design used" },
+        { "col": 12, "name": "reference_reason", "type": "string", "description": "Why this reference was chosen" },
+        { "col": 13, "name": "generated_pdf_path", "type": "string", "description": "Path to PDF output" },
+        { "col": 14, "name": "generated_tex_path", "type": "string", "description": "Path to TeX output" },
+        { "col": 15, "name": "generated_sty_path", "type": "string", "description": "Path to style output" },
+        { "col": 16, "name": "feedback_count", "type": "number", "description": "Number of feedback units for this experiment" },
+        { "col": 17, "name": "patch_count", "type": "number", "description": "Number of variable patches applied" },
+        { "col": 18, "name": "satisfaction_score", "type": "number", "range": [1, 5], "description": "Overall satisfaction rating" },
+        { "col": 19, "name": "overall_match_score", "type": "string", "format": "percentage_or_unknown", "description": "Final match percentage (e.g., '85%' or 'unknown')" },
+        { "col": 20, "name": "overall_status", "type": "string", "allowed_values": ["success", "partial_success", "failure", "not_verified"], "description": "Overall outcome of experiment" },
+        { "col": 21, "name": "main_success", "type": "string", "description": "What succeeded in this experiment" },
+        { "col": 22, "name": "main_failure", "type": "string", "description": "What failed in this experiment" },
+        { "col": 23, "name": "research_note", "type": "string", "description": "Research insights from this experiment" }
+      ]
+    },
+    {
+      "name": "03-Feedback Unit Log",
+      "mode": "append_only",
+      "key_column": "feedback_unit_id",
+      "description": "Each sentence/unit of user feedback. Parsing of raw_feedback into semantic units.",
+      "fields": [
+        { "col": 1, "name": "feedback_unit_id", "type": "string", "required": true, "format": "exp_YYYYMMDD_HHMMSS_fu##", "description": "Unique ID for this feedback unit" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "raw_id", "type": "string", "required": true, "description": "Links to 01-Raw Experiment Log" },
+        { "col": 4, "name": "feedback_order", "type": "number", "required": true, "description": "Sequence in original feedback (1, 2, 3, ...)" },
+        { "col": 5, "name": "user_feedback_raw", "type": "string", "required": true, "description": "Complete original feedback text" },
+        { "col": 6, "name": "feedback_snippet", "type": "string", "required": true, "description": "Single semantic unit extracted from feedback" },
+        { "col": 7, "name": "feedback_type", "type": "string", "allowed_values": ["direct_numeric", "problem_description", "preference", "other"], "description": "Type of feedback" },
+        { "col": 8, "name": "design_issue_area", "type": "string", "allowed_values": ["margin", "heading", "footnote", "body_text", "column", "overall_layout"], "description": "What design element is being discussed" },
+        { "col": 9, "name": "user_language_type", "type": "string", "description": "How user expressed it (technical, metaphorical, etc.)" },
+        { "col": 10, "name": "is_numeric_feedback", "type": "string", "allowed_values": ["YES", "NO"], "required": true, "description": "Contains a number?" },
+        { "col": 11, "name": "numeric_value_raw", "type": "string", "description": "Extracted numeric value or empty" },
+        { "col": 12, "name": "numeric_unit", "type": "string", "allowed_values": ["%", "pt", "px", "em", "mm", ""], "description": "Unit of numeric value if applicable" },
+        { "col": 13, "name": "qualitative_expression", "type": "string", "description": "How user expressed non-numeric preference" },
+        { "col": 14, "name": "intended_change_summary", "type": "string", "description": "What user wants changed (from context)" },
+        { "col": 15, "name": "ambiguity_level", "type": "string", "allowed_values": ["clear", "somewhat_clear", "ambiguous", "contradictory"], "description": "How clear was this feedback?" },
+        { "col": 16, "name": "needs_user_confirmation", "type": "string", "allowed_values": ["YES", "NO"], "description": "Should we confirm interpretation with user?" }
+      ]
+    },
+    {
+      "name": "04-Variable Patch Log",
+      "mode": "upsert",
+      "key_column": "patch_id",
+      "description": "Mapping of feedback to variable changes. Can update if re-analyzed.",
+      "fields": [
+        { "col": 1, "name": "patch_id", "type": "string", "required": true, "unique": true, "format": "exp_YYYYMMDD_HHMMSS_p##_##", "description": "Unique ID for this patch" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "feedback_unit_id", "type": "string", "required": true, "description": "Links to 03-Feedback Unit Log" },
+        { "col": 4, "name": "patch_order", "type": "number", "description": "Sequence of patches within experiment" },
+        { "col": 5, "name": "feedback_snippet", "type": "string", "description": "Feedback snippet being addressed" },
+        { "col": 6, "name": "interpreted_variable_by_claude", "type": "string", "description": "What variable Claude thought to change" },
+        { "col": 7, "name": "intended_variable_by_user", "type": "string", "description": "What variable user actually intended" },
+        { "col": 8, "name": "actual_changed_variable", "type": "string", "description": "What variable was actually changed in system" },
+        { "col": 9, "name": "saved_rule_variable", "type": "string", "description": "Which rule variable was saved/updated" },
+        { "col": 10, "name": "variable_group", "type": "string", "description": "Group this variable belongs to (margin, font, color, etc.)" },
+        { "col": 11, "name": "variable_scope", "type": "string", "description": "Scope (global, section, paragraph, etc.)" },
+        { "col": 12, "name": "before_value", "type": "string", "description": "Value before change" },
+        { "col": 13, "name": "system_planned_value", "type": "string", "description": "What system planned to change to" },
+        { "col": 14, "name": "actual_after_value", "type": "string", "description": "Value actually changed to" },
+        { "col": 15, "name": "user_target_value", "type": "string", "description": "What user target was" },
+        { "col": 16, "name": "unit", "type": "string", "description": "Unit of measurement" },
+        { "col": 17, "name": "direction_requested", "type": "string", "allowed_values": ["increase", "decrease", "unknown"], "description": "Direction user requested" },
+        { "col": 18, "name": "direction_interpreted", "type": "string", "allowed_values": ["increase", "decrease", "unknown"], "description": "Direction system interpreted" },
+        { "col": 19, "name": "direction_applied", "type": "string", "allowed_values": ["increase", "decrease", "unknown"], "description": "Direction actually applied" },
+        { "col": 20, "name": "direction_match", "type": "string", "allowed_values": ["match", "mismatch", "unknown"], "description": "Did direction match user intent?" },
+        { "col": 21, "name": "magnitude_requested", "type": "string", "format": "percentage_or_unknown", "description": "Magnitude user requested (e.g., '20%')" },
+        { "col": 22, "name": "magnitude_applied", "type": "string", "format": "percentage_or_unknown", "description": "Magnitude actually applied (e.g., '15%')" },
+        { "col": 23, "name": "magnitude_match", "type": "string", "allowed_values": ["match", "partial_match", "mismatch", "unknown"], "description": "How well did magnitude match?" },
+        { "col": 24, "name": "patch_success", "type": "string", "allowed_values": ["yes", "partial", "no", "unknown"], "description": "Did this patch satisfy user?" },
+        { "col": 25, "name": "patch_status", "type": "string", "allowed_values": ["success", "failure", "needs_review"], "description": "Status of this patch" },
+        { "col": 26, "name": "failure_type", "type": "string", "description": "Type of failure if applicable" },
+        { "col": 27, "name": "confidence_score", "type": "string", "allowed_values": ["high", "medium", "low"], "description": "Confidence in this interpretation" },
+        { "col": 28, "name": "research_memo", "type": "string", "description": "Research notes about this patch" }
+      ]
+    },
+    {
+      "name": "05-Before After Values",
+      "mode": "upsert",
+      "key_column": "value_check_id",
+      "description": "Verification that variable values actually changed. Records before/after state.",
+      "fields": [
+        { "col": 1, "name": "value_check_id", "type": "string", "required": true, "unique": true, "description": "Unique ID for this check" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "patch_id", "type": "string", "required": true, "description": "Links to 04-Variable Patch Log" },
+        { "col": 4, "name": "variable_name", "type": "string", "description": "Name of variable being checked" },
+        { "col": 5, "name": "before_value", "type": "string", "description": "Actual value before change" },
+        { "col": 6, "name": "after_value", "type": "string", "description": "Actual value after change" },
+        { "col": 7, "name": "difference_value", "type": "string", "description": "Absolute difference" },
+        { "col": 8, "name": "difference_percent", "type": "string", "format": "percentage", "description": "Percent change" },
+        { "col": 9, "name": "expected_change", "type": "string", "description": "What we expected to change" },
+        { "col": 10, "name": "actual_change", "type": "string", "description": "What actually changed" },
+        { "col": 11, "name": "unit", "type": "string", "description": "Unit of measurement" },
+        { "col": 12, "name": "extracted_from", "type": "string", "description": "Where value was extracted (PDF, TeX, CSS, etc.)" },
+        { "col": 13, "name": "extraction_method", "type": "string", "description": "How value was extracted" },
+        { "col": 14, "name": "verified", "type": "string", "allowed_values": ["YES", "NO", "PARTIAL"], "description": "Was change verified?" },
+        { "col": 15, "name": "verification_note", "type": "string", "description": "Notes on verification process" }
+      ]
+    },
+    {
+      "name": "06-Lock Check",
+      "mode": "upsert",
+      "key_column": "lock_check_id",
+      "description": "Verification that unintended variables were NOT changed (lock test).",
+      "fields": [
+        { "col": 1, "name": "lock_check_id", "type": "string", "required": true, "unique": true, "description": "Unique ID for this lock check" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "patch_id", "type": "string", "required": true, "description": "Links to 04-Variable Patch Log" },
+        { "col": 4, "name": "target_variable", "type": "string", "description": "The intended variable to change" },
+        { "col": 5, "name": "locked_variables", "type": "string", "description": "List of variables that should NOT change" },
+        { "col": 6, "name": "locked_before_values", "type": "string", "description": "Before values of locked variables" },
+        { "col": 7, "name": "locked_after_values", "type": "string", "description": "After values of locked variables" },
+        { "col": 8, "name": "unintended_changed_variables", "type": "string", "description": "Any locked variables that DID change" },
+        { "col": 9, "name": "lock_success", "type": "string", "allowed_values": ["YES", "NO", "PARTIAL"], "description": "All locks held?" },
+        { "col": 10, "name": "lock_failure_detail", "type": "string", "description": "Details of any lock failures" },
+        { "col": 11, "name": "severity", "type": "string", "allowed_values": ["low", "medium", "high"], "description": "How severe was the failure?" },
+        { "col": 12, "name": "fix_required", "type": "string", "allowed_values": ["YES", "NO"], "description": "Does this need fixing?" }
+      ]
+    },
+    {
+      "name": "07-Score Breakdown",
+      "mode": "upsert",
+      "key_column": "score_id",
+      "description": "Detailed breakdown of how satisfaction/match scores were calculated.",
+      "fields": [
+        { "col": 1, "name": "score_id", "type": "string", "required": true, "unique": true, "description": "Unique ID for this score record" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "feedback_unit_id", "type": "string", "description": "Links to 03-Feedback Unit Log (if per-unit)" },
+        { "col": 4, "name": "patch_id", "type": "string", "description": "Links to 04-Variable Patch Log (if per-patch)" },
+        { "col": 5, "name": "satisfaction_score", "type": "number", "range": [1, 5], "description": "User satisfaction rating" },
+        { "col": 6, "name": "variable_match_score", "type": "string", "format": "percentage", "description": "Did we interpret the right variable?" },
+        { "col": 7, "name": "direction_match_score", "type": "string", "format": "percentage", "description": "Did we get direction right?" },
+        { "col": 8, "name": "magnitude_match_score", "type": "string", "format": "percentage", "description": "Did we get magnitude right?" },
+        { "col": 9, "name": "lock_success_score", "type": "string", "format": "percentage", "description": "Did we avoid side effects?" },
+        { "col": 10, "name": "actual_patch_score", "type": "string", "format": "percentage", "description": "Did visual result match?" },
+        { "col": 11, "name": "rule_application_score", "type": "string", "format": "percentage", "description": "Did rule apply correctly?" },
+        { "col": 12, "name": "overall_match_score", "type": "string", "format": "percentage", "description": "Combined match score (e.g., '82%')" },
+        { "col": 13, "name": "score_formula", "type": "string", "description": "Formula used to calculate overall score" },
+        { "col": 14, "name": "score_reason", "type": "string", "description": "Explanation of score" }
+      ]
+    },
+    {
+      "name": "08-Failure Analysis",
+      "mode": "append_only",
+      "key_column": "failure_id",
+      "description": "Log of failures and issues encountered. Append-only for complete history.",
+      "fields": [
+        { "col": 1, "name": "failure_id", "type": "string", "required": true, "format": "failure_YYYYMMDD_HHMMSS", "description": "Unique ID for this failure record" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "feedback_unit_id", "type": "string", "description": "Links to 03-Feedback Unit Log" },
+        { "col": 4, "name": "patch_id", "type": "string", "description": "Links to 04-Variable Patch Log" },
+        { "col": 5, "name": "failure_type", "type": "string", "description": "Type of failure (interpretation, application, lock, etc.)" },
+        { "col": 6, "name": "failure_stage", "type": "string", "description": "Where did it fail (parsing, mapping, application, verification)" },
+        { "col": 7, "name": "description", "type": "string", "description": "Description of what went wrong" },
+        { "col": 8, "name": "example_user_feedback", "type": "string", "description": "Example of feedback that triggered this failure" },
+        { "col": 9, "name": "wrong_system_interpretation", "type": "string", "description": "What did system incorrectly interpret?" },
+        { "col": 10, "name": "expected_behavior", "type": "string", "description": "What should have happened" },
+        { "col": 11, "name": "actual_behavior", "type": "string", "description": "What actually happened" },
+        { "col": 12, "name": "severity", "type": "string", "allowed_values": ["low", "medium", "high", "critical"], "description": "How severe is this failure?" },
+        { "col": 13, "name": "fix_required", "type": "string", "allowed_values": ["YES", "NO"], "description": "Does this need fixing?" },
+        { "col": 14, "name": "related_rule_id", "type": "string", "description": "Related rule in 09-Rule Memory" },
+        { "col": 15, "name": "resolved", "type": "string", "allowed_values": ["YES", "NO", "PENDING"], "description": "Has this been resolved?" },
+        { "col": 16, "name": "resolution_note", "type": "string", "description": "How was it resolved?" }
+      ]
+    },
+    {
+      "name": "09-Rule Memory",
+      "mode": "upsert",
+      "key_column": "rule_id",
+      "description": "Learned rules from feedback. Can update success/failure counts.",
+      "fields": [
+        { "col": 1, "name": "rule_id", "type": "string", "required": true, "unique": true, "description": "Unique ID for this rule" },
+        { "col": 2, "name": "variable_name", "type": "string", "required": true, "description": "What variable does this rule control?" },
+        { "col": 3, "name": "variable_group", "type": "string", "description": "Group this variable belongs to" },
+        { "col": 4, "name": "rule_condition", "type": "string", "description": "When does this rule apply?" },
+        { "col": 5, "name": "rule_action", "type": "string", "description": "What does the rule do?" },
+        { "col": 6, "name": "current_rule_value", "type": "string", "description": "Current value enforced by this rule" },
+        { "col": 7, "name": "source_feedback_count", "type": "number", "description": "How many feedback units informed this rule?" },
+        { "col": 8, "name": "success_count", "type": "number", "description": "How many times did this rule succeed?" },
+        { "col": 9, "name": "failure_count", "type": "number", "description": "How many times did this rule fail?" },
+        { "col": 10, "name": "confidence", "type": "string", "allowed_values": ["high", "medium", "low"], "description": "Confidence in this rule" },
+        { "col": 11, "name": "first_created", "type": "string", "format": "ISO8601", "description": "When was this rule first created?" },
+        { "col": 12, "name": "last_updated", "type": "string", "format": "ISO8601", "description": "When was this rule last updated?" },
+        { "col": 13, "name": "example_feedback", "type": "string", "description": "Example feedback that informed this rule" },
+        { "col": 14, "name": "related_experiments", "type": "string", "description": "Experiment IDs that used this rule" },
+        { "col": 15, "name": "rule_description", "type": "string", "description": "Human-readable description of rule" },
+        { "col": 16, "name": "risk_note", "type": "string", "description": "Any risks or edge cases?" },
+        { "col": 17, "name": "active_status", "type": "string", "allowed_values": ["active", "inactive", "deprecated"], "description": "Is this rule currently active?" }
+      ]
+    },
+    {
+      "name": "10-Rule Application Log",
+      "mode": "append_only",
+      "key_column": "rule_application_id",
+      "description": "Each time a rule is loaded and applied. Append-only for complete audit trail.",
+      "fields": [
+        { "col": 1, "name": "rule_application_id", "type": "string", "required": true, "description": "Unique ID for this application record" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "rule_id", "type": "string", "required": true, "description": "Links to 09-Rule Memory" },
+        { "col": 4, "name": "variable_name", "type": "string", "description": "Variable this rule targets" },
+        { "col": 5, "name": "rule_loaded", "type": "string", "allowed_values": ["YES", "NO"], "description": "Was rule successfully loaded?" },
+        { "col": 6, "name": "rule_applied", "type": "string", "allowed_values": ["YES", "NO"], "description": "Was rule successfully applied?" },
+        { "col": 7, "name": "applied_value", "type": "string", "description": "Value applied by the rule" },
+        { "col": 8, "name": "expected_effect", "type": "string", "description": "What effect was expected?" },
+        { "col": 9, "name": "actual_effect", "type": "string", "description": "What effect actually happened?" },
+        { "col": 10, "name": "application_success", "type": "string", "allowed_values": ["yes", "no", "partial"], "description": "Did application succeed?" },
+        { "col": 11, "name": "failure_reason", "type": "string", "description": "If failed, why?" },
+        { "col": 12, "name": "note", "type": "string", "description": "Additional notes" }
+      ]
+    },
+    {
+      "name": "11-Research Coding",
+      "mode": "append_only",
+      "key_column": "coding_id",
+      "description": "Research categories and tacit knowledge coding. For analysis and pattern discovery.",
+      "fields": [
+        { "col": 1, "name": "coding_id", "type": "string", "required": true, "format": "coding_YYYYMMDD_HHMMSS", "description": "Unique ID for this coding record" },
+        { "col": 2, "name": "experiment_id", "type": "string", "required": true, "description": "Links to 02-Experiment Summary" },
+        { "col": 3, "name": "feedback_unit_id", "type": "string", "description": "Links to 03-Feedback Unit Log" },
+        { "col": 4, "name": "patch_id", "type": "string", "description": "Links to 04-Variable Patch Log" },
+        { "col": 5, "name": "research_category", "type": "string", "description": "Research classification (e.g., typography, layout, color, etc.)" },
+        { "col": 6, "name": "design_tacit_knowledge_type", "type": "string", "description": "Type of tacit knowledge (aesthetic, technical, cultural, etc.)" },
+        { "col": 7, "name": "user_language_type", "type": "string", "description": "How user expressed it (quantitative, metaphorical, emotional, etc.)" },
+        { "col": 8, "name": "design_decision_level", "type": "string", "description": "Level of decision (pixel, component, page, document)" },
+        { "col": 9, "name": "interpretation_result", "type": "string", "description": "Result of interpretation process" },
+        { "col": 10, "name": "operational_result", "type": "string", "description": "Result of operational implementation" },
+        { "col": 11, "name": "research_quote", "type": "string", "description": "Relevant quote from feedback" },
+        { "col": 12, "name": "memo", "type": "string", "description": "Research memo and insights" }
+      ]
+    },
+    {
+      "name": "12-Variable Dictionary",
+      "mode": "upsert",
+      "key_column": "variable_name",
+      "description": "Complete dictionary of all variables. Can be updated with new expressions.",
+      "fields": [
+        { "col": 1, "name": "variable_name", "type": "string", "required": true, "unique": true, "description": "Name of the variable (e.g., 'margin_top', 'font_size_body')" },
+        { "col": 2, "name": "variable_group", "type": "string", "description": "Group (margin, font, color, layout, etc.)" },
+        { "col": 3, "name": "description", "type": "string", "description": "What does this variable control?" },
+        { "col": 4, "name": "possible_user_expressions", "type": "string", "description": "Ways users might refer to this (comma-separated)" },
+        { "col": 5, "name": "unit", "type": "string", "description": "Unit of measurement (pt, px, %, em, mm, etc.)" },
+        { "col": 6, "name": "allowed_range", "type": "string", "description": "Valid range (e.g., '0-100%' or '8pt-72pt')" },
+        { "col": 7, "name": "default_value", "type": "string", "description": "Default value in system" },
+        { "col": 8, "name": "related_latex_command", "type": "string", "description": "Related LaTeX command (if applicable)" },
+        { "col": 9, "name": "related_css_or_style_key", "type": "string", "description": "Related CSS key or style setting" },
+        { "col": 10, "name": "common_failure_type", "type": "string", "description": "Common types of failures for this variable" },
+        { "col": 11, "name": "example_feedback", "type": "string", "description": "Example user feedback for this variable" },
+        { "col": 12, "name": "note", "type": "string", "description": "Additional notes" }
+      ]
+    },
+    {
+      "name": "13-Auto Input Schema",
+      "mode": "upsert",
+      "key_column": "field_name",
+      "description": "Schema definition for input fields. Updated as system learns.",
+      "fields": [
+        { "col": 1, "name": "field_name", "type": "string", "required": true, "unique": true, "description": "Name of input field (e.g., 'input_title', 'genre_hint')" },
+        { "col": 2, "name": "target_sheet", "type": "string", "description": "Which sheet stores this field?" },
+        { "col": 3, "name": "required", "type": "string", "allowed_values": ["YES", "NO"], "description": "Is this field required?" },
+        { "col": 4, "name": "data_type", "type": "string", "description": "Data type (string, number, date, etc.)" },
+        { "col": 5, "name": "allowed_values", "type": "string", "description": "Allowed values if enum (comma-separated)" },
+        { "col": 6, "name": "auto_generated", "type": "string", "allowed_values": ["YES", "NO"], "description": "Is value auto-generated by system?" },
+        { "col": 7, "name": "source", "type": "string", "description": "Where does value come from?" },
+        { "col": 8, "name": "example", "type": "string", "description": "Example value" },
+        { "col": 9, "name": "note", "type": "string", "description": "Additional notes" }
+      ]
+    },
+    {
+      "name": "14-Legacy Migration Map",
+      "mode": "append_only",
+      "key_column": "legacy_id",
+      "description": "Mapping of legacy data from 02-Feedback Test Log to new 14-tab structure.",
+      "fields": [
+        { "col": 1, "name": "legacy_id", "type": "string", "required": true, "description": "ID in legacy sheet (e.g., 'legacy_0001')" },
+        { "col": 2, "name": "legacy_row", "type": "number", "description": "Row number in legacy sheet" },
+        { "col": 3, "name": "new_experiment_id", "type": "string", "description": "Mapped experiment_id in new system" },
+        { "col": 4, "name": "new_raw_id", "type": "string", "description": "Mapped raw_id in new system" },
+        { "col": 5, "name": "migration_status", "type": "string", "allowed_values": ["completed", "partial", "failed", "not_migrated"], "description": "Status of migration" },
+        { "col": 6, "name": "migration_note", "type": "string", "description": "Notes about migration" },
+        { "col": 7, "name": "data_integrity_check", "type": "string", "allowed_values": ["pass", "warning", "fail"], "description": "Was data integrity verified?" },
+        { "col": 8, "name": "verification_detail", "type": "string", "description": "Details of verification" }
+      ]
+    }
+  ],
+  "validation_rules": {
+    "experiment_id_uniqueness": "Each new experiment_id must be unique (never duplicate). Format: exp_YYYYMMDD_HHMMSS",
+    "append_only": "Sheets 01, 03, 08, 10, 11, 14 must only append, never update existing rows. Row deletes only for data correction.",
+    "upsert_allowed": "Sheets 02, 04, 05, 06, 07, 09, 12, 13 can upsert (update if exists, append if new).",
+    "percentage_format": "All percentage values must be 'XX%' format (integer, no decimals, e.g., '75%' not '75.5%'). Exception: 'unknown' is allowed.",
+    "percentage_or_unknown": "Allow both 'XX%' format and the literal string 'unknown'",
+    "id_format": "All IDs must follow their specified format exactly. Use padding with zeros as specified.",
+    "no_data_corruption": "Existing rows must NEVER be overwritten, especially legacy_000xx rows in old sheet.",
+    "referential_integrity": "All foreign keys (experiment_id, raw_id, feedback_unit_id, patch_id, rule_id) must reference existing records.",
+    "timestamp_consistency": "All ISO8601 timestamps must be consistent within same experiment.",
+    "numeric_ranges": "Satisfaction scores must be 1-5. Match scores 0-100%.",
+    "enum_strict": "Enum fields must contain ONLY allowed values, no variations or typos."
+  },
+  "test_cases": [
+    {
+      "name": "Append only verification",
+      "description": "New data appends after existing rows, no overwrites",
+      "sheets_affected": ["01-Raw Experiment Log", "03-Feedback Unit Log", "08-Failure Analysis", "10-Rule Application Log", "11-Research Coding", "14-Legacy Migration Map"],
+      "expected": "Row 62+ contains new data, rows 1-61 unchanged"
+    },
+    {
+      "name": "ID uniqueness",
+      "description": "Each experiment generates unique experiment_id",
+      "sheets_affected": ["02-Experiment Summary"],
+      "expected": "No duplicate experiment_ids across different feedback submissions"
+    },
+    {
+      "name": "Feedback unit count match",
+      "description": "If feedback has N sentences, exactly N rows in 03-Feedback Unit Log",
+      "sheets_affected": ["02-Experiment Summary", "03-Feedback Unit Log"],
+      "expected": "feedback_count in 02-Summary equals rows in 03-Feedback Unit Log for that experiment"
+    },
+    {
+      "name": "Patch count match",
+      "description": "If N feedback units map to M patches, exactly M rows in 04-Variable Patch Log",
+      "sheets_affected": ["02-Experiment Summary", "04-Variable Patch Log"],
+      "expected": "patch_count in 02-Summary equals rows in 04-Variable Patch Log for that experiment"
+    },
+    {
+      "name": "Referential integrity",
+      "description": "All foreign keys point to existing records",
+      "sheets_affected": ["All sheets"],
+      "expected": "Every experiment_id exists in 02-Experiment Summary, every feedback_unit_id exists in 03-Feedback Unit Log, etc."
+    },
+    {
+      "name": "Percentage format consistency",
+      "description": "All percentage fields use 'XX%' format",
+      "sheets_affected": ["02-Experiment Summary", "04-Variable Patch Log", "05-Before After Values", "07-Score Breakdown"],
+      "expected": "All percentages match regex /^\\d{1,3}%$/ or 'unknown'"
+    },
+    {
+      "name": "Legacy migration completeness",
+      "description": "All legacy data migrated with mapping",
+      "sheets_affected": ["02-Feedback Test Log", "14-Legacy Migration Map"],
+      "expected": "Every legacy_000xx row has corresponding entry in migration map"
+    }
+  ],
+  "field_relationships": {
+    "experiment_id": "Foreign key reference in all sheets. Primary identifier for grouping data.",
+    "raw_id": "References 01-Raw Experiment Log. One raw record per feedback submission.",
+    "feedback_unit_id": "References 03-Feedback Unit Log. Multiple per raw record.",
+    "patch_id": "References 04-Variable Patch Log. May have 0-N per feedback unit.",
+    "rule_id": "References 09-Rule Memory. Applied in 10-Rule Application Log.",
+    "variable_name": "References 12-Variable Dictionary. Core controlled parameter."
+  },
+  "data_flow": {
+    "step1": "User submits feedback → 01-Raw Experiment Log + 02-Experiment Summary (new row)",
+    "step2": "System parses feedback → 03-Feedback Unit Log (1+ rows per feedback)",
+    "step3": "System interprets units → 04-Variable Patch Log (0+ rows per unit)",
+    "step4": "System applies patches → 05-Before After Values (verification)",
+    "step5": "System checks for side effects → 06-Lock Check (validation)",
+    "step6": "System scores result → 07-Score Breakdown + update 02-Experiment Summary",
+    "step7": "System logs failures if any → 08-Failure Analysis (append-only)",
+    "step8": "System applies/updates rules → 09-Rule Memory, 10-Rule Application Log",
+    "step9": "Researcher codes insights → 11-Research Coding (append-only)",
+    "step10": "System tracks variables → 12-Variable Dictionary (upsert)",
+    "step11": "System maintains input schema → 13-Auto Input Schema (upsert)"
+  },
+  "migration_notes": {
+    "legacy_sheet": "02-Feedback Test Log",
+    "legacy_preserve": "Keep as read-only archive. Do NOT delete.",
+    "migration_script": "apps-script.gs::migrateFromFeedbackTestLog()",
+    "legacy_mapping": "Documented in 14-Legacy Migration Map with row-by-row verification"
+  }
+}
