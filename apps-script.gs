@@ -295,7 +295,7 @@ function doPost(e) {
     var config = SHEET_CONFIG[sheetKey];
     if (!config) return ContentService.createTextOutput('unknown sheet: ' + sheetKey);
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = getOrCreateSheet(ss, config.name);
 
     var payload = Object.assign({}, data);
