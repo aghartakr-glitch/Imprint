@@ -155,6 +155,24 @@ function findUpsertRow(sheet, keyCol, keyValue) {
   return -1;
 }
 
+function getNextAppendRowByKey(sheet, keyColumnIndex) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 2; // 헤더(1행)만 있으면 2행부터 시작
+
+  var values = sheet.getRange(2, keyColumnIndex, lastRow - 1, 1).getValues();
+  var lastDataRow = 1;
+
+  for (var i = values.length - 1; i >= 0; i--) {
+    var value = values[i][0];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      lastDataRow = i + 2;
+      break;
+    }
+  }
+
+  return lastDataRow + 1;
+}
+
 function getOrCreateSheet(ss, name) {
   var s = ss.getSheetByName(name);
   if (!s) s = ss.insertSheet(name);
