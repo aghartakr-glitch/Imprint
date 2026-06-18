@@ -816,7 +816,9 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
       const m = up.match(/(\d+)/);
       if (m) parsedValue = parseInt(m[1]);
     } else if (v === 'font_style' || v === 'footnote_font' || v === 'running_head_font' || v === 'heading_font') {
-      if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
+      if (/본문과?\s*(동일|같이|같게|같은)|body\s*font|same.*body/i.test(up)) parsedValue = 'same_as_body';
+      else if (/제목과?\s*(동일|같이|같게|같은)|heading\s*font|same.*heading/i.test(up)) parsedValue = 'same_as_heading';
+      else if (/고딕|gothic|sans/i.test(up)) parsedValue = 'gothic';
       else if (/명조|serif|부리/i.test(up)) parsedValue = 'serif';
     } else if (v === 'heading_layout') {
       if (/중앙|가운데|center/i.test(up)) parsedValue = 'center';
