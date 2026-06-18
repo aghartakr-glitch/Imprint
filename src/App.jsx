@@ -290,6 +290,57 @@ function extractUnit(text) {
   return '';
 }
 
+// ── Feedback to Patch Mapping: 피드백을 타이포 변수로 변환 ──────────
+// 사용자 피드백을 구조화된 패치 객체로 변환 (변수, 방향, 크기, 신뢰도)
+
+function mapFeedbackToPatch(feedbackUnit, systemRules) {
+  const snippet = feedbackUnit.snippet;
+  const patches = [];
+
+  const variableMappings = {
+    '각주 행간|footnote.*leading|주석.*행간': { var: 'footnote_leading', group: 'footnote' },
+    '각주 크기|footnote.*size|주석.*크기': { var: 'footnote_size', group: 'footnote' },
+    '각주 번호 크기|marker.*size|주석.*번호': { var: 'footnote_marker_size', group: 'footnote' },
+    '제목.*소제목.*간격|제목.*gap|heading.*gap': { var: 'heading_gap', group: 'heading' },
+    '제목 크기|h1.*size|heading.*1.*size': { var: 'heading_h1_size', group: 'heading' },
+    '소제목 크기|h2.*size|heading.*2.*size': { var: 'heading_h2_size', group: 'heading' },
+    '본문 행간|body.*leading|본문.*라인': { var: 'body_leading', group: 'body_text' },
+    '본문 크기|body.*size|글자.*크기': { var: 'body_size', group: 'body_text' },
+    '여백|margin|마진': { var: 'margin_all', group: 'margin' },
+    '단수|2단|column.*count|다단': { var: 'column_count', group: 'column' },
+  };
+
+  for (const [pattern, mapping] of Object.entries(variableMappings)) {
+    if (new RegExp(pattern, 'i').test(snippet)) {
+      const direction = /늘려|증가|크게|높혀|높이|높여|상향|확대/.test(snippet) ? 'increase' : 'decrease';
+      const magnitude = feedbackUnit.numeric_raw || 'unknown';
+
+      patches.push({
+        interpreted_variable: mapping.var,
+        intended_variable: mapping.var,
+        group: mapping.group,
+        direction_requested: direction,
+        magnitude_requested: normalizePercentage(magnitude),
+        confidence: 'high'
+      });
+      break;
+    }
+  }
+
+  if (patches.length === 0) {
+    patches.push({
+      interpreted_variable: 'unknown',
+      intended_variable: 'unknown',
+      group: 'unknown',
+      direction_requested: 'unknown',
+      magnitude_requested: 'unknown',
+      confidence: 'low'
+    });
+  }
+
+  return patches;
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
