@@ -7207,7 +7207,10 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                             <option value="footnote_leading">각주 행간</option>
                             <option value="column_gap">단 간격</option>
                             <option value="folio_size">쪽번호 크기</option>
-                            <option value="font_style">서체 스타일</option>
+                            <option value="font_style">본문 서체 (고딕/명조)</option>
+                            <option value="heading_font">제목 서체 (고딕/명조)</option>
+                            <option value="footnote_font">각주 서체 (고딕/명조)</option>
+                            <option value="running_head_font">면주·쪽번호 서체 (고딕/명조)</option>
                             <option value="paragraph_spacing">문단 간격</option>
                             <option value="__custom__">기타 (직접 입력)</option>
                           </select>
