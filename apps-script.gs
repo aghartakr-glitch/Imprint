@@ -388,7 +388,7 @@ function migrateFromFeedbackTestLog() {
 // ── 쓰레기 컬럼 삭제 (기존 AP+ 열) ─────────────────────────────
 
 function cleanupExtraColumns() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName('02-Feedback Test Log');
   if (!sheet) { Logger.log('02-Feedback Test Log 없음'); return; }
 
