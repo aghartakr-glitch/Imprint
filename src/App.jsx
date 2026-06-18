@@ -443,9 +443,9 @@ function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore
 // 14개 탭에 구조화된 형태로 append/upsert 모드로 기록
 
 async function sendPayloadToSheet(payload) {
-  if (!payload || !payload.experiment_id) {
-    console.error('Invalid payload');
-    return { status: 'error', message: 'Invalid payload' };
+  if (!payload || !payload.experiment_id || !payload.raw_log) {
+    console.error('Invalid payload:', payload);
+    return { status: 'error', message: 'Invalid payload - missing required fields' };
   }
 
   const sheetRecordOrder = [
