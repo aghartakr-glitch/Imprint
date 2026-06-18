@@ -476,8 +476,7 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
     }
     if (parsedValue === null) continue;
 
-    // history 추가 (최대 10개)
-    rule.history = [...(rule.history || []), { value: parsedValue, weight, timestamp: now }].slice(-10);
+    rule.history = [...(rule.history || []), { value: parsedValue, weight, timestamp: now }];
     rule.weighted_count = rule.history.reduce((s, h) => s + h.weight, 0);
 
     // 카테고리형은 최다 weighted, 수치형은 최신값 우선 (즉시 반영)
@@ -1947,6 +1946,30 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   return lines.join('\n');
 }
 
+function normalizeHeadingGapVspaces(latex = '') {
+  let s = String(latex || '');
+  const nextHeading = /^(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/;
+
+  // Heading -> heading: hardcoded pt or body-gap macro must become heading-gap macro.
+  s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\par}\\vspace{\\imprintheadinggap}$1');
+  s = s.replace(/\\vspace\{\\imprintbodygap\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\vspace{\\imprintheadinggap}$1');
+
+  // Heading -> body: all remaining hardcoded heading vspaces become body-gap macro.
+  s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
+
+  // If a heading-gap macro is followed by body text, demote it to body-gap.
+  s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*)/g, (m, ws, offset, full) => {
+    const after = full.slice(offset + m.length);
+    return nextHeading.test(ws + after) ? m : `\\vspace{\\imprintbodygap}${ws}`;
+  });
+
+  // Empty-line-only gaps after heading blocks.
+  s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*(?:\\Needspace\{[^}]+\}\s*\n\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
+  s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
+
+  return s;
+}
+
 function buildMissingBodyPlaceholder() {
   return [
     '% ============================================================',
@@ -3123,8 +3146,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const dbLead = corrections.bl || p.b.행간;
       const minLead = Math.round(bodySize * TYPO_BASE.leadingRatio(bodySize) * 10) / 10;
       const bodyLead = (dbLead && dbLead / bodySize >= 1.3) ? dbLead : minLead;
-      const hasFootnote = p.footnote && p.footnote !== '-';
-      let fnSize = hasFootnote ? parseFloat(p.footnote.replace('pt','')) : 8;
+      const refFootnoteSize = (p.footnote && p.footnote !== '-')
+        ? parseFloat(String(p.footnote).replace('pt',''))
+        : 8;
+      const hasFootnote = !!((p.footnote && p.footnote !== '-') || hasFootnoteText || hasFootnoteMarkers);
+      let fnSize = Number.isFinite(refFootnoteSize) ? refFootnoteSize : 8;
       // 각주는 본문보다 작으므로 행간 비율 더 크게
       let fnLead = Math.round(fnSize * TYPO_BASE.leadingRatio(fnSize) * 10) / 10;
       // 규칙 적용: fnLead 먼저 적용 → fnSize 적용 (의존성 끊기)
@@ -3633,6 +3659,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : '',
         // \notef: 주석 컬럼용 서체 커맨드 (DB footnote 크기 기반, pn_font로 명조/고딕 결정)
         `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\providecommand{\\foottextfont}{\\footnotesize}`,
+        `\\renewcommand{\\foottextfont}{\\notef}`,
         `\\newcommand{\\ImpNoteLabel}[1]{${_footnoteMarkerFormat === 'bracket' ? '[#1]\\ ' : '#1.\\ '}}`,
         // 각주 N단 지원: fields.각주단 >= 2이면 bigfoot 패키지로 다단 각주 구성
         (() => {
@@ -3895,6 +3923,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `\\renewcommand{\\footnoterule}{}`,
         hasFootnote ? `\\renewcommand{\\footnotesize}{\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}` : null,
         `\\newcommand{\\notef}{\\sffamily\\fontsize{${fnSize}pt}{${fnLead}pt}\\selectfont}`,
+        `\\providecommand{\\foottextfont}{\\footnotesize}`,
+        `\\renewcommand{\\foottextfont}{\\notef}`,
         // 각주 N단: fields.각주단 >= 2이면 bigfoot(sty 내 \RequirePackage), 아니면 1단
         (() => {
           const fnCols = parseInt(fields.각주단 || '1', 10);
@@ -4106,23 +4136,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
             }
           }
 
-          // ── 헤딩 간격 패치 ─────────────────────────────────────────
-          // 실제 생성 패턴: {\noindent\hone...\par}\vspace{...}\n{\noindent\htwo...}
-          // legacy 패턴: \noindent{\hone...} 도 함께 지원
-          // 헤딩↔헤딩: \par}\vspace{Xpt} 다음에 또 헤딩
-          // 헤딩↔헤딩: 같은 줄 또는 줄바꿈 모두 지원 (\s*가 \n 포함)
-          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\par}\\vspace{\\imprintheadinggap}$1');
-          // 기존 body gap 매크로가 헤딩 앞에 있으면 heading gap으로 승격
-          s = s.replace(/\\vspace\{\\imprintbodygap\}(\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '\\vspace{\\imprintheadinggap}$1');
-          // 헤딩↔본문: 나머지 \par}\vspace{Xpt} (hardcoded pt값 → \imprintbodygap)
-          s = s.replace(/\\par\}\\vspace\{[\d.]+pt\}/g, '\\par}\\vspace{\\imprintbodygap}');
-          // 이미 \imprintheadinggap인데 본문 앞인 경우 (blank line 포함 — \s* lookahead 필수)
-          s = s.replace(/\\vspace\{\\imprintheadinggap\}(\s*(?!\s*(?:\\Needspace\{[^}]+\}\s*)?(?:\{\\noindent\\h|\\noindent\{\\h)))/g, '\\vspace{\\imprintbodygap}$1');
-          // 빈 줄만 있는 케이스: 헤딩↔헤딩
-          s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n(\s*(?:\\Needspace\{[^}]+\}\s*\n\s*)?(?:\{\\noindent\\h|\\noindent\{\\h))/g, '$1\n\\vspace{\\imprintheadinggap}\n\n$2');
-          // 빈 줄만 있는 케이스: 헤딩↔본문
-          s = s.replace(/(\{(?:\\noindent)?\\(?:hone|htwo|hthree)[^}]*\\par\})\n\n/g, '$1\n\\vspace{\\imprintbodygap}\n\n');
-          return s;
+          return normalizeHeadingGapVspaces(s);
         });
         pushLog('latex', 'LaTeX 생성', 'done', '학습 규칙으로 sty/main.tex 패치 완료');
         setMatching(false);
@@ -4852,6 +4866,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
             }
           }
         }
+
+        finalMainTex = normalizeHeadingGapVspaces(finalMainTex);
 
         // LaTeX 구조 검증 (sanitize 후 검증)
         const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent, layoutConfig: styleConfig });
