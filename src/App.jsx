@@ -207,6 +207,27 @@ function generateRuleApplicationId(experimentId, applicationIndex) {
   return `${experimentId}_ra${String(applicationIndex + 1).padStart(2, '0')}`;
 }
 
+// ── Percentage Normalization Utility ─────────────────────────────────────
+// Normalizes percentage values to consistent format: always as integers with % symbol
+
+function normalizePercentage(value) {
+  // Handle string inputs
+  if (typeof value === 'string') {
+    const match = value.match(/-?\d+(?:\.\d+)?/);
+    if (!match) return 'unknown';
+    value = parseFloat(match[0]);
+  } else if (typeof value === 'number') {
+    // Handle number inputs - use directly
+  } else {
+    // Handle invalid inputs (null, undefined, objects, etc)
+    return 'unknown';
+  }
+
+  // Round to nearest integer
+  const rounded = Math.round(value);
+  return `${rounded}%`;
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
