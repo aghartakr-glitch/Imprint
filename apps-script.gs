@@ -265,6 +265,29 @@ function getOrCreateSheet(ss, name) {
 
 function doPost(e) {
   try {
+    var path = e.parameter.path || '';
+
+    // Handle /api/sheet-record endpoint
+    if (path === '/api/sheet-record') {
+      var data = JSON.parse(e.postData.contents);
+      var sheetName = data.sheetName;
+      var rowValues = data.rowValues;
+      var mode = data.mode || 'append';
+      var keyValue = data.keyValue;
+      var keyColumnIndex = data.keyColumnIndex || 1;
+
+      if (!sheetName || !rowValues) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ status: 'error', message: 'Missing sheetName or rowValues' })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var result = writeToSheet(sheetName, rowValues, mode, keyValue, keyColumnIndex);
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Existing logic for other endpoints...
     var data = JSON.parse(e.postData.contents);
     var sheetKey = data.sheet || 'raw_log';
     var config = SHEET_CONFIG[sheetKey];
