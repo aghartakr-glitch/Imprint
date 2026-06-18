@@ -396,3 +396,550 @@ function cleanupExtraColumns() {
   sheet.deleteColumns(43, last - 42);
   Logger.log('삭제 완료: ' + (last - 42) + '열 제거 (43~' + last + ')');
 }
+
+// ── 데이터 유효성 검증 함수 ─────────────────────────────────────
+
+/**
+ * Main validation function for sheet data based on schema
+ * @param {string} sheetName - Name of the sheet
+ * @param {Object} rowData - Object with field names as keys
+ * @returns {Object} { valid: boolean, errors: array<string> }
+ */
+function validateSheetData(sheetName, rowData) {
+  var errors = [];
+
+  if (!sheetName) {
+    errors.push('Sheet name is required');
+    return { valid: false, errors: errors };
+  }
+
+  // Validate based on sheet type
+  switch(sheetName) {
+    case '01-Raw Experiment Log':
+      errors = errors.concat(validate_01_RawLog(rowData));
+      break;
+    case '02-Experiment Summary':
+      errors = errors.concat(validate_02_ExpSummary(rowData));
+      break;
+    case '03-Feedback Unit Log':
+      errors = errors.concat(validate_03_FeedbackUnit(rowData));
+      break;
+    case '04-Variable Patch Log':
+      errors = errors.concat(validate_04_VariablePatch(rowData));
+      break;
+    case '05-Before After Values':
+      errors = errors.concat(validate_05_BeforeAfter(rowData));
+      break;
+    case '06-Lock Check':
+      errors = errors.concat(validate_06_LockCheck(rowData));
+      break;
+    case '07-Score Breakdown':
+      errors = errors.concat(validate_07_ScoreBreakdown(rowData));
+      break;
+    case '08-Failure Analysis':
+      errors = errors.concat(validate_08_FailureAnalysis(rowData));
+      break;
+    case '09-Rule Memory':
+      errors = errors.concat(validate_09_RuleMemory(rowData));
+      break;
+    case '10-Rule Application Log':
+      errors = errors.concat(validate_10_RuleApplication(rowData));
+      break;
+    case '11-Research Coding':
+      errors = errors.concat(validate_11_ResearchCoding(rowData));
+      break;
+    case '12-Variable Dictionary':
+      errors = errors.concat(validate_12_VariableDict(rowData));
+      break;
+    case '13-Auto Input Schema':
+      errors = errors.concat(validate_13_AutoSchema(rowData));
+      break;
+    case '14-Legacy Migration Map':
+      errors = errors.concat(validate_14_LegacyMap(rowData));
+      break;
+    default:
+      errors.push('Unknown sheet: ' + sheetName);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors,
+    sheetName: sheetName
+  };
+}
+
+// ── Individual Sheet Validators ──────────────────────────────────
+
+function validate_01_RawLog(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.raw_id) errors.push('01: raw_id is required');
+  if (!data.experiment_id) errors.push('01: experiment_id is required');
+  if (!data.source) errors.push('01: source is required');
+  if (!data.user_feedback_raw) errors.push('01: user_feedback_raw is required');
+
+  // Format validation
+  if (data.raw_id && !/^raw_\d{8}_\d{6}$/.test(data.raw_id)) {
+    errors.push('01: raw_id must match format raw_YYYYMMDD_HHMMSS, got: ' + data.raw_id);
+  }
+  if (data.experiment_id && !/^exp_\d{8}_\d{6}$/.test(data.experiment_id)) {
+    errors.push('01: experiment_id must match format exp_YYYYMMDD_HHMMSS, got: ' + data.experiment_id);
+  }
+
+  // Enum validation
+  var allowed_sources = ['feedback_apply_button', 'migrated_from_02'];
+  if (data.source && allowed_sources.indexOf(String(data.source)) === -1) {
+    errors.push('01: source must be one of: ' + allowed_sources.join(', '));
+  }
+
+  // Range validation
+  if (data.satisfaction_score) {
+    var score = parseInt(data.satisfaction_score);
+    if (isNaN(score) || score < 1 || score > 5) {
+      errors.push('01: satisfaction_score must be 1-5, got: ' + data.satisfaction_score);
+    }
+  }
+
+  return errors;
+}
+
+function validate_02_ExpSummary(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.experiment_id) errors.push('02: experiment_id is required');
+
+  // Format validation
+  if (data.experiment_id && !/^exp_\d{8}_\d{6}$/.test(data.experiment_id)) {
+    errors.push('02: experiment_id must match format exp_YYYYMMDD_HHMMSS');
+  }
+
+  // Range validation
+  if (data.satisfaction_score) {
+    var score = parseInt(data.satisfaction_score);
+    if (isNaN(score) || score < 1 || score > 5) {
+      errors.push('02: satisfaction_score must be 1-5');
+    }
+  }
+
+  // Enum validation
+  if (data.overall_status) {
+    var allowed = ['success', 'partial_success', 'failure', 'not_verified'];
+    if (allowed.indexOf(String(data.overall_status)) === -1) {
+      errors.push('02: overall_status must be one of: ' + allowed.join(', '));
+    }
+  }
+
+  // Percentage format
+  if (data.overall_match_score) {
+    if (!validatePercentageFormat(data.overall_match_score)) {
+      errors.push('02: overall_match_score must be XX% format or "unknown", got: ' + data.overall_match_score);
+    }
+  }
+
+  return errors;
+}
+
+function validate_03_FeedbackUnit(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.feedback_unit_id) errors.push('03: feedback_unit_id is required');
+  if (!data.experiment_id) errors.push('03: experiment_id is required');
+  if (!data.raw_id) errors.push('03: raw_id is required');
+  if (data.feedback_order === undefined) errors.push('03: feedback_order is required');
+  if (!data.feedback_snippet) errors.push('03: feedback_snippet is required');
+  if (!data.is_numeric_feedback) errors.push('03: is_numeric_feedback is required');
+
+  // Enum validation
+  if (data.is_numeric_feedback && ['YES', 'NO'].indexOf(String(data.is_numeric_feedback)) === -1) {
+    errors.push('03: is_numeric_feedback must be YES or NO');
+  }
+
+  if (data.feedback_type) {
+    var allowed = ['direct_numeric', 'problem_description', 'preference', 'other'];
+    if (allowed.indexOf(String(data.feedback_type)) === -1) {
+      errors.push('03: feedback_type must be one of: ' + allowed.join(', '));
+    }
+  }
+
+  if (data.design_issue_area) {
+    var allowed = ['margin', 'heading', 'footnote', 'body_text', 'column', 'overall_layout'];
+    if (allowed.indexOf(String(data.design_issue_area)) === -1) {
+      errors.push('03: design_issue_area must be one of: ' + allowed.join(', '));
+    }
+  }
+
+  if (data.ambiguity_level) {
+    var allowed = ['clear', 'somewhat_clear', 'ambiguous', 'contradictory'];
+    if (allowed.indexOf(String(data.ambiguity_level)) === -1) {
+      errors.push('03: ambiguity_level must be one of: ' + allowed.join(', '));
+    }
+  }
+
+  if (data.needs_user_confirmation && ['YES', 'NO'].indexOf(String(data.needs_user_confirmation)) === -1) {
+    errors.push('03: needs_user_confirmation must be YES or NO');
+  }
+
+  return errors;
+}
+
+function validate_04_VariablePatch(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.patch_id) errors.push('04: patch_id is required');
+  if (!data.experiment_id) errors.push('04: experiment_id is required');
+  if (!data.feedback_unit_id) errors.push('04: feedback_unit_id is required');
+
+  // Enum validation
+  if (data.direction_requested && ['increase', 'decrease', 'unknown'].indexOf(String(data.direction_requested)) === -1) {
+    errors.push('04: direction_requested must be increase/decrease/unknown');
+  }
+
+  if (data.direction_interpreted && ['increase', 'decrease', 'unknown'].indexOf(String(data.direction_interpreted)) === -1) {
+    errors.push('04: direction_interpreted must be increase/decrease/unknown');
+  }
+
+  if (data.direction_applied && ['increase', 'decrease', 'unknown'].indexOf(String(data.direction_applied)) === -1) {
+    errors.push('04: direction_applied must be increase/decrease/unknown');
+  }
+
+  if (data.direction_match && ['match', 'mismatch', 'unknown'].indexOf(String(data.direction_match)) === -1) {
+    errors.push('04: direction_match must be match/mismatch/unknown');
+  }
+
+  if (data.confidence_score && ['high', 'medium', 'low'].indexOf(String(data.confidence_score)) === -1) {
+    errors.push('04: confidence_score must be high/medium/low');
+  }
+
+  if (data.patch_success && ['yes', 'partial', 'no', 'unknown'].indexOf(String(data.patch_success)) === -1) {
+    errors.push('04: patch_success must be yes/partial/no/unknown');
+  }
+
+  // Percentage format
+  if (data.magnitude_requested && !validatePercentageFormat(data.magnitude_requested)) {
+    errors.push('04: magnitude_requested must be XX% format or "unknown"');
+  }
+  if (data.magnitude_applied && !validatePercentageFormat(data.magnitude_applied)) {
+    errors.push('04: magnitude_applied must be XX% format or "unknown"');
+  }
+
+  return errors;
+}
+
+function validate_05_BeforeAfter(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.value_check_id) errors.push('05: value_check_id is required');
+  if (!data.experiment_id) errors.push('05: experiment_id is required');
+  if (!data.patch_id) errors.push('05: patch_id is required');
+
+  // Enum validation
+  if (data.verified && ['YES', 'NO', 'PARTIAL'].indexOf(String(data.verified)) === -1) {
+    errors.push('05: verified must be YES/NO/PARTIAL');
+  }
+
+  return errors;
+}
+
+function validate_06_LockCheck(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.lock_check_id) errors.push('06: lock_check_id is required');
+  if (!data.experiment_id) errors.push('06: experiment_id is required');
+  if (!data.patch_id) errors.push('06: patch_id is required');
+
+  // Enum validation
+  if (data.lock_success && ['YES', 'NO', 'PARTIAL'].indexOf(String(data.lock_success)) === -1) {
+    errors.push('06: lock_success must be YES/NO/PARTIAL');
+  }
+
+  if (data.severity && ['low', 'medium', 'high'].indexOf(String(data.severity)) === -1) {
+    errors.push('06: severity must be low/medium/high');
+  }
+
+  if (data.fix_required && ['YES', 'NO'].indexOf(String(data.fix_required)) === -1) {
+    errors.push('06: fix_required must be YES/NO');
+  }
+
+  return errors;
+}
+
+function validate_07_ScoreBreakdown(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.score_id) errors.push('07: score_id is required');
+  if (!data.experiment_id) errors.push('07: experiment_id is required');
+
+  // Range validation
+  if (data.satisfaction_score) {
+    var score = parseInt(data.satisfaction_score);
+    if (isNaN(score) || score < 1 || score > 5) {
+      errors.push('07: satisfaction_score must be 1-5');
+    }
+  }
+
+  // Percentage format validation
+  var percent_fields = ['variable_match_score', 'direction_match_score', 'magnitude_match_score', 'lock_success_score', 'actual_patch_score', 'rule_application_score', 'overall_match_score'];
+  percent_fields.forEach(function(field) {
+    if (data[field] && !validatePercentageFormat(data[field])) {
+      errors.push('07: ' + field + ' must be XX% format or "unknown"');
+    }
+  });
+
+  return errors;
+}
+
+function validate_08_FailureAnalysis(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.failure_id) errors.push('08: failure_id is required');
+  if (!data.experiment_id) errors.push('08: experiment_id is required');
+
+  // Enum validation
+  if (data.severity && ['low', 'medium', 'high', 'critical'].indexOf(String(data.severity)) === -1) {
+    errors.push('08: severity must be low/medium/high/critical');
+  }
+
+  if (data.fix_required && ['YES', 'NO'].indexOf(String(data.fix_required)) === -1) {
+    errors.push('08: fix_required must be YES/NO');
+  }
+
+  if (data.resolved && ['YES', 'NO', 'PENDING'].indexOf(String(data.resolved)) === -1) {
+    errors.push('08: resolved must be YES/NO/PENDING');
+  }
+
+  return errors;
+}
+
+function validate_09_RuleMemory(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.rule_id) errors.push('09: rule_id is required');
+  if (!data.variable_name) errors.push('09: variable_name is required');
+
+  // Enum validation
+  if (data.confidence && ['high', 'medium', 'low'].indexOf(String(data.confidence)) === -1) {
+    errors.push('09: confidence must be high/medium/low');
+  }
+
+  if (data.active_status && ['active', 'inactive', 'deprecated'].indexOf(String(data.active_status)) === -1) {
+    errors.push('09: active_status must be active/inactive/deprecated');
+  }
+
+  return errors;
+}
+
+function validate_10_RuleApplication(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.rule_application_id) errors.push('10: rule_application_id is required');
+  if (!data.experiment_id) errors.push('10: experiment_id is required');
+  if (!data.rule_id) errors.push('10: rule_id is required');
+
+  // Enum validation
+  if (data.rule_loaded && ['YES', 'NO'].indexOf(String(data.rule_loaded)) === -1) {
+    errors.push('10: rule_loaded must be YES/NO');
+  }
+
+  if (data.rule_applied && ['YES', 'NO'].indexOf(String(data.rule_applied)) === -1) {
+    errors.push('10: rule_applied must be YES/NO');
+  }
+
+  if (data.application_success && ['yes', 'no', 'partial'].indexOf(String(data.application_success)) === -1) {
+    errors.push('10: application_success must be yes/no/partial');
+  }
+
+  return errors;
+}
+
+function validate_11_ResearchCoding(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.coding_id) errors.push('11: coding_id is required');
+  if (!data.experiment_id) errors.push('11: experiment_id is required');
+
+  return errors;
+}
+
+function validate_12_VariableDict(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.variable_name) errors.push('12: variable_name is required');
+
+  return errors;
+}
+
+function validate_13_AutoSchema(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.field_name) errors.push('13: field_name is required');
+
+  // Enum validation
+  if (data.required && ['YES', 'NO'].indexOf(String(data.required)) === -1) {
+    errors.push('13: required must be YES/NO');
+  }
+
+  if (data.auto_generated && ['YES', 'NO'].indexOf(String(data.auto_generated)) === -1) {
+    errors.push('13: auto_generated must be YES/NO');
+  }
+
+  return errors;
+}
+
+function validate_14_LegacyMap(data) {
+  var errors = [];
+
+  // Required fields
+  if (!data.legacy_id) errors.push('14: legacy_id is required');
+
+  // Enum validation
+  if (data.migration_status) {
+    var allowed = ['completed', 'partial', 'failed', 'not_migrated'];
+    if (allowed.indexOf(String(data.migration_status)) === -1) {
+      errors.push('14: migration_status must be one of: ' + allowed.join(', '));
+    }
+  }
+
+  if (data.data_integrity_check && ['pass', 'warning', 'fail'].indexOf(String(data.data_integrity_check)) === -1) {
+    errors.push('14: data_integrity_check must be pass/warning/fail');
+  }
+
+  return errors;
+}
+
+// ── Helper Functions ────────────────────────────────────────────
+
+/**
+ * Validates percentage format (XX% or "unknown")
+ * @param {string} value - Value to validate
+ * @returns {boolean}
+ */
+function validatePercentageFormat(value) {
+  if (String(value).toLowerCase() === 'unknown') return true;
+  return /^\d{1,3}%$/.test(String(value));
+}
+
+/**
+ * Validates ID format
+ * @param {string} id - ID to validate
+ * @param {string} format - Expected format (raw_YYYYMMDD_HHMMSS, exp_YYYYMMDD_HHMMSS, etc.)
+ * @returns {boolean}
+ */
+function validateIDFormat(id, format) {
+  switch(format) {
+    case 'raw_YYYYMMDD_HHMMSS':
+      return /^raw_\d{8}_\d{6}$/.test(id);
+    case 'exp_YYYYMMDD_HHMMSS':
+      return /^exp_\d{8}_\d{6}$/.test(id);
+    case 'exp_YYYYMMDD_HHMMSS_fu##':
+      return /^exp_\d{8}_\d{6}_fu\d{2}$/.test(id);
+    case 'exp_YYYYMMDD_HHMMSS_p##_##':
+      return /^exp_\d{8}_\d{6}_p\d{2}_\d{2}$/.test(id);
+    case 'failure_YYYYMMDD_HHMMSS':
+      return /^failure_\d{8}_\d{6}$/.test(id);
+    case 'coding_YYYYMMDD_HHMMSS':
+      return /^coding_\d{8}_\d{6}$/.test(id);
+    default:
+      return true;
+  }
+}
+
+/**
+ * Run all validation tests on current spreadsheet
+ * @returns {Object} Report with pass/fail counts
+ */
+function runValidationTests() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var report = {
+    timestamp: new Date().toISOString(),
+    sheets: [],
+    total_rows_checked: 0,
+    total_errors: 0
+  };
+
+  var sheetNames = [
+    '01-Raw Experiment Log',
+    '02-Experiment Summary',
+    '03-Feedback Unit Log',
+    '04-Variable Patch Log',
+    '05-Before After Values',
+    '06-Lock Check',
+    '07-Score Breakdown',
+    '08-Failure Analysis',
+    '09-Rule Memory',
+    '10-Rule Application Log',
+    '11-Research Coding',
+    '12-Variable Dictionary',
+    '13-Auto Input Schema',
+    '14-Legacy Migration Map'
+  ];
+
+  sheetNames.forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      report.sheets.push({ sheet: sheetName, status: 'not_found', rows_checked: 0 });
+      return;
+    }
+
+    var lastRow = sheet.getLastRow();
+    var colCount = sheet.getLastColumn();
+    var errors = [];
+    var rowsChecked = 0;
+
+    // Check header row (row 1) exists
+    if (lastRow < 1) {
+      report.sheets.push({ sheet: sheetName, status: 'empty', rows_checked: 0 });
+      return;
+    }
+
+    // Check first 10 data rows for validation (rows 2-11)
+    for (var i = 2; i <= Math.min(lastRow, 11); i++) {
+      var row = sheet.getRange(i, 1, 1, colCount).getValues()[0];
+      var rowObject = convertRowToObject(sheet.getRange(1, 1, 1, colCount).getValues()[0], row);
+      var validation = validateSheetData(sheetName, rowObject);
+
+      if (!validation.valid) {
+        errors = errors.concat(validation.errors);
+      }
+      rowsChecked++;
+    }
+
+    report.sheets.push({
+      sheet: sheetName,
+      rows_checked: rowsChecked,
+      total_rows_in_sheet: lastRow,
+      errors_found: errors.length,
+      errors: errors.slice(0, 5), // Show first 5 errors
+      status: errors.length === 0 ? 'pass' : 'fail'
+    });
+
+    report.total_rows_checked += rowsChecked;
+    report.total_errors += errors.length;
+  });
+
+  Logger.log(JSON.stringify(report, null, 2));
+  return report;
+}
+
+/**
+ * Helper: Convert sheet row to object using headers
+ */
+function convertRowToObject(headers, row) {
+  var obj = {};
+  for (var i = 0; i < headers.length; i++) {
+    obj[headers[i]] = row[i];
+  }
+  return obj;
+}
