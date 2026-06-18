@@ -3051,9 +3051,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       }
 
       // ── Stage 3c: AI 타이포그래피 미세조정 ───────────────────────
-      // patchModeOnly: AI 호출 건너뜀 — 학습 규칙만 적용, 본문 행간 안정화
+      // DISABLED: adjustTypography가 사용자 규칙(heading_gap, footnote_leading)을 override하므로 비활성화
+      // 이제는 system rules (applySystemRules)만 사용하여 사용자 피드백을 정확히 반영
       let typoAdj = null;
-      if (!patchModeOnly) {
+      if (false && !patchModeOnly) {
         pushLog('typo', '타이포 조정', 'running', 'AI 기반 수치 미세조정 중');
         typoAdj = await adjustTypography(matchText, profile, chosen.p, structReason, apiKey);
         if (typoAdj) {
