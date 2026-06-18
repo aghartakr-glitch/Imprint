@@ -195,7 +195,7 @@ function writeToSheet(sheetName, rowValues, mode, keyValue, keyColumnIndex) {
     }
 
     // Get spreadsheet and sheet
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = getOrCreateSheet(ss, sheetName);
 
     // Default keyColumnIndex to 1 if not provided
