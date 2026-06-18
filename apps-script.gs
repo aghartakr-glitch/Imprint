@@ -1,6 +1,8 @@
 // Imprint Record — Apps Script v3 (14-tab research database)
 // writeByColMap: 헤더 읽지 않고 컬럼 인덱스로 직접 기록. appendRow 사용 안 함.
 
+const SPREADSHEET_ID = '17kAuiIrDVDNtE2YHY0pvxizeAeHOiZN5bHD3jm3eW3s';
+
 // ── 컬럼 맵 ─────────────────────────────────────────────────────
 
 const RAW_LOG_COL = {
