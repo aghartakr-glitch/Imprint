@@ -5547,6 +5547,110 @@ ${customTexts.join('\n')}`;
             system_rules_snapshot: (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules') || '{}'); } catch { return {}; } })(),
           }, null, 2).slice(0, 45000),
         });
+
+        // ── 03-Experiment Summary: 실험 1회 = 1행 ────────────────────────
+        sendToSheet({
+          sheet: 'experiment_summary',
+          experiment_id: exp.experiment_id,
+          date: exp.timestamp?.slice(0,10) || '',
+          timestamp: exp.timestamp || '',
+          input_title: fields.제목 || '',
+          input_subtitle: fields.소제목 || '',
+          genre: hint || currentLog?.text_analysis?.detected_genre || '',
+          mode: selectionMode === 'auto' ? '자동 추천' : selectionMode === 'genre-forced' ? '장르 강제' : '레퍼런스 고정',
+          reference_selected: currentLog?.matching?.selected_reference_title || '',
+          reference_candidates: (currentLog?.matching?.top_candidates||[]).slice(0,3).map(c=>c.title).join(', '),
+          design_concept: (structuredReason?.design_concept||[]).join(', '),
+          design_task: (structuredReason?.design_task||[]).join(', '),
+          visual_elements: (structuredReason?.visual_element||[]).join(', '),
+          user_feedback_raw: userFeedbackText,
+          satisfaction_score: satisfactionScore,
+          overall_match_score: Math.round(analysis.matchRate) + '%',
+          overall_status: analysis.matchRate >= 70 ? 'pass' : analysis.matchRate >= 40 ? 'partial' : 'fail',
+          research_note: analysis.nextRule || '',
+        });
+
+        // ── 04-Variable Patch Log: 변수 1개 = 1행 ─────────────────────────
+        (analysis.corrections || []).forEach((c, idx) => {
+          if (c.target_variable === '__custom__') return;
+          const patchId = `${exp.experiment_id}_p${String(idx+1).padStart(2,'0')}`;
+          const dirLabel = c.direction_match === true ? 'match' : c.direction_match === false ? 'mismatch' : 'unknown';
+          const failureType = !c.direction_match && c.direction_match !== null ? 'direction_mismatch'
+            : (c.system_pct === '미반영' || !c.system_pct) ? 'no_actual_patch' : '';
+          const userVal = parseFloat((c.user_pct||'').match(/([+-]?\d+(?:\.\d+)?)/)?.[1]||'0');
+          const sysVal  = parseFloat((c.system_pct||'').match(/([+-]?\d+(?:\.\d+)?)/)?.[1]||'0');
+          const magMatch = !isNaN(userVal) && !isNaN(sysVal) && userVal !== 0
+            ? Math.abs(1 - Math.abs(sysVal) / Math.abs(userVal)) < 0.3 ? 'close' : 'far' : 'unknown';
+          sendToSheet({
+            sheet: 'variable_patch',
+            patch_id: patchId,
+            experiment_id: exp.experiment_id,
+            date: exp.timestamp?.slice(0,10) || '',
+            feedback_snippet: userFeedbackText,
+            feedback_type: 'structured_form',
+            interpreted_variable_by_claude: c.target_variable,
+            intended_variable_by_user: c.target_variable,
+            actual_changed_variable: c.target_variable,
+            variable_group: c.target_variable.split('_')[0],
+            before_value: 'not_verified',
+            system_planned_value: c.system_pct || '미반영',
+            actual_after_value: 'not_verified',
+            user_target_value: c.user_pct || '',
+            unit: c.user_pct?.includes('%') ? 'percent' : c.user_pct?.includes('pt') ? 'pt' : c.user_pct?.includes('mm') ? 'mm' : 'unknown',
+            direction_requested: userVal > 0 ? 'increase' : userVal < 0 ? 'decrease' : 'unknown',
+            direction_applied: sysVal > 0 ? 'increase' : sysVal < 0 ? 'decrease' : 'unknown',
+            direction_match: dirLabel,
+            magnitude_match: magMatch,
+            locked_variables: 'not_verified',
+            unintended_changed_variables: 'not_verified',
+            lock_success: 'not_verified',
+            patch_status: failureType ? 'fail' : 'applied',
+            failure_type: failureType || '',
+            next_rule: `${c.target_variable}: ${c.system_pct||'미반영'} → ${c.user_pct}`,
+            research_memo: '',
+          });
+
+          // ── 06-Failure Analysis: 실패 케이스만 ─────────────────────────
+          if (failureType) {
+            sendToSheet({
+              sheet: 'failure_analysis',
+              failure_id: `fail_${patchId}`,
+              experiment_id: exp.experiment_id,
+              patch_id: patchId,
+              failure_type: failureType,
+              description: `${c.target_variable}: 사용자 ${c.user_pct}, 시스템 ${c.system_pct||'미반영'}`,
+              example_user_feedback: userFeedbackText,
+              wrong_system_interpretation: c.system_pct || '미반영',
+              expected_behavior: c.user_pct,
+              actual_behavior: c.system_pct || '미반영',
+              severity: analysis.matchRate < 40 ? 'high' : 'medium',
+              fix_required: failureType === 'no_actual_patch' ? 'rule_application_bug' : 'direction_logic',
+            });
+          }
+        });
+
+        // ── 05-Rule Summary: 현재 누적 규칙 스냅샷 ────────────────────────
+        (() => {
+          const sr = (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules')||'{}'); } catch { return {}; } })();
+          Object.entries(sr.rules || {}).forEach(([ruleName, rule]) => {
+            if (rule.confidence === 'none' || rule.value === null) return;
+            sendToSheet({
+              sheet: 'rule_summary',
+              rule_id: `rule_${ruleName}`,
+              variable_name: ruleName,
+              variable_group: ruleName.split('_')[0],
+              current_rule_value: typeof rule.value === 'number' ? `${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}%` : String(rule.value),
+              confidence: rule.confidence,
+              evidence_count: (rule.history||[]).length,
+              success_count: 'not_tracked',
+              failure_count: 'not_tracked',
+              last_updated: exp.timestamp?.slice(0,10) || '',
+              example_feedback: userFeedbackText,
+              rule_description: `${ruleName}: ${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}% [${rule.confidence}]`,
+              risk_note: '',
+            });
+          });
+        })();
       }
 
       // 피드백 폼 초기화
