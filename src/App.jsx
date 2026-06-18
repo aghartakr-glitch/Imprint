@@ -5999,6 +5999,19 @@ ${customTexts.join('\n')}`;
         })();
       }
 
+      // ── buildSheetPayload 호출: 다중탭 로깅용 페이로드 생성 ────────────────
+      const payload = buildSheetPayload(
+        analysis,
+        null,  // pdf: 현재 컴포넌트에서 직접 생성하지 않음
+        styCode,
+        latex,
+        { title: fields.제목, subtitle: fields.소제목, body: fields.본문, footnote: fields.각주, genre: hint, reference: currentLog?.matching?.selected_reference_title },
+        satisfactionScore,
+        userFeedbackText
+      );
+      window._pendingSheetPayload = payload;
+      console.log('Sheet payload generated:', payload.experiment_id);
+
       // 피드백 폼 초기화
       setFeedbackCorrections([]);
       setFeedbackCurrentSystemPct('');
