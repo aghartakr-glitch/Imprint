@@ -7295,9 +7295,26 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     {/* 피드백 전송 버튼 */}
                     {(() => {
                       const canSubmit = feedbackCorrections.length > 0 && satisfactionScore !== null && !experimentLoading;
+                      const handleFeedbackApply = async () => {
+                        await analyzeExperiment();
+                        // After analyzeExperiment completes, send payload to Google Sheet
+                        if (window._pendingSheetPayload) {
+                          sendPayloadToSheet(window._pendingSheetPayload)
+                            .then(result => {
+                              console.log('Google Sheet record result:', result);
+                              if (result.status === 'success') {
+                                alert('피드백이 저장되었습니다');
+                              }
+                            })
+                            .catch(error => {
+                              console.error('Google Sheet record error:', error);
+                            });
+                          window._pendingSheetPayload = null;
+                        }
+                      };
                       return (
                         <button
-                          onClick={analyzeExperiment}
+                          onClick={handleFeedbackApply}
                           disabled={!canSubmit}
                           style={{ padding:'10px', fontSize:12, fontWeight:600,
                             border:'none', borderRadius:3,
