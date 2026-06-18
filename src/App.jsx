@@ -6086,12 +6086,6 @@ ${customTexts.join('\n')}`;
       );
       window._pendingSheetPayload = payload;
       console.log('Sheet payload generated:', payload.experiment_id);
-
-      // 피드백 폼 초기화
-      setFeedbackCorrections([]);
-      setFeedbackCurrentSystemPct('');
-      setFeedbackCurrentUserPct('');
-      setFeedbackCurrentVar('body_leading');
     } catch (err) {
       setExperimentAnalysis({ matchRate: 0, difference: `오류: ${err.message}`, nextRule: '' });
     } finally {
