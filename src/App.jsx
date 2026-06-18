@@ -6118,7 +6118,7 @@ ${customTexts.join('\n')}`;
           text_id: 'unknown',
           version_id: 'unknown',
           input_title: fields.제목 || '',
-          input_genre: hint || cl?.text_analysis?.detected_genre || '',
+          input_genre: hint || '',
           experiment_goal: 'feedback_apply_button',
           selected_reference: cl?.matching?.selected_reference_title || '',
           reference_reason: cl?.matching?.semantic_reason || '',
