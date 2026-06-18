@@ -228,6 +228,68 @@ function normalizePercentage(value) {
   return `${rounded}%`;
 }
 
+// ── Feedback Unit Parser: 피드백를 의미단위로 분해 ──────────────────
+// 사용자 피드백 텍스트를 문장/절 단위로 분해하고 각 단위의 의미를 분석
+
+function parseFeedbackUnits(feedbackText) {
+  if (!feedbackText) return [];
+
+  const sentences = feedbackText
+    .split(/[。\.!\n]/gi)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  return sentences.map((snippet, index) => ({
+    order: index + 1,
+    snippet: snippet,
+    type: detectFeedbackType(snippet),
+    design_area: detectDesignArea(snippet),
+    language_type: detectLanguageType(snippet),
+    has_numeric: /\d+/.test(snippet),
+    numeric_raw: extractNumeric(snippet),
+    unit: extractUnit(snippet)
+  }));
+}
+
+function detectFeedbackType(text) {
+  if (/늘려|증가|크게|크면|높혀|높이|높여|높이|상향|확대/.test(text)) return 'direct_numeric';
+  if (/줄여|감소|작게|작으면|낮춰|낮춤|낮게|하향|축소/.test(text)) return 'direct_numeric';
+  if (/높이|낮추/.test(text)) return 'direct_numeric';
+  return 'other';
+}
+
+function detectDesignArea(text) {
+  if (/각주|주석|footnote/.test(text)) return 'footnote';
+  if (/제목|소제목|h[1-2]|heading|title|subtitle/.test(text)) return 'heading';
+  if (/여백|마진|margin|padding/.test(text)) return 'margin';
+  if (/본문|body|본|text/.test(text)) return 'body_text';
+  if (/단수|2단|3단|column|칼럼/.test(text)) return 'column';
+  if (/행간|라인|leading|line.?height|line.?spacing/.test(text)) return 'line_spacing';
+  if (/글자.?크기|폰트.?크기|font.?size|size/.test(text)) return 'font_size';
+  if (/자간|글자.?간격|자.?간|spacing|tracking/.test(text)) return 'letter_spacing';
+  return 'overall_layout';
+}
+
+function detectLanguageType(text) {
+  if (/\d+%|[0-9]/.test(text)) return 'direct_numeric';
+  return 'sensory_expression';
+}
+
+function extractNumeric(text) {
+  const matches = text.match(/-?\d+(?:\.\d+)?/g);
+  if (!matches) return '';
+  return matches.join('~');
+}
+
+function extractUnit(text) {
+  if (/%/.test(text)) return '%';
+  if (/pt|px|em|mm|cm|in/.test(text)) {
+    const match = text.match(/(pt|px|em|mm|cm|in)/);
+    return match ? match[0] : '';
+  }
+  return '';
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
