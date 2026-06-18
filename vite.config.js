@@ -13,8 +13,38 @@ const anthropicProxy = {
   },
 }
 
+const googleAppsScriptProxy = {
+  '/gas': {
+    target: 'https://script.google.com',
+    changeOrigin: true,
+    secure: true,
+    followRedirects: true,
+    rewrite: path => path.replace(/^\/gas/, ''),
+    configure: proxy => {
+      proxy.on('proxyRes', proxyRes => {
+        const location = proxyRes.headers.location
+        if (location?.startsWith('https://script.googleusercontent.com/')) {
+          proxyRes.headers.location = location.replace('https://script.googleusercontent.com', '/gasusercontent')
+        }
+      })
+    },
+  },
+  '/gasusercontent': {
+    target: 'https://script.googleusercontent.com',
+    changeOrigin: true,
+    secure: true,
+    followRedirects: true,
+    rewrite: path => path.replace(/^\/gasusercontent/, ''),
+  },
+}
+
+const proxy = {
+  ...anthropicProxy,
+  ...googleAppsScriptProxy,
+}
+
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: anthropicProxy },
-  preview: { proxy: anthropicProxy },
+  server: { proxy },
+  preview: { proxy },
 })

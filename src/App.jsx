@@ -7,7 +7,9 @@
 
 const IMPRINT_VERSION = "1.3.0";
 const ENABLE_GOOGLE_SHEET_LOGGING = true;
+const ENABLE_DETAILED_SHEET_LOGGING = false;
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRBcWDn_OCM3aakKwDJlepJnnT8dUXJ9tZ6bZUyOVJ0IiqVCw3ct-akZM-vvduVfqrBg/exec';
+const APPS_SCRIPT_PROXY_URL = '/gas/macros/s/AKfycbyRBcWDn_OCM3aakKwDJlepJnnT8dUXJ9tZ6bZUyOVJ0IiqVCw3ct-akZM-vvduVfqrBg/exec';
 
 // ── LaTeX escape (note content용 — 특수문자 안전 처리) ─────────────
 const latexEscNote = s => String(s || '')
@@ -458,17 +460,12 @@ async function sendPayloadToSheet(payload) {
   for (const config of sheetRecordOrder) {
     try {
       const row = convertPayloadToRow(config.data, config.sheetName);
-      await fetch('https://script.google.com/macros/s/AKfycbyRBcWDn_OCM3aakKwDJlepJnnT8dUXJ9tZ6bZUyOVJ0IiqVCw3ct-akZM-vvduVfqrBg/exec', {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          sheetName: config.sheetName,
-          rowValues: row,
-          mode: config.mode,
-          keyValue: config.keyValue,
-          keyColumnIndex: config.keyColumnIndex
-        })
+      await postSheetPayload({
+        sheetName: config.sheetName,
+        rowValues: row,
+        mode: config.mode,
+        keyValue: config.keyValue,
+        keyColumnIndex: config.keyColumnIndex
       });
       results.push({ status: 'success', sheet: config.sheetName });
       console.log(`Sheet record sent: ${config.sheetName}`);
@@ -523,6 +520,9 @@ function _defaultSystemRules() {
     rules: {
       column_count:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
       font_style:        { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      footnote_font:     { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      running_head_font: { value: null, weighted_count: 0, confidence: 'none', history: [] },
+      heading_font:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
       paragraph_spacing: { value: null, weighted_count: 0, confidence: 'none', history: [] },
       body_leading:      { value: null, weighted_count: 0, confidence: 'none', history: [] },
       body_size:         { value: null, weighted_count: 0, confidence: 'none', history: [] },
@@ -1003,23 +1003,62 @@ function buildDesignRules() {
   ];
   return sorted.slice(0, 8).map(r => `- ${r}`).join('\n');
 }
+function isLocalDevHost() {
+  if (typeof window === 'undefined') return false;
+  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
+async function postSheetPayload(body, { allowOpaqueFallback = false } = {}) {
+  const jsonBody = JSON.stringify(body);
+  const preferredUrl = isLocalDevHost() ? APPS_SCRIPT_PROXY_URL : APPS_SCRIPT_URL;
+
+  try {
+    const res = await fetch(preferredUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: jsonBody,
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch {}
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    if (!data || typeof data !== 'object') throw new Error(`Apps Script returned non-JSON response: ${text.slice(0, 200)}`);
+    if (data?.status === 'error') throw new Error(data.message || 'Apps Script error');
+    if (data?.status !== 'success') throw new Error(`Unexpected Apps Script response: ${text.slice(0, 200)}`);
+    return data;
+  } catch (err) {
+    if (!allowOpaqueFallback) throw err;
+    console.warn('[sendToSheet] proxy/cors request failed, trying no-cors fallback:', err);
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: jsonBody,
+    });
+    return { status: 'opaque_fallback' };
+  }
+}
+
 async function sendToSheet(payload) {
   try {
     const sheetNameMap = {
       'raw_log': '01-Raw Experiment Log',
       'exp_summary': '02-Experiment Summary',
+      'feedback_unit': '03-Feedback Unit Log',
+      'variable_patch': '04-Variable Patch Log',
+      'score_breakdown': '07-Score Breakdown',
+      'failure_analysis': '08-Failure Analysis',
+      'rule_memory': '09-Rule Memory',
       'revision': '06-Revision Log',
     };
     const { sheet, ...fields } = payload;
     const sheetName = sheetNameMap[sheet] || sheet;
     const rowValues = Object.values(fields);
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ sheetName, rowValues }),
-    });
-  } catch { /* silent fail — logging must not break the app */ }
+    return await postSheetPayload({ sheetName, rowValues });
+  } catch (err) {
+    console.warn('[sendToSheet] logging failed:', err);
+    return { status: 'error', message: err?.message || String(err) };
+  }
 }
 
 // ─── Design Tokens ───────────────────────────────────────────────
@@ -5888,7 +5927,7 @@ ${customTexts.join('\n')}`;
       }
 
       // ── Google Sheets 14탭 리서치 데이터베이스 로깅 ──────────────
-      if (ENABLE_GOOGLE_SHEET_LOGGING) {
+      if (ENABLE_GOOGLE_SHEET_LOGGING && ENABLE_DETAILED_SHEET_LOGGING) {
         const cl = currentLog;
         const rawId = `raw_${exp.experiment_id}`;
         const matchRate = Math.round(analysis.matchRate);
@@ -7310,10 +7349,13 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                               console.log('Google Sheet record result:', result);
                               if (result.status === 'success') {
                                 alert('피드백이 저장되었습니다');
+                              } else {
+                                alert('Google Sheet 저장 실패: ' + JSON.stringify(result));
                               }
                             })
                             .catch(error => {
                               console.error('Google Sheet record error:', error);
+                              alert('Google Sheet 저장 실패: ' + (error?.message || String(error)));
                             });
                           window._pendingSheetPayload = null;
                         }
