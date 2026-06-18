@@ -345,6 +345,11 @@ function mapFeedbackToPatch(feedbackUnit, systemRules) {
 // 모든 피드백 분석과 패치 정보를 포함한 Google Sheets용 JSON 페이로드 생성
 
 function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore, userFeedback) {
+  if (!userFeedback || userFeedback.trim() === '') {
+    console.error('No feedback provided');
+    return null;
+  }
+
   const experimentId = generateExperimentId();
   const rawId = generateRawId(experimentId);
   const timestamp = new Date().toISOString();
