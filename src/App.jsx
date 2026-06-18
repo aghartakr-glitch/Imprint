@@ -4098,6 +4098,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
       // patchModeOnly: sty 재생성 + main.tex heading_gap 패치 (Sonnet 재생성 건너뜀)
       if (patchModeOnly) {
+        // setStyCode는 이미 줄 4097에서 실행됨 (styContent 재계산됨, 규칙 포함)
         // 기존 main.tex 본문의 heading 인접 \vspace{Xpt}를 \vspace{\imprintheadinggap}으로 교체
         // 헤딩 뒤 간격을 \imprintheadinggap으로 통일
         // 케이스 1: {\hX TEXT\par}\vspace{Xpt} → \vspace{\imprintheadinggap}
