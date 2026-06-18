@@ -1125,20 +1125,34 @@ async function postSheetPayload(body, { allowOpaqueFallback = false } = {}) {
 }
 
 async function sendToSheet(payload) {
+  const sheetNameMap = {
+    'raw_log': '01-Raw Experiment Log',
+    'exp_summary': '02-Experiment Summary',
+    'feedback_unit': '03-Feedback Unit Log',
+    'variable_patch': '04-Variable Patch Log',
+    'score_breakdown': '07-Score Breakdown',
+    'failure_analysis': '08-Failure Analysis',
+    'rule_memory': '09-Rule Memory',
+    'revision': '06-Revision Log',
+  };
   try {
-    const sheetNameMap = {
-      'raw_log': '01-Raw Experiment Log',
-      'exp_summary': '02-Experiment Summary',
-      'feedback_unit': '03-Feedback Unit Log',
-      'variable_patch': '04-Variable Patch Log',
-      'score_breakdown': '07-Score Breakdown',
-      'failure_analysis': '08-Failure Analysis',
-      'rule_memory': '09-Rule Memory',
-      'revision': '06-Revision Log',
-    };
-    const { sheet, ...fields } = payload;
+    const { sheet, ...data } = payload;
     const sheetName = sheetNameMap[sheet] || sheet;
-    const rowValues = Object.values(fields);
+    const headers = SHEET_HEADERS[sheetName];
+    if (!headers) {
+      console.warn(`[sendToSheet] 알 수 없는 시트: ${sheetName}`);
+      return { status: 'skip', reason: 'no_headers' };
+    }
+    // 02-Experiment Summary의 date는 timestamp에서 파생
+    if (sheetName === '02-Experiment Summary' && !data.date && data.timestamp) {
+      data.date = data.timestamp.slice(0, 10);
+    }
+    const rowValues = buildRow(headers, data);
+    console.log(`[sendToSheet] ${sheetName}`, { headers: headers.length, rowValues: rowValues.length, rowValues });
+    if (rowValues.length !== headers.length) {
+      console.error(`[sendToSheet] 컬럼 수 불일치! 전송 취소 (headers=${headers.length} row=${rowValues.length})`);
+      return { status: 'error', reason: 'length_mismatch' };
+    }
     return await postSheetPayload({ sheetName, rowValues });
   } catch (err) {
     console.warn('[sendToSheet] logging failed:', err);
