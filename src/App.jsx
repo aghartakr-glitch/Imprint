@@ -1924,14 +1924,14 @@ function buildBodyContent({ title, subtitle, body, footnote, runningHead, preser
   if (t) {
     lines.push('\\Needspace{6\\baselineskip}');
     lines.push(`{\\noindent\\hone${titleAlignCmd ? `\n${titleAlignCmd}` : ''} ${t}\\par}`);
-    lines.push(`\\vspace{${Math.round(gap * 1.8 * 10) / 10}pt}`);
+    lines.push(`\\vspace{\\imprintheadinggap}`);
     lines.push('');
   }
   const st = esc(subtitle);
   if (st) {
     lines.push('\\Needspace{4\\baselineskip}');
     lines.push(`{\\noindent\\htwo${subtitleAlignCmd ? `\n${subtitleAlignCmd}` : ''} ${st}\\par}`);
-    lines.push(`\\vspace{${Math.round(gap * 1.3 * 10) / 10}pt}`);
+    lines.push(`\\vspace{\\imprintbodygap}`);
     lines.push('');
   }
   if (body && body.trim()) {
