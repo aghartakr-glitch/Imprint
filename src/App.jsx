@@ -851,8 +851,12 @@ function updateSystemRules(corrections, satisfactionScore, feedbackText = '') {
       rule.value = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
       if (v === 'column_count') rule.value = parseInt(rule.value);
     } else {
-      // 최신 피드백값 즉시 반영 — 가중 평균 대신 최신값으로 교체
-      rule.value = parsedValue;
+      // 사용자가 입력한 %는 현재 출력 기준 상대값 → 이전 규칙에 복합 적용
+      // 예: 이전 rule -30%, 사용자 -20% → 현재 출력은 base*0.7, 목표 = base*0.7*0.8 = base*0.56 → new rule = -44%
+      const currentMult = 1 + (rule.value || 0) / 100;
+      const userMult = 1 + parsedValue / 100;
+      const newMult = currentMult * userMult;
+      rule.value = Math.round(Math.max(-80, Math.min(200, (newMult - 1) * 100)) * 10) / 10;
     }
 
     rule.confidence = _calcConfidence(rule.weighted_count);
