@@ -4064,8 +4064,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       // 혼합 서체(isMixedLayout): 제목은 sffamily(고딕), 본문은 rmfamily(명조)
       // heading 커맨드: 크기 + 굵기 + (혼합시) font family
       // 비혼합: \bfseries 로 소제목 구분 / 혼합: sffamily 전환으로 명조↔고딕 구분
-      const hFont = _learnedHFont === 'serif' ? '\\rmfamily\\bfseries'
-                  : _learnedHFont === 'gothic' ? '\\sffamily'
+      const _hFontResolved = _learnedHFont === 'same_as_body' ? (bodyIsSerif ? 'serif' : 'gothic')
+                           : _learnedHFont === 'same_as_heading' ? null
+                           : _learnedHFont;
+      const hFont = _hFontResolved === 'serif' ? '\\rmfamily\\bfseries'
+                  : _hFontResolved === 'gothic' ? '\\sffamily'
                   : isMixedLayout ? '\\sffamily' : '\\bfseries';
       const bFont = isMixedLayout ? '\\rmfamily'  : '\\normalfont';
       // 학습된 제목 정렬 방향 적용 (medium 이상 confidence일 때만)
