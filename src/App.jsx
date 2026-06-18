@@ -341,6 +341,98 @@ function mapFeedbackToPatch(feedbackUnit, systemRules) {
   return patches;
 }
 
+// ── Sheet Payload Builder: 완전한 14-탭 데이터 구조 생성 ─────────────
+// 모든 피드백 분석과 패치 정보를 포함한 Google Sheets용 JSON 페이로드 생성
+
+function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore, userFeedback) {
+  const experimentId = generateExperimentId();
+  const rawId = generateRawId(experimentId);
+  const timestamp = new Date().toISOString();
+
+  const feedbackUnits = parseFeedbackUnits(userFeedback);
+
+  const payload = {
+    experiment_id: experimentId,
+    raw_id: rawId,
+    timestamp: timestamp,
+
+    // 01-Raw Experiment Log
+    raw_log: {
+      raw_id: rawId,
+      experiment_id: experimentId,
+      timestamp: timestamp,
+      source: 'feedback_apply_button',
+      input_title: inputData.title || '',
+      input_subtitle: inputData.subtitle || '',
+      input_body: (inputData.body || '').substring(0, 100) + '...',
+      input_footnote: inputData.footnote || 'none',
+      genre_hint: inputData.genre || '',
+      selected_reference: inputData.reference || '',
+      generated_pdf_path: pdf ? pdf.url : 'not_verified',
+      generated_tex_path: tex ? 'main.tex' : 'not_verified',
+      generated_sty_path: sty ? 'imprint-style.sty' : 'not_verified',
+      user_feedback_raw: userFeedback || '',
+      satisfaction_score: satisfactionScore || 0,
+      notes: ''
+    },
+
+    // 02-Experiment Summary
+    experiment_summary: {
+      experiment_id: experimentId,
+      timestamp: timestamp,
+      input_title: inputData.title || '',
+      input_genre: inputData.genre || '',
+      feedback_count: feedbackUnits.length,
+      satisfaction_score: satisfactionScore || 0,
+      overall_match_score: 'not_verified',
+      overall_status: 'not_verified'
+    },
+
+    // 03-Feedback Unit Log (array)
+    feedback_units: feedbackUnits.map((unit, idx) => ({
+      feedback_unit_id: generateFeedbackUnitId(experimentId, idx),
+      experiment_id: experimentId,
+      raw_id: rawId,
+      feedback_order: unit.order,
+      user_feedback_raw: userFeedback || '',
+      feedback_snippet: unit.snippet,
+      feedback_type: unit.type,
+      design_issue_area: unit.design_area,
+      user_language_type: unit.language_type,
+      is_numeric_feedback: unit.has_numeric ? 'YES' : 'NO',
+      numeric_value_raw: unit.numeric_raw || '',
+      numeric_unit: unit.unit || '',
+      intended_change_summary: unit.snippet
+    })),
+
+    // 04-Variable Patch Log (array) - one per variable mapping
+    patches: []
+  };
+
+  // Generate patches from feedback units
+  feedbackUnits.forEach((unit, unitIdx) => {
+    const patches_for_unit = mapFeedbackToPatch(unit, null);
+    patches_for_unit.forEach((patch, patchIdx) => {
+      payload.patches.push({
+        patch_id: generatePatchId(experimentId, unitIdx, patchIdx),
+        experiment_id: experimentId,
+        feedback_unit_id: generateFeedbackUnitId(experimentId, unitIdx),
+        patch_order: patchIdx + 1,
+        feedback_snippet: unit.snippet,
+        interpreted_variable_by_claude: patch.interpreted_variable,
+        intended_variable_by_user: patch.intended_variable,
+        actual_changed_variable: 'not_verified',
+        direction_requested: patch.direction_requested,
+        magnitude_requested: patch.magnitude_requested,
+        magnitude_applied: 'not_verified',
+        confidence_score: patch.confidence
+      });
+    });
+  });
+
+  return payload;
+}
+
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
 // 이전 applyLearnedCorrections / getLearnedColumnCount 대체
 // 변수별 history + weighted_count + confidence 등급으로 반영 강도 조절
