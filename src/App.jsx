@@ -7,7 +7,7 @@
 
 const IMPRINT_VERSION = "1.3.0";
 const ENABLE_GOOGLE_SHEET_LOGGING = true;
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXXt3oHvwf8XHYpLzEH24XuYDL0sCNOZMEAvdXJ19wVP2tYlBWPxYgfnpQHPfym7e1/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbPiXtWuLx10u-XtWWKXLelY55bjv6xH7R2c2hUmTPth-EGck_T_mGEsK5TQ5gW9U/exec';
 
 // ── LaTeX escape (note content용 — 특수문자 안전 처리) ─────────────
 const latexEscNote = s => String(s || '')
