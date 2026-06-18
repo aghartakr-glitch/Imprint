@@ -324,7 +324,7 @@ function doPost(e) {
 // ── 기존 데이터 마이그레이션 (한 번만 수동 실행) ──────────────────
 
 function migrateFromFeedbackTestLog() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var src = ss.getSheetByName('02-Feedback Test Log');
   if (!src) { Logger.log('02-Feedback Test Log 없음'); return; }
 
