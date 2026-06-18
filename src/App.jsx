@@ -3646,10 +3646,13 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         sansFont = 'NotoSerif';
       }
 
-      // footnote/running head 전용 폰트 — 항상 고딕(NotoSans) 강제
-      // 사용자 피드백: "주석·면주는 고딕체여야 한다" — 레퍼런스 분류 무관하게 적용
-      const fnFont = 'NotoSans';
-      const rhFont = 'NotoSans';
+      // footnote/running head 전용 폰트 — 시스템 규칙 우선, 기본값 NotoSans
+      const _learnedFnFont = getSystemFootnoteFont();
+      const _learnedRhFont = getSystemRunningHeadFont();
+      const _learnedHFont  = getSystemHeadingFont();
+      const serifFont = bodyIsSerif ? mainFont : 'NotoSerif';
+      const fnFont = _learnedFnFont === 'serif' ? serifFont : 'NotoSans';
+      const rhFont = _learnedRhFont === 'serif' ? serifFont : 'NotoSans';
 
       // ── FONT_MANIFEST ──────────────────────────────────────────────
       // 사용자 폴더에 실제 존재하는 폰트만 등록. 이 목록 외 폰트는 절대 출력 안 됨.
