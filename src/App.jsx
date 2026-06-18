@@ -458,9 +458,8 @@ async function sendPayloadToSheet(payload) {
   for (const config of sheetRecordOrder) {
     try {
       const row = convertPayloadToRow(config.data, config.sheetName);
-      await fetch('https://script.google.com/macros/s/AKfycbwiQEnEKMYqZyIUJ_8fxCG4JSajs6MShbPWG6YhoFRKJXeErKtAUcA_SiXDgFObYTIYGA/exec', {
+      const result = await fetch('https://script.google.com/macros/s/AKfycbwiQEnEKMYqZyIUJ_8fxCG4JSajs6MShbPWG6YhoFRKJXeErKtAUcA_SiXDgFObYTIYGA/exec', {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           sheetName: config.sheetName,
@@ -470,8 +469,9 @@ async function sendPayloadToSheet(payload) {
           keyColumnIndex: config.keyColumnIndex
         })
       });
-      results.push({ status: 'success', sheet: config.sheetName });
-      console.log(`Sheet record sent: ${config.sheetName}`);
+      const response = await result.json();
+      results.push(response);
+      console.log(`Sheet record: ${config.sheetName}`, response);
     } catch (error) {
       console.error(`Sheet record error (${config.sheetName}):`, error);
       results.push({ status: 'error', sheet: config.sheetName, error: error.toString() });
