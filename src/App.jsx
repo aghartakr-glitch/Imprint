@@ -460,6 +460,7 @@ async function sendPayloadToSheet(payload) {
       const row = convertPayloadToRow(config.data, config.sheetName);
       const result = await fetch('https://script.google.com/macros/s/AKfycbwiQEnEKMYqZyIUJ_8fxCG4JSajs6MShbPWG6YhoFRKJXeErKtAUcA_SiXDgFObYTIYGA/exec', {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           path: '/api/sheet-record',
