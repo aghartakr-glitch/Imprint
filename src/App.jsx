@@ -7512,7 +7512,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
               const confColor = { high:'#c8440a', medium:'#b07c00', low:'#888' };
               const confLabel = { high:'강함 ●●●', medium:'중간 ●●○', low:'약함 ●○○' };
               const varLabel  = {
-                column_count:'단 수', font_style:'서체 스타일', paragraph_spacing:'문단 간격',
+                column_count:'단 수', font_style:'본문 서체', heading_font:'제목 서체', footnote_font:'각주 서체', running_head_font:'면주·쪽번호 서체', paragraph_spacing:'문단 간격',
                 body_size:'글자 크기', body_leading:'행간', tracking:'자간',
                 heading_h1_size:'제목 크기', heading_h1_leading:'제목 행간',
                 heading_h2_size:'부제목 크기', heading_h2_leading:'부제목 행간',
