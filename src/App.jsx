@@ -343,129 +343,7 @@ function mapFeedbackToPatch(feedbackUnit, systemRules) {
   return patches;
 }
 
-// ── Sheet Payload Builder: 완전한 14-탭 데이터 구조 생성 ─────────────
-// 모든 피드백 분석과 패치 정보를 포함한 Google Sheets용 JSON 페이로드 생성
-
-function buildSheetPayload(analysis, pdf, sty, tex, inputData, satisfactionScore, userFeedback) {
-  if (!userFeedback || userFeedback.trim() === '') {
-    console.error('No feedback provided');
-    return null;
-  }
-
-  const experimentId = generateExperimentId();
-  const rawId = generateRawId(experimentId);
-  const timestamp = new Date().toISOString();
-
-  const feedbackUnits = parseFeedbackUnits(userFeedback);
-
-  const payload = {
-    experiment_id: experimentId,
-    raw_id: rawId,
-    timestamp: timestamp,
-
-    // 01-Raw Experiment Log
-    raw_log: {
-      raw_id: rawId,
-      experiment_id: experimentId,
-      timestamp: timestamp,
-      source: 'feedback_apply_button',
-      input_title: inputData.title || '',
-      input_subtitle: inputData.subtitle || '',
-      input_body: (inputData.body || '').substring(0, 100) + '...',
-      input_footnote: inputData.footnote || 'none',
-      genre_hint: inputData.genre || '',
-      user_intent_raw: userFeedback || '',
-      selected_reference: inputData.reference || '',
-      system_intent: 'not_verified',
-      generated_pdf_path: pdf ? pdf.url : 'not_verified',
-      generated_tex_path: tex ? 'main.tex' : 'not_verified',
-      generated_sty_path: sty ? 'imprint-style.sty' : 'not_verified',
-      user_feedback_raw: userFeedback || '',
-      satisfaction_score: satisfactionScore || 0,
-      original_match_rate: 'not_verified',
-      system_adjustment_raw: 'not_verified',
-      user_target_raw: 'not_verified',
-      next_rule_raw: 'not_verified',
-      md_log_path: 'unknown',
-      csv_log_path: 'unknown',
-      json_log_path: rawId,
-      notes: '',
-    },
-
-    // 02-Experiment Summary
-    experiment_summary: {
-      experiment_id: experimentId,
-      date: timestamp.slice(0, 10),
-      timestamp: timestamp,
-      session_id: 'unknown',
-      test_round: 'unknown',
-      text_id: 'unknown',
-      version_id: 'unknown',
-      input_title: inputData.title || '',
-      input_genre: inputData.genre || '',
-      experiment_goal: 'feedback_apply_button',
-      selected_reference: inputData.reference || '',
-      reference_reason: 'not_verified',
-      generated_pdf_path: pdf ? pdf.url : 'not_verified',
-      generated_tex_path: tex ? 'main.tex' : 'not_verified',
-      generated_sty_path: sty ? 'imprint-style.sty' : 'not_verified',
-      feedback_count: feedbackUnits.length,
-      patch_count: 'not_verified',
-      satisfaction_score: satisfactionScore || 0,
-      overall_match_score: 'not_verified',
-      overall_status: 'not_verified',
-      main_success: 'unknown',
-      main_failure: 'unknown',
-      research_note: '',
-    },
-
-    // 03-Feedback Unit Log (array)
-    feedback_units: feedbackUnits.map((unit, idx) => ({
-      feedback_unit_id: generateFeedbackUnitId(experimentId, idx),
-      experiment_id: experimentId,
-      raw_id: rawId,
-      feedback_order: unit.order,
-      user_feedback_raw: userFeedback || '',
-      feedback_snippet: unit.snippet,
-      feedback_type: unit.type,
-      design_issue_area: unit.design_area,
-      user_language_type: unit.language_type,
-      is_numeric_feedback: unit.has_numeric ? 'YES' : 'NO',
-      numeric_value_raw: unit.numeric_raw || '',
-      numeric_unit: unit.unit || '',
-      intended_change_summary: unit.snippet
-    })),
-
-    // 04-Variable Patch Log (array) - one per variable mapping
-    patches: []
-  };
-
-  // Generate patches from feedback units
-  feedbackUnits.forEach((unit, unitIdx) => {
-    const patches_for_unit = mapFeedbackToPatch(unit, null);
-    patches_for_unit.forEach((patch, patchIdx) => {
-      payload.patches.push({
-        patch_id: generatePatchId(experimentId, unitIdx, patchIdx),
-        experiment_id: experimentId,
-        feedback_unit_id: generateFeedbackUnitId(experimentId, unitIdx),
-        patch_order: patchIdx + 1,
-        feedback_snippet: unit.snippet,
-        interpreted_variable_by_claude: patch.interpreted_variable,
-        intended_variable_by_user: patch.intended_variable,
-        actual_changed_variable: 'not_verified',
-        direction_requested: patch.direction_requested,
-        magnitude_requested: patch.magnitude_requested,
-        magnitude_applied: 'not_verified',
-        confidence_score: patch.confidence
-      });
-    });
-  });
-
-  return payload;
-}
-
-// ── Sheet Header Definitions ──────────────────────────────────────────────
-// 각 탭의 헤더 순서를 명시적으로 정의. buildRow()는 이 배열 기준으로 rowValues를 생성.
+// ── Sheet Header Definitions (전체 탭) ───────────────────────────────────
 const SHEET_HEADERS = {
   '01-Raw Experiment Log': [
     'raw_id','experiment_id','timestamp','source','input_title','input_subtitle',
@@ -484,21 +362,25 @@ const SHEET_HEADERS = {
   '03-Feedback Unit Log': [
     'feedback_unit_id','experiment_id','raw_id','feedback_order','user_feedback_raw',
     'feedback_snippet','feedback_type','design_issue_area','user_language_type',
-    'is_numeric_feedback','numeric_value_raw','numeric_unit','intended_change_summary',
-    'ambiguity_level','needs_user_confirmation',
+    'is_numeric_feedback','numeric_value_raw','numeric_unit','qualitative_expression',
+    'intended_change_summary','ambiguity_level','needs_user_confirmation',
   ],
   '04-Variable Patch Log': [
     'patch_id','experiment_id','feedback_unit_id','patch_order','feedback_snippet',
-    'interpreted_variable_by_claude','intended_variable_by_user','actual_changed_variable',
-    'saved_rule_variable','variable_group','variable_scope','before_value',
+    'variable_name','variable_id','variable_label','saved_rule_variable',
+    'variable_group','variable_scope','before_value',
     'system_planned_value','actual_after_value','user_target_value','unit',
     'direction_requested','direction_interpreted','direction_applied','direction_match',
     'magnitude_requested','magnitude_applied','magnitude_match',
-    'patch_success','patch_status','failure_type','confidence_score','research_memo',
+    'patch_success','patch_status','failure_reason','applied_in_tex','research_memo',
   ],
-  '06-Revision Log': [
-    'revision_id','experiment_id','timestamp','user_request','intent','entity','value',
-    'before_value','after_value','success','note',
+  '05-Before After Values': [
+    'value_id','experiment_id','patch_id','feedback_unit_id','variable_id','variable_name',
+    'before_value','after_value','target_value','unit','change_delta','change_ratio','match_status',
+  ],
+  '06-Lock Check': [
+    'lock_check_id','experiment_id','patch_id','feedback_unit_id','variable_id','variable_name',
+    'lock_status','lock_reason','can_modify','locked_by','note',
   ],
   '07-Score Breakdown': [
     'score_id','experiment_id','feedback_unit_id','patch_id','satisfaction_score',
@@ -517,89 +399,321 @@ const SHEET_HEADERS = {
     'current_rule_value','source_feedback_count','success_count','failure_count',
     'confidence','last_updated','example_feedback','rule_description','risk_note','active_status',
   ],
+  '10-Rule Application Log': [
+    'application_id','experiment_id','applied_rule_id','rule_variable','rule_value',
+    'applied_at','application_status','before_value','after_value','note',
+  ],
+  '11-Research Coding': [
+    'coding_id','experiment_id','feedback_unit_id','raw_id','design_issue_area',
+    'feedback_type','user_language_type','ambiguity_level','intended_variable',
+    'target_direction','target_magnitude','interpretation_confidence','coder_note',
+  ],
+  '06-Revision Log': [
+    'revision_id','experiment_id','timestamp','user_request','intent','entity','value',
+    'before_value','after_value','success','note',
+  ],
 };
 
-// buildRow: headers 배열 순서대로 data 객체에서 값을 꺼냄
-// 값이 없으면 fallbackValue()로 채움 (undefined/null → 'unknown' or 'not_verified')
 function _sheetFallback(key) {
-  const notVerified = ['generated_pdf_path','generated_tex_path','generated_sty_path',
-    'before_value','actual_after_value','original_match_rate','overall_match_score',
-    'overall_status','patch_count','lock_success_score','actual_patch_score',
-    'rule_application_score','magnitude_applied','direction_applied',
-    'actual_changed_variable','confidence_score','reference_reason','resolution_note',
-    'score_formula'];
+  const notVerified = [
+    'generated_pdf_path','generated_tex_path','generated_sty_path',
+    'before_value','after_value','actual_after_value','original_match_rate',
+    'overall_match_score','overall_status','patch_count',
+    'lock_success_score','actual_patch_score','rule_application_score',
+    'magnitude_applied','direction_applied','confidence_score',
+    'reference_reason','resolution_note','score_formula',
+    'change_delta','change_ratio','match_status',
+    'lock_status','lock_reason','can_modify',
+    'applied_rule_id','rule_value','application_status',
+    'failure_reason','applied_in_tex','patch_success','patch_status',
+    'interpretation_confidence',
+  ];
   if (notVerified.includes(key)) return 'not_verified';
   return 'unknown';
 }
+
 function buildRow(headers, data) {
-  const row = headers.map(h => {
+  return headers.map(h => {
     const v = data[h];
     return (v === undefined || v === null || v === '') ? _sheetFallback(h) : v;
   });
-  if (row.length !== headers.length) {
-    console.error(`[buildRow] length mismatch: headers=${headers.length} row=${row.length}`);
-  }
-  return row;
 }
 
-// ── Sheet Payload Sender: Google Sheets에 데이터 기록 ───────────────────
-// 생성된 payload를 /api/sheet-record 엔드포인트를 통해 Google Sheets로 전송
-// 14개 탭에 구조화된 형태로 append/upsert 모드로 기록
-
-async function sendPayloadToSheet(payload) {
-  if (!payload || !payload.experiment_id || !payload.raw_log) {
-    console.error('Invalid payload:', payload);
-    return { status: 'error', message: 'Invalid payload - missing required fields' };
-  }
-
-  const sheetRecordOrder = [
-    { sheetName: '01-Raw Experiment Log', data: payload.raw_log, mode: 'append' },
-    { sheetName: '02-Experiment Summary', data: payload.experiment_summary, mode: 'upsert', keyValue: payload.experiment_id, keyColumnIndex: 1 },
-  ];
-
-  const results = [];
-
-  for (const config of sheetRecordOrder) {
-    try {
-      const row = convertPayloadToRow(config.data, config.sheetName);
-      if (!row) {
-        console.error(`[sendPayloadToSheet] 컬럼 수 불일치로 전송 취소: ${config.sheetName}`);
-        results.push({ status: 'error', sheet: config.sheetName, error: 'length_mismatch' });
-        continue;
-      }
-      await postSheetPayload({
-        sheetName: config.sheetName,
-        rowValues: row,
-        mode: config.mode,
-        keyValue: config.keyValue,
-        keyColumnIndex: config.keyColumnIndex
-      });
-      results.push({ status: 'success', sheet: config.sheetName });
-      console.log(`Sheet record sent: ${config.sheetName}`);
-    } catch (error) {
-      console.error(`Sheet record error (${config.sheetName}):`, error);
-      results.push({ status: 'error', sheet: config.sheetName, error: error.toString() });
-    }
-  }
-
-  return { status: results.every(r => r.status === 'success') ? 'success' : 'partial', results };
-}
-
-function convertPayloadToRow(data, sheetName) {
-  if (!data) return [];
+async function appendSheetSafe(sheetName, data) {
   const headers = SHEET_HEADERS[sheetName];
-  if (!headers) return [];
-  // 02-Experiment Summary의 date는 timestamp에서 파생
-  if (sheetName === '02-Experiment Summary' && !data.date && data.timestamp) {
-    data = { ...data, date: data.timestamp.slice(0, 10) };
+  if (!headers) { console.warn(`[appendSheetSafe] 헤더 정의 없음: ${sheetName}`); return; }
+  const rowValues = buildRow(headers, data);
+  console.table({ sheetName, headers_len: headers.length, row_len: rowValues.length, rowValues });
+  if (rowValues.length !== headers.length) {
+    console.error(`[appendSheetSafe] 컬럼 수 불일치, 전송 취소: ${sheetName} headers=${headers.length} row=${rowValues.length}`);
+    return;
   }
-  const row = buildRow(headers, data);
-  console.log(`[convertPayloadToRow] sheetName=${sheetName} headers=${headers.length} row=${row.length}`);
-  if (row.length !== headers.length) {
-    console.error(`[convertPayloadToRow] length mismatch! 전송 취소`);
-    return null;
+  return postSheetPayload({ sheetName, rowValues }).catch(err =>
+    console.warn(`[appendSheetSafe] ${sheetName} 전송 실패:`, err.message)
+  );
+}
+
+// ── 변수 ID/라벨/그룹 매핑 사전 ─────────────────────────────────────────────
+const VARIABLE_MAP = {
+  body_size:           { variable_id:'body_font_size',           variable_label:'본문 크기',        variable_group:'body_text',    unit:'pt' },
+  body_leading:        { variable_id:'body_line_height',         variable_label:'본문 행간',        variable_group:'body_text',    unit:'%' },
+  body_gap:            { variable_id:'body_paragraph_gap',       variable_label:'본문↔제목 간격',   variable_group:'body_text',    unit:'pt' },
+  tracking:            { variable_id:'body_tracking',            variable_label:'자간',             variable_group:'body_text',    unit:'em' },
+  paragraph_spacing:   { variable_id:'paragraph_spacing',        variable_label:'문단 간격',        variable_group:'body_text',    unit:'pt' },
+  font_style:          { variable_id:'body_font',                variable_label:'본문 서체',        variable_group:'body_text',    unit:'font' },
+  heading_h1_size:     { variable_id:'title_font_size',          variable_label:'제목 크기',        variable_group:'heading',      unit:'pt' },
+  heading_h1_leading:  { variable_id:'title_line_height',        variable_label:'제목 행간',        variable_group:'heading',      unit:'%' },
+  heading_h2_size:     { variable_id:'subtitle_font_size',       variable_label:'소제목 크기',      variable_group:'heading',      unit:'pt' },
+  heading_h2_leading:  { variable_id:'subtitle_line_height',     variable_label:'소제목 행간',      variable_group:'heading',      unit:'%' },
+  heading_h3_size:     { variable_id:'sub2_font_size',           variable_label:'소소제목 크기',    variable_group:'heading',      unit:'pt' },
+  heading_h3_leading:  { variable_id:'sub2_line_height',         variable_label:'소소제목 행간',    variable_group:'heading',      unit:'%' },
+  heading_gap:         { variable_id:'heading_subtitle_spacing', variable_label:'제목↔소제목 간격', variable_group:'heading',      unit:'%' },
+  heading_layout:      { variable_id:'heading_alignment',        variable_label:'제목 정렬',        variable_group:'heading',      unit:'enum' },
+  heading_font:        { variable_id:'heading_font',             variable_label:'제목 서체',        variable_group:'heading',      unit:'font' },
+  footnote_size:       { variable_id:'footnote_font_size',       variable_label:'각주 크기',        variable_group:'footnote',     unit:'pt' },
+  footnote_leading:    { variable_id:'footnote_line_height',     variable_label:'각주 행간',        variable_group:'footnote',     unit:'%' },
+  footnote_font:       { variable_id:'footnote_font',            variable_label:'각주 서체',        variable_group:'footnote',     unit:'font' },
+  running_head_font:   { variable_id:'running_head_font',        variable_label:'면주 서체',        variable_group:'running_head', unit:'font' },
+  margin_top:          { variable_id:'margin_top',               variable_label:'상여백',           variable_group:'margin',       unit:'mm' },
+  margin_bottom:       { variable_id:'margin_bottom',            variable_label:'하여백',           variable_group:'margin',       unit:'mm' },
+  margin_inner:        { variable_id:'margin_inner',             variable_label:'안여백',           variable_group:'margin',       unit:'mm' },
+  margin_outer:        { variable_id:'margin_outer',             variable_label:'밖여백',           variable_group:'margin',       unit:'mm' },
+  column_count:        { variable_id:'column_count',             variable_label:'단수',             variable_group:'column',       unit:'count' },
+  column_gap:          { variable_id:'column_gap',               variable_label:'단간격',           variable_group:'column',       unit:'mm' },
+  folio_size:          { variable_id:'folio_font_size',          variable_label:'쪽번호 크기',      variable_group:'folio',        unit:'pt' },
+};
+
+// ── logFeedbackApply: 피드백 하기 버튼 → 전체 로깅 파이프라인 ─────────────────
+async function logFeedbackApply({
+  experimentId, rawId, timestamp,
+  analysis, corrections, satisfactionScore, userFeedbackText,
+  fields, hint, latex, styCode, currentLog, structuredReason,
+  matchRate, overallStatus,
+}) {
+  if (!ENABLE_GOOGLE_SHEET_LOGGING) return;
+  const cl = currentLog;
+  const varNames = {
+    body_size:'본문크기', body_leading:'본문행간', heading_h1_size:'제목크기',
+    heading_h1_leading:'제목행간', heading_h2_size:'소제목크기', heading_h2_leading:'소제목행간',
+    heading_h3_size:'소소제목크기', heading_h3_leading:'소소제목행간',
+    heading_gap:'제목↔소제목간격', body_gap:'제목↔본문간격', heading_layout:'제목정렬',
+    margin_top:'상여백', margin_bottom:'하여백', margin_inner:'안여백', margin_outer:'밖여백',
+    tracking:'자간', column_count:'단수', footnote_size:'각주크기', footnote_leading:'각주행간',
+    column_gap:'단간격', folio_size:'쪽번호', font_style:'본문서체', heading_font:'제목서체',
+    footnote_font:'각주서체', running_head_font:'면주서체', paragraph_spacing:'문단간격',
+  };
+
+  // feedback unit 구성 (feedbackCorrections 기반)
+  const feedbackUnits = corrections
+    .filter(c => c.target_variable !== '__custom__')
+    .map((c, idx) => {
+      const fuId = generateFeedbackUnitId(experimentId, idx);
+      const vmap = VARIABLE_MAP[c.target_variable] || {};
+      const isPct = /[+-]?\d+(\.\d+)?%/.test(c.user_pct || '');
+      const isFont = /font|서체/.test(c.target_variable);
+      const isCount = /count/.test(c.target_variable);
+      const unitStr = c.user_pct?.includes('pt') ? 'pt'
+        : c.user_pct?.includes('mm') ? 'mm'
+        : isPct ? '%' : isFont ? 'font' : isCount ? 'count' : 'unknown';
+      const userVal = parseFloat((c.user_pct || '').match(/([+-]?\d+(?:\.\d+)?)/)?.[1] || 'NaN');
+      const sysVal  = parseFloat((c.system_pct || '').match(/([+-]?\d+(?:\.\d+)?)/)?.[1] || 'NaN');
+      const dirLabel = c.direction_match === true ? 'match' : c.direction_match === false ? 'mismatch' : 'unknown';
+      const magMatch = !isNaN(userVal) && !isNaN(sysVal) && userVal !== 0
+        ? Math.abs(1 - Math.abs(sysVal) / Math.abs(userVal)) < 0.3 ? 'close' : 'far' : 'unknown';
+      const failureReason = c.direction_match === false ? 'direction_mismatch'
+        : (!c.system_pct || c.system_pct === '미반영') ? 'no_actual_patch' : '';
+      const feedbackType = isPct ? 'direct_numeric' : isFont ? 'font_choice' : 'qualitative';
+      const label = varNames[c.target_variable] || c.target_variable;
+      const feedbackSnippet = `${label}: ${c.user_pct || ''}`;
+      return {
+        fuId, idx, c, vmap, isPct, isFont, isCount, unitStr,
+        userVal, sysVal, dirLabel, magMatch, failureReason,
+        feedbackType, feedbackSnippet,
+        patchId: `${experimentId}_p${String(idx+1).padStart(2,'0')}`,
+        scoreId: generateScoreId(experimentId, idx),
+      };
+    });
+
+  // ── 01-Raw Experiment Log
+  await appendSheetSafe('01-Raw Experiment Log', {
+    raw_id: rawId, experiment_id: experimentId, timestamp,
+    source: 'feedback_apply_button',
+    input_title: fields.제목 || '', input_subtitle: fields.소제목 || '',
+    input_body: (fields.본문 || '').slice(0, 200),
+    input_footnote: fields.각주 || '', genre_hint: hint || '',
+    user_intent_raw: userFeedbackText,
+    selected_reference: cl?.matching?.selected_reference_title || '',
+    system_intent: (structuredReason?.design_concept || []).join(', ') || '',
+    generated_pdf_path: 'not_verified',
+    generated_tex_path: latex ? 'main.tex' : 'not_verified',
+    generated_sty_path: styCode ? 'imprint-style.sty' : 'not_verified',
+    user_feedback_raw: userFeedbackText, satisfaction_score: satisfactionScore,
+    original_match_rate: matchRate + '%',
+    system_adjustment_raw: corrections.map(c => c.system_pct).filter(Boolean).join(', '),
+    user_target_raw: corrections.map(c => c.user_pct).filter(Boolean).join(', '),
+    next_rule_raw: analysis.nextRule || '',
+    md_log_path: 'unknown', csv_log_path: 'unknown',
+    json_log_path: experimentId, notes: '',
+  });
+
+  // ── 02-Experiment Summary
+  await appendSheetSafe('02-Experiment Summary', {
+    experiment_id: experimentId, date: timestamp.slice(0, 10), timestamp,
+    session_id: 'unknown', test_round: 'unknown', text_id: 'unknown', version_id: 'unknown',
+    input_title: fields.제목 || '', input_genre: hint || '',
+    experiment_goal: 'feedback_apply_button',
+    selected_reference: cl?.matching?.selected_reference_title || '',
+    reference_reason: cl?.matching?.semantic_reason || '',
+    generated_pdf_path: 'not_verified',
+    generated_tex_path: latex ? 'main.tex' : 'not_verified',
+    generated_sty_path: styCode ? 'imprint-style.sty' : 'not_verified',
+    feedback_count: feedbackUnits.length, patch_count: feedbackUnits.length,
+    satisfaction_score: satisfactionScore,
+    overall_match_score: matchRate + '%', overall_status: overallStatus,
+    main_success: matchRate >= 70 ? (analysis.nextRule || 'direction_match') : 'none',
+    main_failure: matchRate < 70 ? (analysis.difference || 'partial_mismatch') : 'none',
+    research_note: analysis.nextRule || '',
+  });
+
+  // ── 03-Feedback Unit + 11-Research Coding (unit 수만큼)
+  for (const unit of feedbackUnits) {
+    const { fuId, c, vmap, isPct, isFont, feedbackType, feedbackSnippet, unitStr, userVal } = unit;
+
+    await appendSheetSafe('03-Feedback Unit Log', {
+      feedback_unit_id: fuId, experiment_id: experimentId, raw_id: rawId,
+      feedback_order: unit.idx + 1, user_feedback_raw: userFeedbackText,
+      feedback_snippet: feedbackSnippet, feedback_type: feedbackType,
+      design_issue_area: vmap.variable_group || c.target_variable.split('_')[0],
+      user_language_type: isPct ? 'direct_numeric' : 'qualitative',
+      is_numeric_feedback: isPct ? 'TRUE' : 'FALSE',
+      numeric_value_raw: isPct ? (c.user_pct || '') : '',
+      numeric_unit: isPct ? unitStr : '',
+      qualitative_expression: (!isPct && !isFont) ? (c.user_pct || '') : '',
+      intended_change_summary: feedbackSnippet,
+      ambiguity_level: isPct ? 'low' : 'medium', needs_user_confirmation: 'FALSE',
+    });
+
+    await appendSheetSafe('11-Research Coding', {
+      coding_id: generateCodingId(experimentId, unit.idx),
+      experiment_id: experimentId, feedback_unit_id: fuId, raw_id: rawId,
+      design_issue_area: vmap.variable_group || c.target_variable.split('_')[0],
+      feedback_type: feedbackType,
+      user_language_type: isPct ? 'direct_numeric' : 'qualitative',
+      ambiguity_level: isPct ? 'low' : 'medium',
+      intended_variable: vmap.variable_id || c.target_variable,
+      target_direction: !isNaN(userVal) ? (userVal > 0 ? 'increase' : userVal < 0 ? 'decrease' : 'neutral') : 'unknown',
+      target_magnitude: c.user_pct || 'unknown',
+      interpretation_confidence: isPct ? 'high' : 'medium', coder_note: '',
+    });
   }
-  return row;
+
+  // ── 04, 05, 06, 08, 10 (patch 수만큼)
+  for (const unit of feedbackUnits) {
+    const { fuId, patchId, c, vmap, isPct, unitStr, userVal, sysVal, dirLabel, magMatch, failureReason, feedbackSnippet, idx } = unit;
+
+    await appendSheetSafe('04-Variable Patch Log', {
+      patch_id: patchId, experiment_id: experimentId, feedback_unit_id: fuId,
+      patch_order: idx + 1, feedback_snippet: feedbackSnippet,
+      variable_name: c.target_variable,
+      variable_id: vmap.variable_id || c.target_variable,
+      variable_label: vmap.variable_label || c.target_variable,
+      saved_rule_variable: c.target_variable,
+      variable_group: vmap.variable_group || c.target_variable.split('_')[0],
+      variable_scope: 'single_variable', before_value: 'not_verified',
+      system_planned_value: c.system_pct || '미반영', actual_after_value: 'not_verified',
+      user_target_value: c.user_pct || '', unit: unitStr,
+      direction_requested: !isNaN(userVal) ? (userVal > 0 ? 'increase' : userVal < 0 ? 'decrease' : 'neutral') : 'unknown',
+      direction_interpreted: !isNaN(sysVal) ? (sysVal > 0 ? 'increase' : sysVal < 0 ? 'decrease' : 'neutral') : 'unknown',
+      direction_applied: 'not_verified', direction_match: dirLabel,
+      magnitude_requested: c.user_pct || '', magnitude_applied: c.system_pct || 'not_verified',
+      magnitude_match: magMatch,
+      patch_success: failureReason ? 'FALSE' : 'not_verified',
+      patch_status: failureReason ? 'failure' : 'not_verified',
+      failure_reason: failureReason || '',
+      applied_in_tex: latex ? 'not_verified' : 'no_latex', research_memo: '',
+    });
+
+    await appendSheetSafe('05-Before After Values', {
+      value_id: generateValueCheckId(experimentId, idx),
+      experiment_id: experimentId, patch_id: patchId, feedback_unit_id: fuId,
+      variable_id: vmap.variable_id || c.target_variable, variable_name: c.target_variable,
+      before_value: 'not_verified', after_value: 'not_verified',
+      target_value: c.user_pct || '', unit: unitStr,
+      change_delta: 'not_verified', change_ratio: 'not_verified', match_status: 'not_verified',
+    });
+
+    await appendSheetSafe('06-Lock Check', {
+      lock_check_id: generateLockCheckId(experimentId, idx),
+      experiment_id: experimentId, patch_id: patchId, feedback_unit_id: fuId,
+      variable_id: vmap.variable_id || c.target_variable, variable_name: c.target_variable,
+      lock_status: 'not_verified', lock_reason: 'not_verified',
+      can_modify: 'not_verified', locked_by: 'unknown', note: '',
+    });
+
+    await appendSheetSafe('08-Failure Analysis', {
+      failure_id: `${experimentId}_f${String(idx+1).padStart(2,'0')}`,
+      experiment_id: experimentId, feedback_unit_id: fuId, patch_id: patchId,
+      failure_type: failureReason || 'not_verified',
+      failure_stage: failureReason === 'no_actual_patch' ? 'latex_application'
+        : failureReason === 'direction_mismatch' ? 'variable_mapping' : 'not_verified',
+      description: `${c.target_variable}: 요청 ${c.user_pct || 'unknown'}, 시스템 ${c.system_pct || '미반영'}`,
+      example_user_feedback: userFeedbackText,
+      wrong_system_interpretation: c.system_pct || '미반영',
+      expected_behavior: c.user_pct || '', actual_behavior: c.system_pct || '미반영',
+      severity: !failureReason ? 'none' : matchRate < 40 ? 'high' : 'medium',
+      fix_required: failureReason === 'no_actual_patch' ? 'rule_application_bug'
+        : failureReason === 'direction_mismatch' ? 'direction_logic' : 'not_verified',
+      related_rule_id: `rule_${c.target_variable}`,
+      resolved: failureReason ? 'FALSE' : 'not_applicable', resolution_note: 'not_verified',
+    });
+
+    await appendSheetSafe('10-Rule Application Log', {
+      application_id: generateRuleApplicationId(experimentId, idx),
+      experiment_id: experimentId, applied_rule_id: 'not_verified',
+      rule_variable: c.target_variable, rule_value: 'not_verified',
+      applied_at: timestamp, application_status: 'not_verified',
+      before_value: 'not_verified', after_value: 'not_verified', note: '',
+    });
+  }
+
+  // ── 07-Score Breakdown (patch 수만큼)
+  for (const unit of feedbackUnits) {
+    const { scoreId, fuId, patchId, c, dirLabel, magMatch } = unit;
+    const dirScore = dirLabel === 'match' ? 75 : dirLabel === 'mismatch' ? 25 : 50;
+    const varScore = dirLabel !== 'unknown' ? 75 : 50;
+    const magScore = magMatch === 'close' ? 75 : magMatch === 'far' ? 25 : 50;
+    await appendSheetSafe('07-Score Breakdown', {
+      score_id: scoreId, experiment_id: experimentId,
+      feedback_unit_id: fuId, patch_id: patchId,
+      satisfaction_score: satisfactionScore,
+      variable_match_score: varScore + '%', direction_match_score: dirScore + '%',
+      magnitude_match_score: magScore + '%',
+      lock_success_score: 'not_verified', actual_patch_score: 'not_verified',
+      rule_application_score: 'not_verified',
+      overall_match_score: matchRate + '%', score_formula: analysis.matchFormula || '',
+      score_reason: `변수:${c.target_variable}, 방향:${dirLabel}, 크기:${magMatch}`,
+    });
+  }
+
+  // ── 09-Rule Memory (현재 system_rules 스냅샷)
+  const sr = (() => { try { return JSON.parse(localStorage.getItem('imprint_system_rules') || '{}'); } catch { return {}; } })();
+  for (const [ruleName, rule] of Object.entries(sr.rules || {})) {
+    if (rule.confidence === 'none' || rule.value === null) continue;
+    const ruleVal = typeof rule.value === 'number'
+      ? `${rule.value > 0 ? '+' : ''}${Math.round(rule.value)}%` : String(rule.value);
+    await appendSheetSafe('09-Rule Memory', {
+      rule_id: `rule_${ruleName}`, variable_name: ruleName,
+      variable_group: ruleName.split('_')[0], rule_condition: 'genre = any',
+      rule_action: `${ruleName} ${ruleVal}`, current_rule_value: ruleVal,
+      source_feedback_count: (rule.history || []).length,
+      success_count: 'not_tracked', failure_count: 'not_tracked',
+      confidence: rule.confidence, last_updated: timestamp.slice(0, 10),
+      example_feedback: userFeedbackText,
+      rule_description: `${ruleName}: ${ruleVal} [${rule.confidence}]`,
+      risk_note: '', active_status: 'active',
+    });
+  }
+  // 12-Variable Dictionary, 13-Auto Input Schema: 사전 탭이므로 매 클릭마다 append 금지
 }
 
 // ── System Rules: localStorage 기반 구조적 학습 시스템 ──────────────
