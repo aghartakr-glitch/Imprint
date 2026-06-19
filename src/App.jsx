@@ -7624,23 +7624,6 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                       const canSubmit = feedbackCorrections.length > 0 && satisfactionScore !== null && !experimentLoading;
                       const handleFeedbackApply = async () => {
                         await analyzeExperiment();
-                        // After analyzeExperiment completes, send payload to Google Sheet
-                        if (window._pendingSheetPayload) {
-                          sendPayloadToSheet(window._pendingSheetPayload)
-                            .then(result => {
-                              console.log('Google Sheet record result:', result);
-                              if (result.status === 'success') {
-                                alert('피드백이 저장되었습니다');
-                              } else {
-                                alert('Google Sheet 저장 실패: ' + JSON.stringify(result));
-                              }
-                            })
-                            .catch(error => {
-                              console.error('Google Sheet record error:', error);
-                              alert('Google Sheet 저장 실패: ' + (error?.message || String(error)));
-                            });
-                          window._pendingSheetPayload = null;
-                        }
                       };
                       return (
                         <button
