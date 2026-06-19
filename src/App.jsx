@@ -6183,8 +6183,30 @@ ${customTexts.join('\n')}`;
         }
       }
 
-      // ── Google Sheets 14탭 리서치 데이터베이스 로깅 ──────────────
-      if (ENABLE_GOOGLE_SHEET_LOGGING && ENABLE_DETAILED_SHEET_LOGGING) {
+      // ── Google Sheets 전체 탭 로깅 ──────────────────────────────────
+      if (ENABLE_GOOGLE_SHEET_LOGGING) {
+        const rawId = `raw_${exp.experiment_id}`;
+        const matchRateNum = Math.round(analysis.matchRate);
+        const overallStatusVal = matchRateNum >= 70 ? 'success' : matchRateNum >= 50 ? 'partial_success' : matchRateNum >= 30 ? 'partial_failure' : 'failure';
+        logFeedbackApply({
+          experimentId: exp.experiment_id,
+          rawId,
+          timestamp: exp.timestamp || new Date().toISOString(),
+          analysis,
+          corrections: analysis.corrections || [],
+          satisfactionScore,
+          userFeedbackText,
+          fields,
+          hint,
+          latex,
+          styCode,
+          currentLog,
+          structuredReason,
+          matchRate: matchRateNum,
+          overallStatus: overallStatusVal,
+        }).catch(err => console.warn('[logFeedbackApply] 실패:', err.message));
+      }
+      if (false) {
         const cl = currentLog;
         const rawId = `raw_${exp.experiment_id}`;
         const matchRate = Math.round(analysis.matchRate);
