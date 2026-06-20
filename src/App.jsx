@@ -769,8 +769,36 @@ function saveSystemRules(sr) {
   try { localStorage.setItem('imprint_system_rules', JSON.stringify(sr)); } catch {}
 }
 
-// 피드백 적용마다 system_rules를 다운로드 폴더에 자동 백업 (포트/localStorage 손실 대비)
-function downloadSystemRulesBackup(experimentId) {
+// 파일시스템에 쓸 수 없는 문자 제거 (책 제목 → 폴더명)
+function sanitizeFolderName(str) {
+  const cleaned = (str || '').trim().replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+  return cleaned || '제목없음';
+}
+
+// 책 제목 / 테스트 회차별로 폴더링된 경로에 파일 다운로드
+// Chrome/Edge는 download 속성에 '/'가 있으면 기본 다운로드 폴더 하위에 실제 서브폴더를 만든다
+function downloadToBookFolder(content, mimeType, bookTitle, runId, filename) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const folder = sanitizeFolderName(bookTitle);
+  const run = runId || String(Date.now());
+  a.href = url;
+  a.download = `Imprint-Data/${folder}/${run}/${filename}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// 피드백 적용마다 system_rules를 책 제목별 폴더에 자동 백업 (포트/localStorage 손실 대비)
+function downloadSystemRulesBackup(experimentId, bookTitle, runId) {
+  try {
+    const sr = loadSystemRules();
+    downloadToBookFolder(JSON.stringify(sr, null, 2), 'application/json', bookTitle, runId, `system_rules_${experimentId || Date.now()}.json`);
+    return;
+  } catch (e) { console.warn('[downloadSystemRulesBackup] 실패:', e.message); }
+  // 폴더링 실패 시 평문 다운로드로 폴백
   try {
     const sr = loadSystemRules();
     const blob = new Blob([JSON.stringify(sr, null, 2)], { type: 'application/json' });
