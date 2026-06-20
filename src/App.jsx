@@ -769,6 +769,22 @@ function saveSystemRules(sr) {
   try { localStorage.setItem('imprint_system_rules', JSON.stringify(sr)); } catch {}
 }
 
+// 피드백 적용마다 system_rules를 다운로드 폴더에 자동 백업 (포트/localStorage 손실 대비)
+function downloadSystemRulesBackup(experimentId) {
+  try {
+    const sr = loadSystemRules();
+    const blob = new Blob([JSON.stringify(sr, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `system_rules_${experimentId || Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.warn('[downloadSystemRulesBackup] 실패:', e.message);
+  }
+}
+
 // satisfaction → 학습 가중치 (피드백이 있으면 명확한 신호로 취급)
 function _satWeight(sat) {
   if (sat <= 2) return 1.5;
