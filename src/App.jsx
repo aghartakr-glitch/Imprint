@@ -5690,6 +5690,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         const _analyzePrompt = '텍스트 분석→JSON: ' + matchText.slice(0, 200);
         const _semanticPrompt = 'rerank ' + matchText.slice(0, 100);
         const _logId = makeGenerationId();
+        setCurrentRunId(_logId);
         const _fnCount = (fields.각주||'').split(/\n/).filter(l=>l.trim()).length;
         const _genLog = {
           id: _logId,
