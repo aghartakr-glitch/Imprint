@@ -6186,6 +6186,7 @@ ${customTexts.join('\n')}`;
 
       // ── System Rules 업데이트 ────────────────────────
       updateSystemRules(analysis.corrections, satisfactionScore, userFeedbackText);
+      downloadSystemRulesBackup(exp.experiment_id);
 
       // ── sty 즉시 재생성 (API 비용 없음) — 학습된 규칙이 반영된 sty 파일 갱신 ──
       if (latex) {
