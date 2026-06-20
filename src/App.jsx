@@ -4948,6 +4948,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 4000,
+            temperature: 0,
             system: 'You are a XeLaTeX code generator. Output ONLY raw LaTeX code. No explanations, no comments in prose, no "Hmm", no "Actually", no thinking out loud. Your entire response must start with \\begin{document} and end with \\end{document}. Any character before \\begin{document} is forbidden.',
             messages: [{ role: 'user', content: [{ type: 'text', text: latexPrompt, cache_control: { type: 'ephemeral' } }] }],
           }),
