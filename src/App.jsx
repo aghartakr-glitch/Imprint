@@ -3315,6 +3315,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 400,
+          temperature: 0,
           system: 'Return ONLY valid JSON, no other text.',
           // 같은 본문+설정이면 prompt가 동일 → 캐시 히트
           messages: [{ role: 'user', content: [{ type: 'text', text: prompt, cache_control: { type: 'ephemeral' } }] }],
