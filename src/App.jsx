@@ -7824,10 +7824,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                     </span>
                     <div style={{ display:'flex', gap:6 }}>
                       <button onClick={() => {
-                        const blob = new Blob([JSON.stringify(sr, null, 2)], { type:'application/json' });
-                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-                        a.download = 'system_rules.json'; document.body.appendChild(a);
-                        a.click(); document.body.removeChild(a);
+                        downloadToBookFolder(JSON.stringify(sr, null, 2), 'application/json', fields.제목, currentRunId, 'system_rules.json');
                       }} style={{ padding:'3px 8px', fontSize:10, border:`1px solid ${T.border}`,
                         borderRadius:3, background:T.surface, color:T.muted, cursor:'pointer' }}>
                         JSON 저장
