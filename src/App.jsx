@@ -3441,7 +3441,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey }, signal: ctrl.signal,
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001', max_tokens: 600,
+          model: 'claude-haiku-4-5-20251001', max_tokens: 600, temperature: 0,
           system: 'Return ONLY valid JSON, no other text.',
           messages: [{ role: 'user', content: [
             // ── 캐시 대상: 레퍼런스 후보 데이터 (같은 본문이면 동일 → 캐시 히트) ──
