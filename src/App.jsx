@@ -8510,7 +8510,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
                         </div>
                       </div>
                       <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
-                        <button onClick={() => downloadFile(styCode, 'imprint-style.sty')}
+                        <button onClick={() => downloadToBookFolder(styCode, 'text/plain;charset=utf-8', fields.제목, currentRunId, 'imprint-style.sty')}
                           style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
                             border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
                             background:T.surface, color:T.ink, cursor:"pointer",
