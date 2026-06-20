@@ -3128,6 +3128,7 @@ export default function App() {
       return idx >= 0 ? prev.map((x,i) => i===idx ? entry : x) : [...prev, entry];
     });
   const [matching, setMatching] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState(null); // 책 제목별 다운로드 폴더링에 사용하는 실행 회차 ID
   const [rationale, setRationale] = useState('');
   const [chosenReason, setChosenReason] = useState('');
   const [structuredReason, setStructuredReason] = useState(null); // {reference_reason, content_match, layout_reason, design_concept[], design_task[], visual_element[], ...}
