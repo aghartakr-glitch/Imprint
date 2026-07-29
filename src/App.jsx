@@ -2936,7 +2936,9 @@ export default function App() {
 4. 공간 기획은 미학뿐 아니라 임대료, 접근성, 지역 관계와 연결된다.`,
     면주: "골목 재생",
   });
-  const [inputTab, setInputTab] = useState('text'); // 'text' | 'experiment'
+  const [inputTab, setInputTab] = useState(() => {
+    try { return localStorage.getItem('imprint_baseline_latex') ? 'experiment' : 'text'; } catch { return 'text'; }
+  }); // 'text' | 'experiment'
   const [experimentFeedback, setExperimentFeedback] = useState(''); // 사용자 정답 피드백 (레거시, 유지)
   const [satisfactionScore, setSatisfactionScore] = useState(null); // 1~5 또는 null
   const [feedbackCorrections, setFeedbackCorrections] = useState([]); // [{target_variable, system_pct, user_pct, direction_match}]
@@ -3142,10 +3144,10 @@ export default function App() {
   const [appliedMargins, setAppliedMargins] = useState(null); // corrections.margins from last run()
   const [patchToast, setPatchToast] = useState(null); // 피드백 반영 완료 토스트
   const [latex, setLatex] = useState(() => {
-    try { return localStorage.getItem('imprint_last_latex') || ""; } catch { return ""; }
+    try { return localStorage.getItem('imprint_baseline_latex') || ""; } catch { return ""; }
   });
   const [styCode, setStyCode] = useState(() => {
-    try { return localStorage.getItem('imprint_last_sty') || ""; } catch { return ""; }
+    try { return localStorage.getItem('imprint_baseline_sty') || ""; } catch { return ""; }
   });
   const [requiredFonts, setRequiredFonts] = useState([]);
   const [err, setErr] = useState("");
@@ -3162,15 +3164,7 @@ export default function App() {
   const [allLogs, setAllLogs] = useState([]);              // 세션 내 전체 로그 (인메모리)
   // includeFullPrompts: 미구현 기능 (export 시 prompt 전문 포함)
 
-  // 마지막 생성 결과 localStorage 영구 저장 — 새로고침 후에도 피드백 탭 유지
-  useEffect(() => {
-    try { if (latex) localStorage.setItem('imprint_last_latex', latex);
-          else localStorage.removeItem('imprint_last_latex'); } catch {}
-  }, [latex]);
-  useEffect(() => {
-    try { if (styCode) localStorage.setItem('imprint_last_sty', styCode);
-          else localStorage.removeItem('imprint_last_sty'); } catch {}
-  }, [styCode]);
+  // latex/styCode는 run() 완료 시에만 localStorage 저장 (채팅 수정은 저장 안 함)
   useEffect(() => {
     try { if (currentLog) localStorage.setItem('imprint_last_log', JSON.stringify(currentLog));
           else localStorage.removeItem('imprint_last_log'); } catch {}
@@ -5612,6 +5606,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         }
         setStyCode(finalStyContent);
         setLatex(finalMainTex);
+        try { localStorage.setItem('imprint_baseline_sty', finalStyContent);
+              localStorage.setItem('imprint_baseline_latex', finalMainTex); } catch {}
         // ── Revision Trajectory: rev_000 초기 생성 기록 ──────────────────
         const _cmdMap0 = extractLatexCommandMap(finalMainTex || '');
         setRevisionLog([{
@@ -5962,6 +5958,13 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // [^}]* 는 \fontsize{Xpt} 안의 } 에서 멈추므로, (?:\\[a-zA-Z]+)* 로 수정
     const notef = latexStr.match(/\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
     if (notef) { map.noteSize = notef[1]; map.noteLeading = notef[2]; }
+    // \hone \htwo \hthree
+    const h1 = latexStr.match(/\\newcommand\{\\hone\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
+    if (h1) { map.h1Size = h1[1]; map.h1Leading = h1[2]; }
+    const h2 = latexStr.match(/\\newcommand\{\\htwo\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
+    if (h2) { map.h2Size = h2[1]; map.h2Leading = h2[2]; }
+    const h3 = latexStr.match(/\\newcommand\{\\hthree\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
+    if (h3) { map.h3Size = h3[1]; map.h3Leading = h3[2]; }
     // \geometry 여백
     const geo = latexStr.match(/top=([\d.]+)mm.*?bottom=([\d.]+)mm.*?inner=([\d.]+)mm.*?outer=([\d.]+)mm/s);
     if (geo) { map.marginTop=geo[1]; map.marginBottom=geo[2]; map.marginInner=geo[3]; map.marginOuter=geo[4]; }
@@ -6551,15 +6554,20 @@ ${customTexts.join('\n')}`;
     setRefineHistory(h => [...h, { role: 'user', content: userMsg, intent }]);
 
     // ── 현재 LaTeX 수치 스냅샷 (수정 전) ─────────────────────────
-    const cmdMap = extractLatexCommandMap(latex);
+    // sty 파일 우선: 본문 크기 등 핵심 수치는 sty에 정의되어 있음
+    const cmdMapSty = styCode ? extractLatexCommandMap(styCode) : {};
+    const cmdMap = { ...extractLatexCommandMap(latex), ...cmdMapSty };
     const compressedLatex = compressLatex(latex);
 
     // ── 커맨드 맵 요약 (시스템 프롬프트용) ───────────────────────
     const cmdMapStr = [
-      cmdMap.bodySize     && `본문: ${cmdMap.bodySize}pt / 행간 ${cmdMap.bodyLeading}pt`,
-      cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt  ← "각주/주석/옆 글씨" 요청 시 여기 수정`,
-      cmdMap.footnoteSize && `하단각주(\\footnotesize): ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
-      cmdMap.letterSpace  && `자간(LetterSpace): ${cmdMap.letterSpace}`,
+      cmdMap.h1Size       && `제목(\\hone): ${cmdMap.h1Size}pt / 행간 ${cmdMap.h1Leading}pt`,
+      cmdMap.h2Size       && `소제목(\\htwo): ${cmdMap.h2Size}pt / 행간 ${cmdMap.h2Leading}pt`,
+      cmdMap.h3Size       && `중간제목(\\hthree): ${cmdMap.h3Size}pt / 행간 ${cmdMap.h3Leading}pt`,
+      cmdMap.bodySize     && `본문(\\bodyf): ${cmdMap.bodySize}pt / 행간 ${cmdMap.bodyLeading}pt`,
+      cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt`,
+      cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
+      cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
       cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
     ].filter(Boolean).join('\n');
 
@@ -6576,59 +6584,33 @@ ${customTexts.join('\n')}`;
 
     // ── 인텐트별 출력 규칙 ────────────────────────────────────────
     const outputRules = intent === 'question'
-      ? `출력 규칙 (질문 모드):
-1. 한국어로 질문에 답변한다.
-2. 현재 수치, 선택된 레퍼런스, 조판 설계 이유를 근거로 설명한다.
-3. <latex_update> 태그를 절대 출력하지 않는다 — 코드를 수정하지 않는다.
-4. 수정을 원한다면 어떻게 요청하면 되는지 짧게 안내해도 된다.`
-      : intent === 'modify'
-      ? `출력 규칙 (수정 모드):
-1. 먼저 아래 형식으로 디자인 해석을 출력한다:
-<interpretation>
-designConcept: <개념 한 줄>
-designTask: <과제 한 줄>
-visualElement: <수치/스타일 한 줄>
-</interpretation>
-2. 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
-3. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
-4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX만 넣는다.
-5. 핵심 스타일(판형·정렬·레퍼런스)은 절대 변경하지 않는다.`
-      : /* ambiguous */
-      `출력 규칙:
-1. 먼저 한국어로 무엇을 어떻게 바꾸는지 1~2문장으로 설명한다.
-2. LaTeX 수정이 필요하면 설명 뒤에 <latex_update> 태그 안에 수정된 전체 LaTeX를 출력한다.
-3. 수정이 없으면 <latex_update> 태그를 출력하지 않고 대화만 한다.
-4. <latex_update> 태그 안에는 마크다운(backtick) 없이 순수 LaTeX 코드만 넣는다.`;
+      ? `출력 규칙: 한국어로 2문장 이내 답변. 코드 태그 출력 금지.`
+      : `출력 규칙:
+- 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
+- sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
+  사용 가능한 키: bodySize bodyLeading h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSize footnoteLeading letterSpace marginTop marginBottom marginInner marginOuter
+  예: <sty_patch>bodySize=9.0,bodyLeading=14.4</sty_patch>
+- main.tex 구조 수정: <latex_update>전체LaTeX내용</latex_update>
+- 수정 불가: "적용 불가: <이유 5단어>" 한 줄만.`;
 
     // ── 시스템 프롬프트 ───────────────────────────────────────────
-    const systemPrompt = `너는 Imprint 조판 시스템의 스타일 어시스턴트다. 한국어로 자연스럽게 대화한다.
+    const systemPrompt = `너는 Imprint 조판 시스템 스타일 어시스턴트다.
 
-현재 스타일 수치:
-${cmdMapStr || '(수치 추출 실패 — LaTeX 직접 참고)'}
-판형: ${p.f.w}×${p.f.h}mm (절대 불변)
-본문 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
+현재 수치:
+${cmdMapStr || '(없음)'}
+판형: ${p.f.w}×${p.f.h}mm (불변) / 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
 
-레퍼런스 정보:
-${refCtx}
-
-수치 없는 자연어 변환 기준:
-"조금/약간" = ±10%,  "좀/더" = ±15%,  "크게/많이" = ±25%,  "훨씬/아주" = ±35%
-
-LaTeX 커맨드 라우팅 규칙:
-${cmdMap.noteSize
-  ? `- "각주", "주석", "사이드노트", "옆 글씨", "여백 텍스트" → \\notef 안의 \\fontsize만 수정 (현재 ${cmdMap.noteSize}pt)`
-  : `- 이 레이아웃에는 여백 주석(\\notef)이 없음`}
-${cmdMap.footnoteSize
-  ? `- 하단 각주 → \\renewcommand{\\footnotesize}{\\fontsize{X}{Y}\\selectfont}`
-  : `- 이 레이아웃에는 하단 각주 정의 없음 → 관련 요청은 "불가" 안내`}
-- 자간 → \\setmainfont 의 LetterSpace= 만 수정
-- 여백 → \\geometry 의 top/bottom/inner/outer 만 수정
-- 쪽번호 → \\makeoddfoot / \\makeoddhead / \\makeevenfoot / \\makeevenhead
+강도 판단 기준 (현재값 기준, 범위 내에서 자유롭게 판단):
+아주 조금/살짝 < 조금/약간 < 적당히/좀 < 많이/크게 < 아주 많이/훨씬
+작은 변화는 독자가 알아채기 어려울 만큼, 큰 변화는 레이아웃이 눈에 띄게 달라질 만큼.
+수치는 소수점 2자리까지 사용. 정수(9, 10 등) 출력 금지 — 반드시 소수점 포함(예: 9.24, 8.73).
+${cmdMap.noteSize ? `주석(\\notef): 현재 ${cmdMap.noteSize}pt` : ''}
+${cmdMap.footnoteSize ? `하단각주(\\footnotesize): 현재 ${cmdMap.footnoteSize}pt` : ''}
 
 ${outputRules}
 
-현재 LaTeX:
-${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : ''}${compressedLatex}`;
+현재 main.tex:
+${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${compressedLatex}`;
 
     // ── 멀티턴 대화 히스토리 구성 (최근 6턴만 유지하여 비용 절감) ──────────
     // assistant 메시지는 chatContent(자연어 부분)만 전달 — LaTeX 코드 제외
@@ -6650,7 +6632,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'claude-sonnet-5',
           max_tokens: 3000,
           stream: true,
           system: systemPrompt,
@@ -6697,10 +6679,17 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
               // 실시간 표시: <latex_update> 태그 이전 자연어만 표시
               // <latex_update> 감지되면 "LaTeX 수정 중…" 상태 표시
               const hasLatexTag = /<latex_update>/i.test(fullText);
-              const hasClosingTag = /<\/latex_update>/i.test(fullText);
-              const naturalPart = fullText.replace(/<latex_update>[\s\S]*/i, '').trim();
-              if (hasLatexTag && !hasClosingTag) {
-                setStreamingText(naturalPart ? naturalPart + '\n\nLaTeX 수정 중…' : 'LaTeX 수정 중…');
+              const hasStyTag = /<sty_update>/i.test(fullText);
+              const hasClosingLatex = /<\/latex_update>/i.test(fullText);
+              const hasClosingSty = /<\/sty_update>/i.test(fullText);
+              const naturalPart = fullText
+                .replace(/<latex_update>[\s\S]*/i, '')
+                .replace(/<sty_update>[\s\S]*/i, '')
+                .replace(/<sty_patch>[\s\S]*?(<\/sty_patch>|$)/i, '')
+                .trim();
+              const updating = (hasLatexTag && !hasClosingLatex) || (hasStyTag && !hasClosingSty);
+              if (updating) {
+                setStreamingText(naturalPart ? naturalPart + '\n\n스타일 파일 수정 중…' : '스타일 파일 수정 중…');
               } else {
                 setStreamingText(naturalPart);
               }
@@ -6712,9 +6701,14 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
       // ── 스트리밍 완료 후 처리 ─────────────────────────────────
       setStreamingText('');
 
-      // <latex_update> 태그 추출
+      // <latex_update> / <sty_update> 태그 추출
       const latexMatch = fullText.match(/<latex_update>([\s\S]+?)<\/latex_update>/i);
-      const chatContent = fullText.replace(/<latex_update>[\s\S]+?<\/latex_update>/i, '').trim();
+      const styMatch = fullText.match(/<sty_update>([\s\S]+?)<\/sty_update>/i);
+      const chatContent = fullText
+        .replace(/<latex_update>[\s\S]+?<\/latex_update>/i, '')
+        .replace(/<sty_update>[\s\S]+?<\/sty_update>/i, '')
+        .replace(/<sty_patch>[\s\S]+?<\/sty_patch>/i, '')
+        .trim();
 
       // ── interpretation 태그 파싱 ─────────────────────────────────────
       const interpretMatch = fullText.match(/<interpretation>([\s\S]+?)<\/interpretation>/i);
@@ -6774,14 +6768,111 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         }
       }
 
+      // ── sty_patch 처리 (수치만 패치, sty 전문 불필요) ────────────
+      let styChanged = false;
+      const styPatchMatch = fullText.match(/<sty_patch>([\s\S]+?)<\/sty_patch>/i);
+      if (styPatchMatch && styCode) {
+        const patches = {};
+        styPatchMatch[1].trim().split(',').forEach(part => {
+          const [k, v] = part.trim().split('=');
+          if (k && v) patches[k.trim()] = v.trim();
+        });
+        const cmLabel = {
+          bodySize:'본문 크기', bodyLeading:'본문 행간',
+          noteSize:'주석 크기', noteLeading:'주석 행간',
+          footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
+          letterSpace:'자간',
+          marginTop:'상단 여백', marginBottom:'하단 여백',
+          marginInner:'내측 여백', marginOuter:'외측 여백',
+        };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm' };
+        let patchedSty = styCode;
+        for (const [key, val] of Object.entries(patches)) {
+          const before = cmdMap[key];
+          const unit = cmUnit[key] || 'pt';
+          if (before !== undefined && before !== val) {
+            directDiffs.push(`- ${cmLabel[key] || key}: ${before}${unit} → ${val}${unit}`);
+          }
+          if (key === 'bodySize' || key === 'bodyLeading') {
+            const bSize = patches.bodySize || cmdMap.bodySize;
+            const bLead = patches.bodyLeading || cmdMap.bodyLeading;
+            if (bSize && bLead) {
+              patchedSty = patchedSty
+                .replace(/(\\AtBeginDocument\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt(\}\\selectfont\})/,
+                  `$1${bSize}pt$2${bLead}pt$3`)
+                .replace(/(\\bodyf\{\\rmfamily\\fontsize\{|\\newcommand\{\\bodyf\}\{\\rmfamily\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                  (m, pre, mid) => `${pre}${bSize}pt${mid}${bLead}pt`);
+            }
+          } else if (key === 'noteSize' || key === 'noteLeading') {
+            const nSize = patches.noteSize || cmdMap.noteSize;
+            const nLead = patches.noteLeading || cmdMap.noteLeading;
+            if (nSize && nLead) {
+              patchedSty = patchedSty.replace(
+                /(\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                `$1${nSize}pt$2${nLead}pt`);
+            }
+          } else if (key === 'footnoteSize' || key === 'footnoteLeading') {
+            const fSize = patches.footnoteSize || cmdMap.footnoteSize;
+            const fLead = patches.footnoteLeading || cmdMap.footnoteLeading;
+            if (fSize && fLead) {
+              patchedSty = patchedSty.replace(
+                /(\\renewcommand\{\\footnotesize\}\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                `$1${fSize}pt$2${fLead}pt`);
+            }
+          } else if (['h1Size','h1Leading','h2Size','h2Leading','h3Size','h3Leading'].includes(key)) {
+            const cmdMap2 = { h1:'hone', h2:'htwo', h3:'hthree' };
+            const level = key.slice(0,2); // 'h1','h2','h3'
+            const cmd = cmdMap2[level];
+            const sizeKey = level + 'Size', leadKey = level + 'Leading';
+            const hSize = patches[sizeKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{([\\d.]+)pt`)) || [])[1];
+            const hLead = patches[leadKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{[\\d.]+pt\\}\\{([\\d.]+)pt`)) || [])[1];
+            if (hSize && hLead) {
+              patchedSty = patchedSty.replace(
+                new RegExp(`(\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{)[\\d.]+pt(\\}\\{)[\\d.]+pt`),
+                `$1${hSize}pt$2${hLead}pt`);
+            }
+          } else if (key === 'letterSpace') {
+            patchedSty = patchedSty.replace(/(LetterSpace=)[-\d.]+/, `$1${val}`);
+          } else if (['marginTop','marginBottom','marginInner','marginOuter'].includes(key)) {
+            const propMap = { marginTop:'top', marginBottom:'bottom', marginInner:'inner', marginOuter:'outer' };
+            patchedSty = patchedSty.replace(
+              new RegExp(`(${propMap[key]}\\s*=\\s*)([\\d.]+)mm`), `$1${val}mm`);
+          }
+        }
+        if (patchedSty !== styCode) {
+          setStyCode(patchedSty);
+          styChanged = true;
+          codeChanged = true;
+          setTab('sty');
+        }
+      }
+
+      // ── sty_update 처리 (전문 교체 — fallback) ───────────────────
+      if (!styChanged && styMatch && styCode) {
+        const extractedSty = styMatch[1].trim()
+          .replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+        if (extractedSty.length > 80 && extractedSty.includes('\\ProvidesPackage')) {
+          styChanged = extractedSty.trim() !== styCode.trim();
+          if (styChanged) {
+            setStyCode(extractedSty);
+            codeChanged = true;
+            setTab('sty');
+          }
+        }
+      }
+
       // ── 변경 요약 메시지 ──────────────────────────────────────
-      // directDiffs: 수치 비교 결과 (예: "본문 크기: 9pt → 8pt")
-      // 【변경】/【유지】 형식 패턴도 파싱
       let changesSummary = directDiffs.join('\n');
 
-      // Claude가 【변경】 형식으로 보고한 경우 추가 수집
+      // AI가 "요소: X  이전: Y  이후: Z" 형식으로 보고한 경우 수집
+      const aiChanges = [...chatContentClean.matchAll(/요소[:：]\s*([^\s]+)\s+이전[:：]\s*([^\s]+)\s+이후[:：]\s*([^\s]+)/g)]
+        .map(m => `- ${m[1].trim()}: ${m[2].trim()} → ${m[3].trim()}`);
+      if (aiChanges.length > 0 && directDiffs.length === 0) {
+        changesSummary = aiChanges.join('\n');
+      }
+      // 기존 【변경】 형식도 지원
       const claudeChanges = [...chatContentClean.matchAll(/【변경】([^\n]+)/g)].map(m => `- ${m[1].trim()}`);
-      if (claudeChanges.length > 0 && directDiffs.length === 0) {
+      if (claudeChanges.length > 0 && directDiffs.length === 0 && aiChanges.length === 0) {
         changesSummary = claudeChanges.join('\n');
       }
 
@@ -6789,7 +6880,7 @@ ${intent === 'question' ? '(질문 모드: LaTeX 참고용, 수정 금지)\n' : 
         changesSummary = '- 수정 내용이 기존과 동일하거나 적용 불가한 항목입니다.';
       }
       if (!changesSummary && intent === 'question') {
-        changesSummary = ''; // 질문 모드에서는 변경 요약 없음
+        changesSummary = '';
       }
 
       setRefineHistory(h => [...h, {
