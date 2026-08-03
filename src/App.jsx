@@ -6600,9 +6600,13 @@ ${customTexts.join('\n')}`;
 ${cmdMapStr || '(없음)'}
 판형: ${p.f.w}×${p.f.h}mm (불변) / 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
 
+레퍼런스 디자이너 근거 (이 조판이 왜 이렇게 설계됐는지 — 수정 판단 시 참고할 것):
+${refCtx}
+
 강도 판단 기준 (현재값 기준, 범위 내에서 자유롭게 판단):
 아주 조금/살짝 < 조금/약간 < 적당히/좀 < 많이/크게 < 아주 많이/훨씬
 작은 변화는 독자가 알아채기 어려울 만큼, 큰 변화는 레이아웃이 눈에 띄게 달라질 만큼.
+위 레퍼런스 근거(서체/여백/자간 선택 이유)와 상충하지 않는 범위에서 조정할 것.
 수치는 소수점 2자리까지 사용. 정수(9, 10 등) 출력 금지 — 반드시 소수점 포함(예: 9.24, 8.73).
 ${cmdMap.noteSize ? `주석(\\notef): 현재 ${cmdMap.noteSize}pt` : ''}
 ${cmdMap.footnoteSize ? `하단각주(\\footnotesize): 현재 ${cmdMap.footnoteSize}pt` : ''}
@@ -6632,8 +6636,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 3000,
+          temperature: 0.7,
           stream: true,
           system: systemPrompt,
           messages,
