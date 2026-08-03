@@ -38,9 +38,23 @@ const googleAppsScriptProxy = {
   },
 }
 
+const compileServerProxy = {
+  '/compile-api': {
+    target: 'http://localhost:8789',
+    changeOrigin: true,
+    rewrite: path => path.replace(/^\/compile-api/, '/api'),
+  },
+  '/compile-outputs': {
+    target: 'http://localhost:8789',
+    changeOrigin: true,
+    rewrite: path => path.replace(/^\/compile-outputs/, '/outputs'),
+  },
+}
+
 const proxy = {
   ...anthropicProxy,
   ...googleAppsScriptProxy,
+  ...compileServerProxy,
 }
 
 export default defineConfig({

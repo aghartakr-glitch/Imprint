@@ -775,16 +775,82 @@ function sanitizeFolderName(str) {
   return cleaned || '제목없음';
 }
 
-// 책 제목 / 테스트 회차별로 폴더링된 경로에 파일 다운로드
+// YYYY-MM-DD 형식 날짜 문자열
+function todayFolderName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+// HHmmss 형식 시간 문자열 (같은 날 여러 세션 구분용)
+function nowTimeSuffix() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+// 날짜별 세션 폴더 경로: Imprint-Data/<날짜>/<책제목>_<시간>
+function sessionFolderPath(bookTitle, runId) {
+  const folder = sanitizeFolderName(bookTitle);
+  const time = runId || nowTimeSuffix();
+  return `Imprint-Data/${todayFolderName()}/${folder}_${time}`;
+}
+
+// 로컬 컴파일 서버(server/index.mjs, npm run server)에 main.tex/sty를 전송해
+// Imprint/Imprint-Data/<날짜>/<책제목>_<시간>/ 에 저장 + xelatex로 PDF까지 자동 생성.
+// 서버가 꺼져 있으면 조용히 실패(네트워크 에러) — 브라우저 다운로드는 별도로 항상 동작하므로 치명적이지 않음.
+async function saveAndCompileOnServer(mainTex, styContent, bookTitle, log) {
+  try {
+    const res = await fetch('/compile-api/save-and-compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mainTex, styContent, bookTitle, log }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      console.warn('[saveAndCompileOnServer] 실패:', data.error);
+      return null;
+    }
+    if (!data.compileOk) {
+      console.warn('[saveAndCompileOnServer] 저장은 됐으나 컴파일 실패:', data.compileReason);
+    }
+    return data; // { folder, compileOk, pdfUrl }
+  } catch (e) {
+    console.warn('[saveAndCompileOnServer] 컴파일 서버 연결 실패(서버 꺼져있을 수 있음):', e.message);
+    return null;
+  }
+}
+
+// 스타일 조정 채팅으로 수정 적용 시 호출 — 초기 생성이 저장된 그 폴더의 main.tex/sty를
+// 덮어쓰고 PDF도 재컴파일. 수정 이력(logEntry)은 그 폴더의 revision-log.json에 계속 누적됨(덮어쓰지 않음).
+async function updateAndCompileOnServer(folder, mainTex, styContent, logEntry, version) {
+  try {
+    const res = await fetch('/compile-api/update-and-compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder, mainTex, styContent, logEntry, version }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      console.warn('[updateAndCompileOnServer] 실패:', data.error);
+      return null;
+    }
+    if (!data.compileOk) {
+      console.warn('[updateAndCompileOnServer] 저장은 됐으나 컴파일 실패:', data.compileReason);
+    }
+    return data;
+  } catch (e) {
+    console.warn('[updateAndCompileOnServer] 컴파일 서버 연결 실패:', e.message);
+    return null;
+  }
+}
+
+// 날짜/책제목_시간 폴더링된 경로에 파일 다운로드
 // Chrome/Edge는 download 속성에 '/'가 있으면 기본 다운로드 폴더 하위에 실제 서브폴더를 만든다
 function downloadToBookFolder(content, mimeType, bookTitle, runId, filename) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const folder = sanitizeFolderName(bookTitle);
-  const run = runId || String(Date.now());
   a.href = url;
-  a.download = `Imprint-Data/${folder}/${run}/${filename}`;
+  a.download = `${sessionFolderPath(bookTitle, runId)}/${filename}`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -2505,8 +2571,11 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   const rPos = (rhPos  || '상단-외측').replace(/\s/g, '');
   const pnNone = pPos === '없음' || pPos === '-' || pPos === '';
 
-  const pnCmd = `{\\foliof\\thepage}`;
-  const rhCmd = hasRunningHead ? `{\\runningheadf\\imprintrunninghead}` : null;
+  // \imprintpnxshift(좌우, +값=오른쪽) / \imprintpnyshift(상하, +값=위쪽)로 mm 단위 미세 이동 지원.
+  // \raisebox는 슬롯 높이에 영향을 주지 않아 헤더/푸터 라인 배치를 깨지 않는다.
+  const pnCmd = `{\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}}`;
+  // 면주도 쪽번호와 동일하게 mm 단위 미세 이동 지원 (\imprintrhxshift/\imprintrhyshift)
+  const rhCmd = hasRunningHead ? `{\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}}` : null;
   const mt = `{}`;
 
   // 위치 문자열 → {odd: [L,C,R], even: [L,C,R], top} 반환
@@ -2576,9 +2645,21 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   return [
     `% ── 면주 / 쪽번호 macro (memoir 전용) ────────────────────────`,
     pnNone ? `% pn-status: none` : `% pn-status: active`,
+    `% pn-position: ${pPos}`, // sty_patch가 현재 위치를 파싱하는 데 사용 — 삭제 금지
+    `% rh-position: ${hasRunningHead ? rPos : '없음'}`,
     `\\newcommand{\\foliof}{${getSystemRunningHeadFont()==='serif'?'\\rmfamily':'\\sffamily'}\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
     `\\newcommand{\\runningheadf}{${getSystemRunningHeadFont()==='serif'?'\\rmfamily':'\\sffamily'}\\fontsize{${folioSize}pt}{${folioLead}pt}\\selectfont}`,
     `\\newcommand{\\imprintrunninghead}{}`,
+    `% 쪽번호 mm 단위 미세 이동 (기본 0mm) — pnXShift: +오른쪽/-왼쪽, pnYShift: +위쪽/-아래쪽`,
+    `\\newlength{\\imprintpnxshift}`,
+    `\\setlength{\\imprintpnxshift}{0mm}`,
+    `\\newlength{\\imprintpnyshift}`,
+    `\\setlength{\\imprintpnyshift}{0mm}`,
+    `% 면주 mm 단위 미세 이동 (기본 0mm) — rhXShift: +오른쪽/-왼쪽, rhYShift: +위쪽/-아래쪽`,
+    `\\newlength{\\imprintrhxshift}`,
+    `\\setlength{\\imprintrhxshift}{0mm}`,
+    `\\newlength{\\imprintrhyshift}`,
+    `\\setlength{\\imprintrhyshift}{0mm}`,
     `\\makepagestyle{imprint}`,
     `\\makeheadrule{imprint}{\\textwidth}{0pt}`,
     `\\makefootrule{imprint}{\\textwidth}{0pt}{0pt}`,
@@ -3131,6 +3212,8 @@ export default function App() {
     });
   const [matching, setMatching] = useState(false);
   const [currentRunId, setCurrentRunId] = useState(null); // 책 제목별 다운로드 폴더링에 사용하는 실행 회차 ID
+  const [serverCompileResult, setServerCompileResult] = useState(null); // { folder, compileOk, pdfUrl } — 로컬 컴파일 서버 응답
+  const [styleVersion, setStyleVersion] = useState(0); // 스타일 조정 채팅으로 수정할 때마다 증가. 리셋 트리거는 새로고침뿐(의도적 — localStorage 미사용)
   const [rationale, setRationale] = useState('');
   const [chosenReason, setChosenReason] = useState('');
   const [structuredReason, setStructuredReason] = useState(null); // {reference_reason, content_match, layout_reason, design_concept[], design_task[], visual_element[], ...}
@@ -5608,6 +5691,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         setLatex(finalMainTex);
         try { localStorage.setItem('imprint_baseline_sty', finalStyContent);
               localStorage.setItem('imprint_baseline_latex', finalMainTex); } catch {}
+        // 로컬 컴파일 서버가 켜져 있으면 Imprint/Imprint-Data/<날짜>/<책제목>_<시간>/에
+        // main.tex + sty + PDF까지 자동 저장 (백그라운드, 실패해도 생성 흐름은 계속됨)
+        saveAndCompileOnServer(finalMainTex, finalStyContent, fields.제목, {
+          experiment_id: null, satisfaction_score: null, note: 'initial_generation',
+        }).then(result => { if (result) setServerCompileResult(result); });
         // ── Revision Trajectory: rev_000 초기 생성 기록 ──────────────────
         const _cmdMap0 = extractLatexCommandMap(finalMainTex || '');
         setRevisionLog([{
@@ -5974,6 +6062,30 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // \footnotemark / \footnotesize (일반 각주)
     const fnSize = latexStr.match(/\\renewcommand\{\\footnotesize\}\{\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
     if (fnSize) { map.footnoteSize = fnSize[1]; map.footnoteLeading = fnSize[2]; }
+    // \footnotesep — 각주 항목 간 간격(각주1↔각주2 사이 여백). notef의 행간(줄 내부 간격)과는 별개 변수.
+    const fnSep = latexStr.match(/\\setlength\{\\footnotesep\}\{([\d.]+)pt\}/);
+    if (fnSep) map.footnoteSep = fnSep[1];
+    // \imprintheadinggap — 제목↔소제목 간격 (sty에 정의, main.tex에서 \vspace로 사용만 됨)
+    const hGap = latexStr.match(/\\setlength\{\\imprintheadinggap\}\{([\d.]+)pt\}/);
+    if (hGap) map.headingGap = hGap[1];
+    // \imprintbodygap — 제목/소제목↔본문 간격
+    const bGap = latexStr.match(/\\setlength\{\\imprintbodygap\}\{([\d.]+)pt\}/);
+    if (bGap) map.bodyGap = bGap[1];
+    // 쪽번호 mm 단위 미세 이동 (구버전 sty에는 없을 수 있음 — 그 경우 undefined로 남아 "미지원"으로 처리됨)
+    const pnX = latexStr.match(/\\setlength\{\\imprintpnxshift\}\{(-?[\d.]+)mm\}/);
+    if (pnX) map.pnXShift = pnX[1];
+    const pnY = latexStr.match(/\\setlength\{\\imprintpnyshift\}\{(-?[\d.]+)mm\}/);
+    if (pnY) map.pnYShift = pnY[1];
+    // 면주 mm 단위 미세 이동 (구버전 sty에는 없을 수 있음)
+    const rhX = latexStr.match(/\\setlength\{\\imprintrhxshift\}\{(-?[\d.]+)mm\}/);
+    if (rhX) map.rhXShift = rhX[1];
+    const rhY = latexStr.match(/\\setlength\{\\imprintrhyshift\}\{(-?[\d.]+)mm\}/);
+    if (rhY) map.rhYShift = rhY[1];
+    // 쪽번호/면주 위치 슬롯 (상단-외측 등) — sty_patch가 슬롯 자체를 재생성할 때 현재값으로 사용
+    const pnPosM = latexStr.match(/% pn-position: (\S+)/);
+    if (pnPosM) map.pnPos = pnPosM[1];
+    const rhPosM = latexStr.match(/% rh-position: (\S+)/);
+    if (rhPosM) map.rhPos = rhPosM[1];
     // 쪽번호 위치 (makeoddfoot/makeoddhead)
     const pnFoot = latexStr.match(/\\makeoddfoot\{imprint\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/);
     const pnHead = latexStr.match(/\\makeoddhead\{imprint\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/);
@@ -6565,10 +6677,17 @@ ${customTexts.join('\n')}`;
       cmdMap.h2Size       && `소제목(\\htwo): ${cmdMap.h2Size}pt / 행간 ${cmdMap.h2Leading}pt`,
       cmdMap.h3Size       && `중간제목(\\hthree): ${cmdMap.h3Size}pt / 행간 ${cmdMap.h3Leading}pt`,
       cmdMap.bodySize     && `본문(\\bodyf): ${cmdMap.bodySize}pt / 행간 ${cmdMap.bodyLeading}pt`,
-      cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt`,
+      cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 줄 내부 행간 ${cmdMap.noteLeading}pt`,
+      cmdMap.footnoteSep  && `각주 항목 간 간격(\\footnotesep, 각주1↔각주2 사이 여백): ${cmdMap.footnoteSep}pt`,
+      cmdMap.headingGap   && `제목↔소제목 간격(\\imprintheadinggap): ${cmdMap.headingGap}pt`,
+      cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
       cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
       cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
       cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
+      (cmdMap.pnPos !== undefined) && `쪽번호 위치 슬롯: ${cmdMap.pnPos} (상단/하단 × 외측/내측/중앙 중 하나 — pnPos로 슬롯 자체 변경 가능)`,
+      (cmdMap.pnXShift !== undefined) && `쪽번호 미세 이동: 가로 ${cmdMap.pnXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.pnYShift}mm(+위/-아래)`,
+      (cmdMap.rhPos !== undefined) && `면주 위치 슬롯: ${cmdMap.rhPos} (rhPos로 슬롯 자체 변경 가능, '없음'이면 면주 미사용 상태)`,
+      (cmdMap.rhXShift !== undefined) && `면주 미세 이동: 가로 ${cmdMap.rhXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.rhYShift}mm(+위/-아래)`,
     ].filter(Boolean).join('\n');
 
     // ── 레퍼런스 컨텍스트 (question 모드에서 답변 근거로 사용) ──────
@@ -6588,9 +6707,23 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSize footnoteLeading letterSpace marginTop marginBottom marginInner marginOuter
+  사용 가능한 키: bodySize bodyLeading h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSep headingGap bodyGap pnXShift pnYShift pnPos rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  (쪽번호/면주 위치 — 두 종류 요청을 구분할 것:
+   · "조금/살짝 옆으로/위로/아래로" 같은 미세 조정 → pnXShift/pnYShift (쪽번호) 또는 rhXShift/rhYShift (면주), mm 단위
+   · "하단으로/상단으로/왼쪽으로/오른쪽으로/가운데로 옮겨줘"처럼 슬롯 자체를 바꾸는 요청 → pnPos 또는 rhPos
+     값 형식: "상단-외측" "상단-내측" "상단-중앙" "하단-외측" "하단-내측" "하단-중앙" 중 하나 (공백 없이, 하이픈 포함)
+     외측=책등 반대쪽(바깥), 내측=책등 쪽(안쪽). pnPos/rhPos가 cmdMap에 없으면(undefined) 구버전 문서라 슬롯 변경 미지원 — "적용 불가: 구버전 문서, 재생성 필요"로 답할 것)
+  (제목/소제목 간격 요청 → headingGap(제목↔소제목) 또는 bodyGap(제목·소제목↔본문). 이 값은 main.tex가 아니라 sty에 정의되어 있음 — main.tex에서 "정의 안 됨"으로 보여도 sty_patch로 처리할 것)
+  (각주 관련 요청 — 반드시 PDF에서 실제로 눈에 보이는 결과를 낼 것:
+   · "각주 글자 크기" → noteSize만
+   · "각주 간격/각주 줄여줘/각주 촘촘하게" 등 대상이 명확히 특정되지 않은 일반적 요청 → noteLeading과 footnoteSep을 함께 축소할 것.
+     (noteLeading만 줄이면 각주가 한 줄일 때 시각적으로 아무 변화가 없어 사용자가 "안 바뀐다"고 느낌 — 반드시 footnoteSep도 같이 줄여 실제 PDF에서 체감되게 할 것)
+   · "각주끼리 줄 안에서" 처럼 줄바꿈 내부를 명시하면 noteLeading만, "각주 항목 사이/각주 1번 2번 사이"처럼 항목 간격을 명시하면 footnoteSep만
+   footnoteSize는 렌더링에 반영되지 않으므로 사용 금지)
+  (모든 행간 값은 폰트 크기 이상으로 유지할 것 — 그 미만이면 줄바꿈 시 글자가 겹침. 폰트 크기와 동일한 값까지는 허용됨)
   예: <sty_patch>bodySize=9.0,bodyLeading=14.4</sty_patch>
 - main.tex 구조 수정: <latex_update>전체LaTeX내용</latex_update>
+- 쪽번호/면주 슬롯 이동과 mm 미세 이동 모두 sty_patch로 지원됨 (pnPos/rhPos/pnXShift/pnYShift/rhXShift/rhYShift). 위 키 설명 참고. cmdMap에 해당 값이 undefined면 구버전 문서라 미지원 — "적용 불가: 구버전 문서, 재생성 필요"로 답할 것. 강도 표현("조금", "많이" 등)은 위 강도 판단 기준과 동일하게 사용하되 mm 미세 이동은 절대값 1~5mm 범위에서 자유롭게 판단.
 - 수정 불가: "적용 불가: <이유 5단어>" 한 줄만.`;
 
     // ── 시스템 프롬프트 ───────────────────────────────────────────
@@ -6608,8 +6741,8 @@ ${refCtx}
 작은 변화는 독자가 알아채기 어려울 만큼, 큰 변화는 레이아웃이 눈에 띄게 달라질 만큼.
 위 레퍼런스 근거(서체/여백/자간 선택 이유)와 상충하지 않는 범위에서 조정할 것.
 수치는 소수점 2자리까지 사용. 정수(9, 10 등) 출력 금지 — 반드시 소수점 포함(예: 9.24, 8.73).
-${cmdMap.noteSize ? `주석(\\notef): 현재 ${cmdMap.noteSize}pt` : ''}
-${cmdMap.footnoteSize ? `하단각주(\\footnotesize): 현재 ${cmdMap.footnoteSize}pt` : ''}
+${cmdMap.noteSize ? `각주/주석 텍스트(\\notef): 현재 ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt — "각주", "주석", "하단 각주", "사이드노트" 등 각주 관련 요청은 전부 noteSize/noteLeading으로 패치할 것 (실제 PDF에 렌더링되는 유일한 각주 폰트 커맨드).` : ''}
+${cmdMap.footnoteSize ? `\\footnotesize는 정의만 되어 있고 실제 렌더링에는 쓰이지 않음 — footnoteSize/footnoteLeading 키는 사용하지 말 것.` : ''}
 
 ${outputRules}
 
@@ -6735,6 +6868,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
       let directDiffs = [];
       let finalLatex = latex;
+      let finalSty = styCode;
       let codeChanged = false;
 
       if (latexMatch) {
@@ -6786,11 +6920,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           bodySize:'본문 크기', bodyLeading:'본문 행간',
           noteSize:'주석 크기', noteLeading:'주석 행간',
           footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
+          footnoteSep:'각주 항목 간 간격',
+          headingGap:'제목↔소제목 간격', bodyGap:'제목/소제목↔본문 간격',
+          pnXShift:'쪽번호 가로 이동', pnYShift:'쪽번호 세로 이동', pnPos:'쪽번호 위치',
+          rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           letterSpace:'자간',
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'' };
+        // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.1배 하한선
+        const clampLeading = (size, lead) => {
+          const s = Number(size), l = Number(lead);
+          if (!Number.isFinite(s) || !Number.isFinite(l)) return lead;
+          const floor = Math.round(s * 1.0 * 100) / 100; // 폰트 크기와 동일한 값까지 허용, 그 미만만 차단
+          return l < floor ? floor : lead;
+        };
         let patchedSty = styCode;
         for (const [key, val] of Object.entries(patches)) {
           const before = cmdMap[key];
@@ -6800,7 +6945,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           }
           if (key === 'bodySize' || key === 'bodyLeading') {
             const bSize = patches.bodySize || cmdMap.bodySize;
-            const bLead = patches.bodyLeading || cmdMap.bodyLeading;
+            const bLead = clampLeading(bSize, patches.bodyLeading || cmdMap.bodyLeading);
             if (bSize && bLead) {
               patchedSty = patchedSty
                 .replace(/(\\AtBeginDocument\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt(\}\\selectfont\})/,
@@ -6810,19 +6955,110 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             }
           } else if (key === 'noteSize' || key === 'noteLeading') {
             const nSize = patches.noteSize || cmdMap.noteSize;
-            const nLead = patches.noteLeading || cmdMap.noteLeading;
+            const nLead = clampLeading(nSize, patches.noteLeading || cmdMap.noteLeading);
             if (nSize && nLead) {
               patchedSty = patchedSty.replace(
                 /(\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
                 `$1${nSize}pt$2${nLead}pt`);
             }
+          } else if (key === 'footnoteSep') {
+            // 각주 항목 간 간격(각주1↔각주2 사이 여백) — noteLeading(줄 내부 행간)과는 다른 변수
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\footnotesep\}\{)[\d.]+pt(\})/,
+              `$1${val}pt$2`);
+          } else if (key === 'headingGap') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintheadinggap\}\{)[\d.]+pt(\})/,
+              `$1${val}pt$2`);
+          } else if (key === 'bodyGap') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintbodygap\}\{)[\d.]+pt(\})/,
+              `$1${val}pt$2`);
+          } else if (key === 'pnXShift') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintpnxshift\}\{)-?[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'pnYShift') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintpnyshift\}\{)-?[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'rhXShift') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintrhxshift\}\{)-?[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'rhYShift') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintrhyshift\}\{)-?[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'pnPos' || key === 'rhPos') {
+            // 쪽번호/면주 슬롯 자체 재배치 — buildMemoirPageStyle()과 동일한 슬롯 계산 로직을
+            // sty 텍스트에 그대로 재적용한다 (main.tex 재생성 없이 \makeoddhead 등 4줄만 재생성).
+            const mt = '{}';
+            const placementSlots = (cmd, posStr) => {
+              const isTop = posStr.includes('상단');
+              const isOuter = posStr.includes('외측');
+              const isInner = posStr.includes('내측');
+              if (isOuter) return { odd: [mt, mt, cmd], even: [cmd, mt, mt], top: isTop };
+              if (isInner) return { odd: [cmd, mt, mt], even: [mt, mt, cmd], top: isTop };
+              return { odd: [mt, cmd, mt], even: [mt, cmd, mt], top: isTop };
+            };
+            const curPnPos = patches.pnPos || cmdMap.pnPos;
+            const curRhPos = patches.rhPos || cmdMap.rhPos;
+            if (curPnPos && (cmdMap.pnPos !== undefined)) {
+              const pnCmd = '{\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}}';
+              const rhEnabled = curRhPos && curRhPos !== '없음';
+              const rhCmd = rhEnabled ? '{\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}}' : null;
+              let headSlots = { odd: [mt, mt, mt], even: [mt, mt, mt] };
+              let footSlots = { odd: [mt, mt, mt], even: [mt, mt, mt] };
+              const ps = placementSlots(pnCmd, curPnPos);
+              if (ps.top) headSlots = { odd: ps.odd, even: ps.even }; else footSlots = { odd: ps.odd, even: ps.even };
+              if (rhEnabled) {
+                const rs = placementSlots(rhCmd, curRhPos);
+                const target = rs.top ? headSlots : footSlots;
+                ['odd', 'even'].forEach(side => {
+                  [0, 1, 2].forEach(i => { if (target[side][i] === mt) target[side][i] = rs[side][i]; });
+                });
+              }
+              const join3 = a => a.join('');
+              // \raisebox{...}{...} 등 중첩 중괄호가 인자 안에 들어있어 정규식으로는
+              // 정확히 못 자른다 — 중괄호 깊이를 세어가며 3개 인자 블록을 통째로 교체.
+              const replaceMacroThreeArgs = (text, macroPrefix, replacementArgs) => {
+                const idx = text.indexOf(macroPrefix);
+                if (idx === -1) return text;
+                let pos = idx + macroPrefix.length;
+                for (let g = 0; g < 3; g++) {
+                  if (text[pos] !== '{') return text; // 예상 형식이 아니면 안전하게 원본 유지
+                  let depth = 1; pos++;
+                  while (depth > 0 && pos < text.length) {
+                    if (text[pos] === '{') depth++;
+                    else if (text[pos] === '}') depth--;
+                    pos++;
+                  }
+                }
+                return text.slice(0, idx) + macroPrefix + replacementArgs + text.slice(pos);
+              };
+              patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeoddhead{imprint}', join3(headSlots.odd));
+              patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeevenhead{imprint}', join3(headSlots.even));
+              patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeoddfoot{imprint}', join3(footSlots.odd));
+              patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeevenfoot{imprint}', join3(footSlots.even));
+              patchedSty = patchedSty
+                .replace(/% pn-position: \S+/, `% pn-position: ${curPnPos}`)
+                .replace(/% rh-position: \S+/, `% rh-position: ${rhEnabled ? curRhPos : '없음'}`);
+            }
           } else if (key === 'footnoteSize' || key === 'footnoteLeading') {
+            // \footnotesize는 정의만 되고 실제 렌더링에는 \notef가 항상 쓰인다(imprint-style.sty의
+            // \@makefntext/\@twocolfootfmt가 \foottextfont→\notef를 직접 호출). footnoteSize 요청이
+            // 들어와도 \notef를 같이 패치해야 PDF에 실제로 반영된다.
             const fSize = patches.footnoteSize || cmdMap.footnoteSize;
-            const fLead = patches.footnoteLeading || cmdMap.footnoteLeading;
+            const fLead = clampLeading(fSize, patches.footnoteLeading || cmdMap.footnoteLeading);
             if (fSize && fLead) {
-              patchedSty = patchedSty.replace(
-                /(\\renewcommand\{\\footnotesize\}\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
-                `$1${fSize}pt$2${fLead}pt`);
+              patchedSty = patchedSty
+                .replace(
+                  /(\\renewcommand\{\\footnotesize\}\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                  `$1${fSize}pt$2${fLead}pt`)
+                .replace(
+                  /(\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                  `$1${fSize}pt$2${fLead}pt`);
             }
           } else if (['h1Size','h1Leading','h2Size','h2Leading','h3Size','h3Leading'].includes(key)) {
             const cmdMap2 = { h1:'hone', h2:'htwo', h3:'hthree' };
@@ -6830,7 +7066,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const cmd = cmdMap2[level];
             const sizeKey = level + 'Size', leadKey = level + 'Leading';
             const hSize = patches[sizeKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{([\\d.]+)pt`)) || [])[1];
-            const hLead = patches[leadKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{[\\d.]+pt\\}\\{([\\d.]+)pt`)) || [])[1];
+            const hLead = clampLeading(hSize, patches[leadKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{[\\d.]+pt\\}\\{([\\d.]+)pt`)) || [])[1]);
             if (hSize && hLead) {
               patchedSty = patchedSty.replace(
                 new RegExp(`(\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{)[\\d.]+pt(\\}\\{)[\\d.]+pt`),
@@ -6846,6 +7082,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         }
         if (patchedSty !== styCode) {
           setStyCode(patchedSty);
+          finalSty = patchedSty;
           styChanged = true;
           codeChanged = true;
           setTab('sty');
@@ -6860,6 +7097,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           styChanged = extractedSty.trim() !== styCode.trim();
           if (styChanged) {
             setStyCode(extractedSty);
+            finalSty = extractedSty;
             codeChanged = true;
             setTab('sty');
           }
@@ -6896,6 +7134,24 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         codeChanged,
         intent,                  // question | modify | ambiguous
       }]);
+
+      // ── 로컬 컴파일 서버에도 반영: 작업본(main.pdf)은 덮어쓰지만, 버전 넘버 붙인 스냅샷
+      // (main_v{n}.pdf/tex/sty)은 계속 쌓인다. 수정 이력도 revision-log.json에 누적.
+      if (codeChanged && serverCompileResult?.folder) {
+        const nextVersion = styleVersion + 1;
+        updateAndCompileOnServer(
+          serverCompileResult.folder,
+          finalLatex,
+          finalSty,
+          { user_request: userMsg, changes: changesSummary, intent },
+          nextVersion
+        ).then(result => {
+          if (result) {
+            setServerCompileResult(result);
+            if (result.compileOk) setStyleVersion(nextVersion);
+          }
+        });
+      }
 
       // ── revisionLog에 user_refinement 기록 ───────────────────────────
       if (codeChanged) {
@@ -8517,6 +8773,25 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         </div>
                       );
                     })()}
+                    {serverCompileResult && (
+                      <div style={{ padding:"10px 12px", marginBottom:12, borderRadius:3, fontSize:12, lineHeight:1.6,
+                        background: serverCompileResult.compileOk ? '#eef9ee' : '#fff8ec',
+                        border:`1px solid ${serverCompileResult.compileOk ? '#b8e0b8' : '#e8d4a0'}` }}>
+                        {serverCompileResult.compileOk ? (
+                          <>
+                            ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:11}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
+                            {serverCompileResult.pdfUrl && (
+                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">최신 PDF</a></>
+                            )}
+                            {serverCompileResult.versionedPdfUrl && (
+                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
+                            )}
+                          </>
+                        ) : (
+                          <>⚠ 파일은 저장됐지만 PDF 컴파일 실패 — <code style={{fontSize:11}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code> ({serverCompileResult.compileReason || '원인 미상'})</>
+                        )}
+                      </div>
+                    )}
                     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                       <div>
                         <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
