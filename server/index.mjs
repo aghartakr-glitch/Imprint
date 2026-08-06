@@ -84,16 +84,24 @@ async function handleUpdateAndCompile(req, res) {
   const runDir = join(OUTPUTS_DIR, folder)
   if (!existsSync(runDir)) return sendJson(res, 404, { ok: false, error: `대상 폴더 없음: ${folder}` })
   try {
-    overwriteGenerationFiles(runDir, { mainTex, styContent })
+    const previous = overwriteGenerationFiles(runDir, { mainTex, styContent })
     linkFontsInto(runDir)
     const compileResult = await enqueueCompile(runDir, () => compileMainTex(runDir))
     let versionedPdfUrl = null
+    let rolledBack = false
     if (compileResult.ok && version != null) {
       snapshotVersion(runDir, version)
       versionedPdfUrl = `/outputs/${folder}/main_v${version}.pdf`
+    } else if (!compileResult.ok) {
+      // 컴파일 실패 시 작업 파일을 이전(마지막으로 성공했던) 상태로 되돌린다.
+      // 안 그러면 깨진 내용이 main.tex/sty에 그대로 남아 다음 수정까지 오염시킨다
+      // (2026-08-03 실제 사고: LLM이 문서를 통째로 잘못 재작성 → 컴파일 실패 →
+      //  깨진 main.tex가 작업 파일로 남음).
+      overwriteGenerationFiles(runDir, previous)
+      rolledBack = true
     }
     const revisionCount = logEntry
-      ? appendRevisionLog(runDir, { ...logEntry, version: version ?? null })
+      ? appendRevisionLog(runDir, { ...logEntry, version: version ?? null, compileFailed: !compileResult.ok, rolledBack })
       : null
     return sendJson(res, 200, {
       ok: true,
@@ -105,6 +113,7 @@ async function handleUpdateAndCompile(req, res) {
       compileLog: compileResult.ok ? null : compileResult.log,
       pdfUrl: compileResult.ok ? `/outputs/${folder}/main.pdf` : null,
       versionedPdfUrl,
+      rolledBack,
     })
   } catch (err) {
     return sendJson(res, 500, { ok: false, error: String(err.message || err) })

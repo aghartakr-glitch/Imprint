@@ -53,10 +53,20 @@ export function writeGenerationFiles(runDir, { mainTex, styContent, log }) {
 
 // 스타일 조정 채팅으로 수정할 때: main.tex/sty는 덮어쓰지만, 수정 이력은
 // revision-log.json에 계속 누적한다 (배열에 append, 절대 덮어쓰지 않음).
+// 덮어쓰기 전 기존 내용을 반환 — 컴파일이 실패하면 호출자가 복원할 수 있게 함
+// (2026-08-03: LLM이 main.tex을 통째로 잘못 재작성해 컴파일이 깨지고, 그 깨진
+// 내용이 작업 파일에 그대로 남아 다음 수정까지 오염시킨 실제 사고 이후 추가).
 export function overwriteGenerationFiles(runDir, { mainTex, styContent }) {
   if (!existsSync(runDir)) throw new Error(`대상 폴더 없음: ${runDir}`)
-  if (mainTex != null) writeFileSync(join(runDir, 'main.tex'), mainTex, 'utf-8')
-  if (styContent != null) writeFileSync(join(runDir, 'imprint-style.sty'), styContent, 'utf-8')
+  const texPath = join(runDir, 'main.tex');
+  const styPath = join(runDir, 'imprint-style.sty');
+  const previous = {
+    mainTex: existsSync(texPath) ? readFileSync(texPath, 'utf-8') : null,
+    styContent: existsSync(styPath) ? readFileSync(styPath, 'utf-8') : null,
+  };
+  if (mainTex != null) writeFileSync(texPath, mainTex, 'utf-8')
+  if (styContent != null) writeFileSync(styPath, styContent, 'utf-8')
+  return previous;
 }
 
 // 컴파일 성공 후 main.pdf/tex/sty를 v{n} 접미사 붙여 별도 스냅샷으로 복사.

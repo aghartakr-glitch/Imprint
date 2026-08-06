@@ -2573,19 +2573,32 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
 
   // \imprintpnxshift(좌우, +값=오른쪽) / \imprintpnyshift(상하, +값=위쪽)로 mm 단위 미세 이동 지원.
   // \raisebox는 슬롯 높이에 영향을 주지 않아 헤더/푸터 라인 배치를 깨지 않는다.
-  const pnCmd = `{\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}}`;
+  // memoir 헤더/푸터 슬롯은 좌/중/우 정렬을 \hfil(무한 스트레치 글루)로 구현한다.
+  // 오른쪽/가운데 정렬 슬롯에서는 내용 앞의 \hspace가 그 \hfil에 그대로 흡수되어
+  // 아무리 큰 값을 넣어도 위치가 전혀 안 바뀌는 문제가 있다(2026-08-03 실측 확인:
+  // -30mm를 줘도 픽셀 단위로 완전히 동일한 렌더링). \makebox[0pt]{...}로 감싸
+  // 바깥 글루 계산에서 내용의 폭을 0으로 만들면, 슬롯이 항상 원래 위치에 앵커를
+  // 놓고 그 안에서 \hspace가 실제로 화면 이동을 만든다 — 정렬 방향과 무관하게 동작.
+  const pnInner = `\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}`;
   // 면주도 쪽번호와 동일하게 mm 단위 미세 이동 지원 (\imprintrhxshift/\imprintrhyshift)
-  const rhCmd = hasRunningHead ? `{\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}}` : null;
+  const rhInner = hasRunningHead ? `\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}` : null;
   const mt = `{}`;
 
   // 위치 문자열 → {odd: [L,C,R], even: [L,C,R], top} 반환
-  function placementSlots(cmd, posStr) {
+  // makebox[0pt]는 인자 없으면 가운데 정렬(폭 넘치면 좌우로 반씩 삐져나감) —
+  // 오른쪽/왼쪽 슬롯에서는 [l]/[r]로 정렬 방향을 명시해야 긴 텍스트가 페이지
+  // 밖으로 흘러나가지 않는다(2026-08-05 실측: 긴 면주 텍스트가 우측 슬롯에서
+  // 페이지 오른쪽 밖으로 절반 잘려 나가는 문제 확인 후 수정).
+  function placementSlots(innerContent, posStr) {
     const isTop   = posStr.includes('상단');
     const isOuter = posStr.includes('외측');
     const isInner = posStr.includes('내측');
-    if (isOuter)      return { odd: [mt, mt, cmd],  even: [cmd, mt, mt],  top: isTop };
-    else if (isInner) return { odd: [cmd, mt, mt],  even: [mt, mt, cmd],  top: isTop };
-    else              return { odd: [mt, cmd, mt],  even: [mt, cmd, mt],  top: isTop };
+    const cmdL = `{\\makebox[0pt][l]{${innerContent}}}`;
+    const cmdC = `{\\makebox[0pt]{${innerContent}}}`;
+    const cmdR = `{\\makebox[0pt][r]{${innerContent}}}`;
+    if (isOuter)      return { odd: [mt, mt, cmdR], even: [cmdL, mt, mt], top: isTop };
+    else if (isInner) return { odd: [cmdL, mt, mt], even: [mt, mt, cmdR], top: isTop };
+    else              return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
   }
 
   let headSlots = { odd: [mt,mt,mt], even: [mt,mt,mt] };
@@ -2593,7 +2606,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
 
   // 쪽번호 배치
   if (!pnNone) {
-    const ps = placementSlots(pnCmd, pPos);
+    const ps = placementSlots(pnInner, pPos);
     if (ps.top) headSlots = { odd: ps.odd, even: ps.even };
     else        footSlots = { odd: ps.odd, even: ps.even };
   }
@@ -2602,7 +2615,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   // 수직 여백 배치: \smash + \rlap/\llap + \rotatebox → header 슬롯에서 여백으로 확장
   // 홀수=외측(오른쪽), 짝수=외측(왼쪽) 에 90° 회전 (아래→위 방향)
   let extraSty = []; // 수직 면주에 필요한 추가 선언
-  if (hasRunningHead && rhCmd) {
+  if (hasRunningHead && rhInner) {
     const isVertOuter = rPos === '외측-수직';
     const isVertInner = rPos === '내측-수직';
     if (isVertOuter || isVertInner) {
@@ -4022,9 +4035,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           italic: null, boldItalic: null,
         },
         NotoSerif: {
+          // Noto Serif KR 배포본은 이탤릭이 없음 — 이탤릭 필요 시 자동으로 정자체(로마체)로 대체됨
           ext: '.ttf',
           upright: 'NotoSerif-Regular', bold: 'NotoSerif-Bold',
-          italic: 'NotoSerif-Italic', boldItalic: 'NotoSerif-BoldItalic',
+          italic: null, boldItalic: null,
         },
         NotoSerif_SemiCondensed: {
           ext: '.ttf',
@@ -5554,6 +5568,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           ``,
           `\\XeTeXlinebreaklocale "ko"`,
           `\\XeTeXlinebreakskip=0pt plus 1pt`,
+          // 한글이 전혀 없는 영문 전용 문서면 kotex가 따옴표 등 문장부호를 자동으로
+          // 시스템 한글 폰트(UnDotum/UnBatang)로 대체해버리는 것을 방지
+          /[가-힣ᄀ-ᇿ㄰-㆏]/.test(finalBodyContent + (effectiveRH() || ''))
+            ? null
+            : `\\disablekoreanfonts % 영문 전용 문서 — kotex 자동 한글 폰트 폴백 방지`,
           ``,
           effectiveRH()
             ? `\\renewcommand{\\imprintrunninghead}{${escapeLatex(effectiveRH())}}`
@@ -6037,22 +6056,57 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
 
   // ── 현재 LaTeX에서 실제 수치 커맨드 맵 추출 ──────────────────────
   // Claude가 "어느 명령어를 얼마나 바꿔야 하는지" 정확히 알 수 있도록
+  // \newcommand{\CMD}{...\fontsize{Xpt}{Ypt}...} 형태를 공통으로 추출.
+  // (?:\\[a-zA-Z]+)* 는 \rmfamily/\sffamily 같은 서체 커맨드가 \fontsize 앞에 몇 개 와도
+  // [^}]*가 그 안의 }에서 멈추는 문제를 피하려고 넣은 것.
+  function matchFontSizeLeading(latexStr, cmdName) {
+    const re = new RegExp(`\\\\newcommand\\{\\\\${cmdName}\\}\\{(?:\\\\[a-zA-Z]+)*\\\\fontsize\\{([\\d.]+)pt\\}\\{([\\d.]+)pt\\}`);
+    const m = latexStr.match(re);
+    return m ? { size: m[1], leading: m[2] } : null;
+  }
+
   function extractLatexCommandMap(latexStr) {
     const map = {};
-    // \fontsize{Xpt}{Ypt} — 본문 (첫 번째 등장)
+    // \fontsize{Xpt}{Ypt} — 본문 (첫 번째 등장, \newcommand로 감싸여 있지 않아 별도 처리)
     const bodyFont = latexStr.match(/\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}\\selectfont/);
     if (bodyFont) { map.bodySize = bodyFont[1]; map.bodyLeading = bodyFont[2]; }
-    // \notef 정의: \newcommand{\notef}{\rmfamily\fontsize{Xpt}{Ypt}\selectfont}
-    // [^}]* 는 \fontsize{Xpt} 안의 } 에서 멈추므로, (?:\\[a-zA-Z]+)* 로 수정
-    const notef = latexStr.match(/\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
-    if (notef) { map.noteSize = notef[1]; map.noteLeading = notef[2]; }
+    const notef = matchFontSizeLeading(latexStr, 'notef');
+    if (notef) { map.noteSize = notef.size; map.noteLeading = notef.leading; }
+    // 쪽번호/면주 글자 크기 (\foliof, \runningheadf)
+    const pnFont = matchFontSizeLeading(latexStr, 'foliof');
+    if (pnFont) { map.pnSize = pnFont.size; map.pnLeading = pnFont.leading; }
+    const rhFont = matchFontSizeLeading(latexStr, 'runningheadf');
+    if (rhFont) { map.rhSize = rhFont.size; map.rhLeading = rhFont.leading; }
+    // 문단 들여쓰기
+    const parIndent = latexStr.match(/\\setlength\{\\parindent\}\{([\d.]+)em\}/);
+    if (parIndent) map.parIndent = parIndent[1];
+    // 단 간격 (다단 레이아웃에서 열 사이 간격)
+    const colGapM = latexStr.match(/\\setlength\{\\columnsep\}\{([\d.]+)mm\}/);
+    if (colGapM) map.colGap = colGapM[1];
+    // 본문 정렬 (양끝/왼쪽) — 기본은 명시적 커맨드 없음(양끝), \AtBeginDocument{\RaggedRight}가 있으면 왼쪽 정렬
+    map.bodyAlign = /\\AtBeginDocument\{\\RaggedRight\}/.test(latexStr) ? 'ragged' : 'justified';
+    // 하이픈(자동 줄바꿈 시 단어 쪼개기) 켜짐/꺼짐
+    map.hyphenation = /\\hyphenpenalty=10000/.test(latexStr) ? 'off' : 'on';
+    // \bodyf 서체 계열 — \rmfamily/\sffamily 자체는 명조/고딕을 보장하지 않음(생성 시 \setmainfont/
+    // \setsansfont에 어느 쪽이 로드됐는지에 따라 뒤바뀔 수 있음). 실제 로드된 폰트 이름으로 판정한다.
+    const mainFontM = latexStr.match(/\\setmainfont\{([^}]+)\}/);
+    const sansFontM = latexStr.match(/\\setsansfont\{([^}]+)\}/);
+    const mainFontName = mainFontM ? mainFontM[1] : null;
+    const sansFontName = sansFontM ? sansFontM[1] : null;
+    const bodyFam = latexStr.match(/\\newcommand\{\\bodyf\}\{(\\rmfamily|\\sffamily)\\fontsize/);
+    if (bodyFam) {
+      const fontNameForFam = bodyFam[1] === '\\rmfamily' ? mainFontName : sansFontName;
+      const serif = isSerifFontName(fontNameForFam);
+      // 폰트 이름으로 못 정하면(알 수 없는 이름 등) 기존 관습(\rmfamily=명조)으로 폴백
+      map.bodyFontFamily = serif === null ? (bodyFam[1] === '\\sffamily' ? 'sans' : 'serif') : (serif ? 'serif' : 'sans');
+    }
     // \hone \htwo \hthree
-    const h1 = latexStr.match(/\\newcommand\{\\hone\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
-    if (h1) { map.h1Size = h1[1]; map.h1Leading = h1[2]; }
-    const h2 = latexStr.match(/\\newcommand\{\\htwo\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
-    if (h2) { map.h2Size = h2[1]; map.h2Leading = h2[2]; }
-    const h3 = latexStr.match(/\\newcommand\{\\hthree\}\{[^}]*\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt/);
-    if (h3) { map.h3Size = h3[1]; map.h3Leading = h3[2]; }
+    const h1 = matchFontSizeLeading(latexStr, 'hone');
+    if (h1) { map.h1Size = h1.size; map.h1Leading = h1.leading; }
+    const h2 = matchFontSizeLeading(latexStr, 'htwo');
+    if (h2) { map.h2Size = h2.size; map.h2Leading = h2.leading; }
+    const h3 = matchFontSizeLeading(latexStr, 'hthree');
+    if (h3) { map.h3Size = h3.size; map.h3Leading = h3.leading; }
     // \geometry 여백
     const geo = latexStr.match(/top=([\d.]+)mm.*?bottom=([\d.]+)mm.*?inner=([\d.]+)mm.*?outer=([\d.]+)mm/s);
     if (geo) { map.marginTop=geo[1]; map.marginBottom=geo[2]; map.marginInner=geo[3]; map.marginOuter=geo[4]; }
@@ -6677,15 +6731,20 @@ ${customTexts.join('\n')}`;
       cmdMap.h2Size       && `소제목(\\htwo): ${cmdMap.h2Size}pt / 행간 ${cmdMap.h2Leading}pt`,
       cmdMap.h3Size       && `중간제목(\\hthree): ${cmdMap.h3Size}pt / 행간 ${cmdMap.h3Leading}pt`,
       cmdMap.bodySize     && `본문(\\bodyf): ${cmdMap.bodySize}pt / 행간 ${cmdMap.bodyLeading}pt`,
+      (cmdMap.bodyFontFamily !== undefined) && `본문 서체 계열: ${cmdMap.bodyFontFamily === 'sans' ? '고딕(\\sffamily)' : '명조(\\rmfamily)'} — bodyFontFamily로 전환 가능(serif/sans 값, 새 폰트 로드 불필요, sty에 둘 다 이미 있음)`,
       cmdMap.noteSize     && `주석(\\notef): ${cmdMap.noteSize}pt / 줄 내부 행간 ${cmdMap.noteLeading}pt`,
       cmdMap.footnoteSep  && `각주 항목 간 간격(\\footnotesep, 각주1↔각주2 사이 여백): ${cmdMap.footnoteSep}pt`,
       cmdMap.headingGap   && `제목↔소제목 간격(\\imprintheadinggap): ${cmdMap.headingGap}pt`,
       cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
       cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
       cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
+      (cmdMap.parIndent !== undefined) && `문단 들여쓰기: ${cmdMap.parIndent}em`,
+      (cmdMap.colGap !== undefined) && `단 간격(\\columnsep): ${cmdMap.colGap}mm`,
       cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
+      (cmdMap.pnSize !== undefined) && `쪽번호 글자 크기(\\foliof): ${cmdMap.pnSize}pt / 행간 ${cmdMap.pnLeading}pt`,
       (cmdMap.pnPos !== undefined) && `쪽번호 위치 슬롯: ${cmdMap.pnPos} (상단/하단 × 외측/내측/중앙 중 하나 — pnPos로 슬롯 자체 변경 가능)`,
       (cmdMap.pnXShift !== undefined) && `쪽번호 미세 이동: 가로 ${cmdMap.pnXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.pnYShift}mm(+위/-아래)`,
+      (cmdMap.rhSize !== undefined) && `면주 글자 크기(\\runningheadf): ${cmdMap.rhSize}pt / 행간 ${cmdMap.rhLeading}pt`,
       (cmdMap.rhPos !== undefined) && `면주 위치 슬롯: ${cmdMap.rhPos} (rhPos로 슬롯 자체 변경 가능, '없음'이면 면주 미사용 상태)`,
       (cmdMap.rhXShift !== undefined) && `면주 미세 이동: 가로 ${cmdMap.rhXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.rhYShift}mm(+위/-아래)`,
     ].filter(Boolean).join('\n');
@@ -6707,7 +6766,10 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSep headingGap bodyGap pnXShift pnYShift pnPos rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSep headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  (bodyAlign 값: justified 또는 ragged. hyphenation 값: on 또는 off)
+  (쪽번호/면주 글자 크기 — pnSize/pnLeading(\foliof), rhSize/rhLeading(\runningheadf). "main.tex에 정의 안 됨"이라고 답하지 말 것 — sty에 있음)
+  ("본문 서체를 고딕/명조로 바꿔줘" → bodyFontFamily=sans 또는 serif. sty에 명조(\rmfamily)와 고딕(\sffamily) 둘 다 이미 로드되어 있으므로 새 폰트 파일 필요 없음 — "재생성 필요"라고 답하지 말 것. 완전히 다른 서체 종류(예: 특정 브랜드 폰트)를 새로 요청하는 경우에만 재생성 필요.)
   (쪽번호/면주 위치 — 두 종류 요청을 구분할 것:
    · "조금/살짝 옆으로/위로/아래로" 같은 미세 조정 → pnXShift/pnYShift (쪽번호) 또는 rhXShift/rhYShift (면주), mm 단위
    · "하단으로/상단으로/왼쪽으로/오른쪽으로/가운데로 옮겨줘"처럼 슬롯 자체를 바꾸는 요청 → pnPos 또는 rhPos
@@ -6722,16 +6784,26 @@ ${customTexts.join('\n')}`;
    footnoteSize는 렌더링에 반영되지 않으므로 사용 금지)
   (모든 행간 값은 폰트 크기 이상으로 유지할 것 — 그 미만이면 줄바꿈 시 글자가 겹침. 폰트 크기와 동일한 값까지는 허용됨)
   예: <sty_patch>bodySize=9.0,bodyLeading=14.4</sty_patch>
-- main.tex 구조 수정: <latex_update>전체LaTeX내용</latex_update>
-- 쪽번호/면주 슬롯 이동과 mm 미세 이동 모두 sty_patch로 지원됨 (pnPos/rhPos/pnXShift/pnYShift/rhXShift/rhYShift). 위 키 설명 참고. cmdMap에 해당 값이 undefined면 구버전 문서라 미지원 — "적용 불가: 구버전 문서, 재생성 필요"로 답할 것. 강도 표현("조금", "많이" 등)은 위 강도 판단 기준과 동일하게 사용하되 mm 미세 이동은 절대값 1~5mm 범위에서 자유롭게 판단.
-- 수정 불가: "적용 불가: <이유 5단어>" 한 줄만.`;
+- 쪽번호/면주 mm 미세 이동(pnXShift/pnYShift/rhXShift/rhYShift) 강도 표현("조금", "많이" 등)은 위 강도 판단 기준과 동일하게 사용하되 절대값 1~5mm 범위에서 자유롭게 판단.
+- 구조적 요청(단 개수 변경, 각주를 사이드노트로 옮기기, 레이아웃 유형 변경 등 sty_patch 키로 표현 안 되는 것)은 거부하지 말고 시도하되, 반드시 아래 절차를 지킬 것:
+  1. 절대 문서를 처음부터 새로 쓰지 말 것. 아래 "현재 main.tex" 섹션에 있는 텍스트를 그대로 시작점으로 삼아, 요청과 직접 관련된 부분만 최소 편집(삽입/래핑)할 것.
+  2. \\documentclass, \\usepackage 목록(kotex, imprint-style 등), \\XeTeXlinebreaklocale, \\pagestyle{imprint} 등 preamble/설정 줄은 단 한 글자도 바꾸지 말 것 — 원본 그대로 복사.
+  3. \\documentclass{memoir}를 \\documentclass{article} 등 다른 클래스로 바꾸는 것 절대 금지. \\usepackage{imprint-style}를 \\usepackage{imprint.sty} 같은 다른 이름으로 쓰는 것도 절대 금지 — 원본 철자 그대로.
+  4. 실제로 편집하는 부분은 본문 단락들 뿐: \\begin{multicols}{N}...\\end{multicols}로 감싸는 정도의 최소 삽입만 할 것.
+  <latex_update>전체 main.tex (위 규칙을 지킨, 원본 기반 최소 편집본)</latex_update>
+  <sty_update>전체 sty</sty_update> (main.tex만 바뀌면 이 태그는 생략)
+  · 각주를 옆으로(사이드노트) 옮기기: 매우 큰 구조 변경 — 시도는 하되 응답 앞에 "⚠ 실험적 변경, 컴파일 실패 가능" 한 줄 추가.
+  · 확신 없으면 최소한만 바꿀 것. 원본을 통째로 재작성하는 것보다 작은 삽입 하나가 훨씬 안전함.
+- 수정 불가: 정말로 방법이 없을 때만(예: 존재하지 않는 대상을 가리킴) "적용 불가: <이유 5단어>" 한 줄. 구조 변경이라는 이유만으로 거부하지 말 것 — 위 방식으로 시도.`;
 
     // ── 시스템 프롬프트 ───────────────────────────────────────────
     const systemPrompt = `너는 Imprint 조판 시스템 스타일 어시스턴트다.
 
 현재 수치:
 ${cmdMapStr || '(없음)'}
-판형: ${p.f.w}×${p.f.h}mm (불변) / 정렬: ${runMeta?.selectedAlignment||'justified'} (고정)
+판형: ${p.f.w}×${p.f.h}mm (불변)
+정렬: ${cmdMap.bodyAlign === 'ragged' ? '왼쪽(ragged)' : '양끝(justified)'} — 다른 수정 중 의도치 않게 바뀌면 안 되지만, 사용자가 "왼쪽 정렬로", "양끝 맞춤으로" 등 명시적으로 정렬을 요청하면 bodyAlign 키로 변경할 것
+하이픈: ${cmdMap.hyphenation === 'off' ? '꺼짐' : '켜짐'} — "하이픈 빼줘/넣어줘"는 hyphenation 키로 변경할 것
 
 레퍼런스 디자이너 근거 (이 조판이 왜 이렇게 설계됐는지 — 수정 판단 시 참고할 것):
 ${refCtx}
@@ -6741,8 +6813,6 @@ ${refCtx}
 작은 변화는 독자가 알아채기 어려울 만큼, 큰 변화는 레이아웃이 눈에 띄게 달라질 만큼.
 위 레퍼런스 근거(서체/여백/자간 선택 이유)와 상충하지 않는 범위에서 조정할 것.
 수치는 소수점 2자리까지 사용. 정수(9, 10 등) 출력 금지 — 반드시 소수점 포함(예: 9.24, 8.73).
-${cmdMap.noteSize ? `각주/주석 텍스트(\\notef): 현재 ${cmdMap.noteSize}pt / 행간 ${cmdMap.noteLeading}pt — "각주", "주석", "하단 각주", "사이드노트" 등 각주 관련 요청은 전부 noteSize/noteLeading으로 패치할 것 (실제 PDF에 렌더링되는 유일한 각주 폰트 커맨드).` : ''}
-${cmdMap.footnoteSize ? `\\footnotesize는 정의만 되어 있고 실제 렌더링에는 쓰이지 않음 — footnoteSize/footnoteLeading 키는 사용하지 말 것.` : ''}
 
 ${outputRules}
 
@@ -6917,26 +6987,77 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           if (k && v) patches[k.trim()] = v.trim();
         });
         const cmLabel = {
-          bodySize:'본문 크기', bodyLeading:'본문 행간',
+          bodySize:'본문 크기', bodyLeading:'본문 행간', bodyFontFamily:'본문 서체 계열',
           noteSize:'주석 크기', noteLeading:'주석 행간',
           footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
           footnoteSep:'각주 항목 간 간격',
           headingGap:'제목↔소제목 간격', bodyGap:'제목/소제목↔본문 간격',
+          pnSize:'쪽번호 크기', pnLeading:'쪽번호 행간',
           pnXShift:'쪽번호 가로 이동', pnYShift:'쪽번호 세로 이동', pnPos:'쪽번호 위치',
+          rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
+          bodyAlign:'본문 정렬', hyphenation:'하이픈',
+          parIndent:'문단 들여쓰기', colGap:'단 간격',
           letterSpace:'자간',
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'' };
-        // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.1배 하한선
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', colGap:'mm' };
+        // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
         const clampLeading = (size, lead) => {
           const s = Number(size), l = Number(lead);
           if (!Number.isFinite(s) || !Number.isFinite(l)) return lead;
-          const floor = Math.round(s * 1.0 * 100) / 100; // 폰트 크기와 동일한 값까지 허용, 그 미만만 차단
+          const floor = Math.round(s * 100) / 100;
           return l < floor ? floor : lead;
         };
+        // \newcommand{\CMD}{...\fontsize{X}{Y}...} 형태의 크기+행간을 한 번에 패치.
+        // pnSize/rhSize/noteSize/h1~h3 등 여러 커맨드가 전부 같은 형태라 공용으로 뺐다.
+        const patchFontSizeLeading = (sty, cmdName, sizeVal, leadVal) => sty.replace(
+          new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{(?:\\\\[a-zA-Z]+)*\\\\fontsize\\{)[\\d.]+pt(\\}\\{)[\\d.]+pt`),
+          `$1${sizeVal}pt$2${leadVal}pt`
+        );
         let patchedSty = styCode;
+        // 구버전 문서 자동 리트로핏: pn/rh mm 이동 관련 요청이 하나라도 있으면, 아직
+        // \makebox[0pt] 래핑이 없는 옛날 구조(2026-08-03 이전 생성분)를 먼저 새 구조로
+        // 업그레이드한다. 안 그러면 \imprintpnxshift/\imprintrhxshift 값을 아무리 바꿔도
+        // 오른쪽/가운데 정렬 슬롯에서 \hfil이 이동값을 흡수해 화면상 전혀 반영되지 않는다
+        // (실측 확인된 버그 — 값은 바뀌는데 PDF는 픽셀 단위로 완전히 동일했음).
+        const shiftKeys = ['pnXShift', 'pnYShift', 'rhXShift', 'rhYShift'];
+        if (shiftKeys.some(k => k in patches)) {
+          // 4개 매크로 줄(\makeoddhead 등) 전체를 훑어 \makebox[0pt]{...} 래핑 유무만 검사해 보정한다.
+          // 슬롯(좌/중/우)마다 정렬 방향([l]/없음/[r])이 달라야 긴 텍스트가 페이지 밖으로
+          // 흘러나가지 않는다 — buildMemoirPageStyle()의 동일 주석 참고 (2026-08-05 수정).
+          const wrapIfNeeded = (line) => {
+            const m = line.match(/^(\\make(?:odd|even)(?:head|foot)\{imprint\})/);
+            if (!m) return line;
+            const prefix = m[1];
+            let pos = prefix.length;
+            const args = [];
+            for (let g = 0; g < 3; g++) {
+              if (line[pos] !== '{') return line; // 예상 형식이 아니면 안전하게 원본 유지
+              let depth = 1; const start = pos; pos++;
+              while (depth > 0 && pos < line.length) {
+                if (line[pos] === '{') depth++;
+                else if (line[pos] === '}') depth--;
+                pos++;
+              }
+              args.push(line.slice(start + 1, pos - 1));
+            }
+            const aligns = ['l', '', 'r'];
+            const newArgs = args.map((arg, i) => {
+              if (/\\makebox\[0pt\]/.test(arg)) return arg; // 이미 새 구조
+              return arg.replace(
+                /\\raisebox\{(\\imprintpnyshift|\\imprintrhyshift)\}\{\\hspace\{(\\imprintpnxshift|\\imprintrhxshift)\}([^}]*)\}/g,
+                (whole, y, x, rest) => `\\makebox[0pt]${aligns[i] ? `[${aligns[i]}]` : ''}{\\raisebox{${y}}{\\hspace{${x}}${rest}}}`
+              );
+            });
+            return prefix + newArgs.map(a => `{${a}}`).join('') + line.slice(pos);
+          };
+          patchedSty = patchedSty.split('\n').map(line => {
+            if (/^\\make(odd|even)(head|foot)\{imprint\}/.test(line)) return wrapIfNeeded(line);
+            return line;
+          }).join('\n');
+        }
         for (const [key, val] of Object.entries(patches)) {
           const before = cmdMap[key];
           const unit = cmUnit[key] || 'pt';
@@ -6947,25 +7068,73 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const bSize = patches.bodySize || cmdMap.bodySize;
             const bLead = clampLeading(bSize, patches.bodyLeading || cmdMap.bodyLeading);
             if (bSize && bLead) {
-              patchedSty = patchedSty
-                .replace(/(\\AtBeginDocument\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt(\}\\selectfont\})/,
-                  `$1${bSize}pt$2${bLead}pt$3`)
-                .replace(/(\\bodyf\{\\rmfamily\\fontsize\{|\\newcommand\{\\bodyf\}\{\\rmfamily\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
-                  (m, pre, mid) => `${pre}${bSize}pt${mid}${bLead}pt`);
+              patchedSty = patchedSty.replace(
+                /(\\AtBeginDocument\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt(\}\\selectfont\})/,
+                `$1${bSize}pt$2${bLead}pt$3`);
+              // \bodyf는 patchFontSizeLeading의 (?:\\[a-zA-Z]+)* 패턴이 \rmfamily/\sffamily 둘 다 매치
+              patchedSty = patchFontSizeLeading(patchedSty, 'bodyf', bSize, bLead);
             }
+          } else if (key === 'bodyFontFamily') {
+            // 명조(\rmfamily)↔고딕(\sffamily) 전환 — sty에 두 서체 모두 이미 로드돼 있어 새 폰트 불필요
+            const fam = val === 'sans' ? '\\sffamily' : '\\rmfamily';
+            patchedSty = patchedSty.replace(
+              /(\\newcommand\{\\bodyf\}\{)(?:\\rmfamily|\\sffamily)(\\fontsize)/,
+              `$1${fam}$2`);
+          } else if (key === 'bodyAlign') {
+            const wantRagged = val === 'ragged';
+            if (wantRagged) {
+              patchedSty = patchedSty.replace(
+                /% 기본 양쪽 정렬 \(LaTeX 기본값\)/,
+                '\\AtBeginDocument{\\RaggedRight}');
+              // \RaggedRight는 ragged2e 패키지 커맨드 — 양끝정렬로 생성된 문서엔 로드가 안 돼있어
+              // 그냥 패치하면 undefined control sequence 컴파일 에러가 남. 없으면 추가.
+              if (!/\\RequirePackage\{ragged2e\}/.test(patchedSty)) {
+                patchedSty = patchedSty.replace(
+                  /(\\RequirePackage\{fontspec\})/,
+                  '$1\n\\RequirePackage{ragged2e}');
+              }
+            } else {
+              patchedSty = patchedSty.replace(
+                /\\AtBeginDocument\{\\RaggedRight\}/,
+                '% 기본 양쪽 정렬 (LaTeX 기본값)');
+            }
+          } else if (key === 'hyphenation') {
+            const wantOff = val === 'off';
+            const already = /\\hyphenpenalty=10000\n\\exhyphenpenalty=10000/.test(patchedSty);
+            if (wantOff && !already) {
+              patchedSty = patchedSty.replace(
+                /(\\emergencystretch=3em)/,
+                '$1\n\\hyphenpenalty=10000\n\\exhyphenpenalty=10000');
+            } else if (!wantOff && already) {
+              patchedSty = patchedSty.replace(
+                /\n\\hyphenpenalty=10000\n\\exhyphenpenalty=10000/,
+                '');
+            }
+          } else if (key === 'pnSize' || key === 'pnLeading') {
+            const pSize = patches.pnSize || cmdMap.pnSize;
+            const pLead = clampLeading(pSize, patches.pnLeading || cmdMap.pnLeading);
+            if (pSize && pLead) patchedSty = patchFontSizeLeading(patchedSty, 'foliof', pSize, pLead);
+          } else if (key === 'rhSize' || key === 'rhLeading') {
+            const rSize = patches.rhSize || cmdMap.rhSize;
+            const rLead = clampLeading(rSize, patches.rhLeading || cmdMap.rhLeading);
+            if (rSize && rLead) patchedSty = patchFontSizeLeading(patchedSty, 'runningheadf', rSize, rLead);
           } else if (key === 'noteSize' || key === 'noteLeading') {
             const nSize = patches.noteSize || cmdMap.noteSize;
             const nLead = clampLeading(nSize, patches.noteLeading || cmdMap.noteLeading);
-            if (nSize && nLead) {
-              patchedSty = patchedSty.replace(
-                /(\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
-                `$1${nSize}pt$2${nLead}pt`);
-            }
+            if (nSize && nLead) patchedSty = patchFontSizeLeading(patchedSty, 'notef', nSize, nLead);
           } else if (key === 'footnoteSep') {
             // 각주 항목 간 간격(각주1↔각주2 사이 여백) — noteLeading(줄 내부 행간)과는 다른 변수
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\footnotesep\}\{)[\d.]+pt(\})/,
               `$1${val}pt$2`);
+          } else if (key === 'parIndent') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\parindent\}\{)[\d.]+em(\})/,
+              `$1${val}em$2`);
+          } else if (key === 'colGap') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\columnsep\}\{)[\d.]+mm(\})/,
+              `$1${val}mm$2`);
           } else if (key === 'headingGap') {
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\imprintheadinggap\}\{)[\d.]+pt(\})/,
@@ -6994,26 +7163,34 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             // 쪽번호/면주 슬롯 자체 재배치 — buildMemoirPageStyle()과 동일한 슬롯 계산 로직을
             // sty 텍스트에 그대로 재적용한다 (main.tex 재생성 없이 \makeoddhead 등 4줄만 재생성).
             const mt = '{}';
-            const placementSlots = (cmd, posStr) => {
+            // makebox[0pt]는 인자 없으면 가운데 정렬(폭 넘치면 좌우로 반씩 삐져나감) —
+            // 좌/우 슬롯에서는 [l]/[r]로 정렬 방향을 명시해야 긴 텍스트가 페이지 밖으로
+            // 흘러나가지 않는다(buildMemoirPageStyle()의 동일 주석 참고, 2026-08-05 실측 수정).
+            const placementSlots = (innerContent, posStr) => {
               const isTop = posStr.includes('상단');
               const isOuter = posStr.includes('외측');
               const isInner = posStr.includes('내측');
-              if (isOuter) return { odd: [mt, mt, cmd], even: [cmd, mt, mt], top: isTop };
-              if (isInner) return { odd: [cmd, mt, mt], even: [mt, mt, cmd], top: isTop };
-              return { odd: [mt, cmd, mt], even: [mt, cmd, mt], top: isTop };
+              const cmdL = `{\\makebox[0pt][l]{${innerContent}}}`;
+              const cmdC = `{\\makebox[0pt]{${innerContent}}}`;
+              const cmdR = `{\\makebox[0pt][r]{${innerContent}}}`;
+              if (isOuter) return { odd: [mt, mt, cmdR], even: [cmdL, mt, mt], top: isTop };
+              if (isInner) return { odd: [cmdL, mt, mt], even: [mt, mt, cmdR], top: isTop };
+              return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
             };
             const curPnPos = patches.pnPos || cmdMap.pnPos;
             const curRhPos = patches.rhPos || cmdMap.rhPos;
             if (curPnPos && (cmdMap.pnPos !== undefined)) {
-              const pnCmd = '{\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}}';
+              // makebox[0pt]로 감싸는 이유는 buildMemoirPageStyle()의 동일 주석 참고 —
+              // 오른쪽/가운데 정렬 슬롯에서 \hfil이 앞의 \hspace를 흡수해버리는 문제 방지
+              const pnInner = '\\raisebox{\\imprintpnyshift}{\\hspace{\\imprintpnxshift}\\foliof\\thepage}';
               const rhEnabled = curRhPos && curRhPos !== '없음';
-              const rhCmd = rhEnabled ? '{\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}}' : null;
+              const rhInner = rhEnabled ? '\\raisebox{\\imprintrhyshift}{\\hspace{\\imprintrhxshift}\\runningheadf\\imprintrunninghead}' : null;
               let headSlots = { odd: [mt, mt, mt], even: [mt, mt, mt] };
               let footSlots = { odd: [mt, mt, mt], even: [mt, mt, mt] };
-              const ps = placementSlots(pnCmd, curPnPos);
+              const ps = placementSlots(pnInner, curPnPos);
               if (ps.top) headSlots = { odd: ps.odd, even: ps.even }; else footSlots = { odd: ps.odd, even: ps.even };
               if (rhEnabled) {
-                const rs = placementSlots(rhCmd, curRhPos);
+                const rs = placementSlots(rhInner, curRhPos);
                 const target = rs.top ? headSlots : footSlots;
                 ['odd', 'even'].forEach(side => {
                   [0, 1, 2].forEach(i => { if (target[side][i] === mt) target[side][i] = rs[side][i]; });
@@ -7052,26 +7229,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const fSize = patches.footnoteSize || cmdMap.footnoteSize;
             const fLead = clampLeading(fSize, patches.footnoteLeading || cmdMap.footnoteLeading);
             if (fSize && fLead) {
-              patchedSty = patchedSty
-                .replace(
-                  /(\\renewcommand\{\\footnotesize\}\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
-                  `$1${fSize}pt$2${fLead}pt`)
-                .replace(
-                  /(\\newcommand\{\\notef\}\{(?:\\[a-zA-Z]+)*\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
-                  `$1${fSize}pt$2${fLead}pt`);
+              patchedSty = patchedSty.replace(
+                /(\\renewcommand\{\\footnotesize\}\{\\fontsize\{)[\d.]+pt(\}\{)[\d.]+pt/,
+                `$1${fSize}pt$2${fLead}pt`);
+              patchedSty = patchFontSizeLeading(patchedSty, 'notef', fSize, fLead);
             }
           } else if (['h1Size','h1Leading','h2Size','h2Leading','h3Size','h3Leading'].includes(key)) {
-            const cmdMap2 = { h1:'hone', h2:'htwo', h3:'hthree' };
+            const cmdByLevel = { h1:'hone', h2:'htwo', h3:'hthree' };
             const level = key.slice(0,2); // 'h1','h2','h3'
-            const cmd = cmdMap2[level];
-            const sizeKey = level + 'Size', leadKey = level + 'Leading';
-            const hSize = patches[sizeKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{([\\d.]+)pt`)) || [])[1];
-            const hLead = clampLeading(hSize, patches[leadKey] || (patchedSty.match(new RegExp(`\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{[\\d.]+pt\\}\\{([\\d.]+)pt`)) || [])[1]);
-            if (hSize && hLead) {
-              patchedSty = patchedSty.replace(
-                new RegExp(`(\\\\newcommand\\{\\\\${cmd}\\}\\{[^}]*\\\\fontsize\\{)[\\d.]+pt(\\}\\{)[\\d.]+pt`),
-                `$1${hSize}pt$2${hLead}pt`);
-            }
+            const cmd = cmdByLevel[level];
+            const cur = matchFontSizeLeading(patchedSty, cmd);
+            const hSize = patches[level + 'Size'] || cur?.size;
+            const hLead = clampLeading(hSize, patches[level + 'Leading'] || cur?.leading);
+            if (hSize && hLead) patchedSty = patchFontSizeLeading(patchedSty, cmd, hSize, hLead);
           } else if (key === 'letterSpace') {
             patchedSty = patchedSty.replace(/(LetterSpace=)[-\d.]+/, `$1${val}`);
           } else if (['marginTop','marginBottom','marginInner','marginOuter'].includes(key)) {
@@ -7148,7 +7318,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         ).then(result => {
           if (result) {
             setServerCompileResult(result);
-            if (result.compileOk) setStyleVersion(nextVersion);
+            if (result.compileOk) {
+              setStyleVersion(nextVersion);
+            } else if (result.rolledBack) {
+              // 서버가 컴파일 실패로 작업 파일을 이전 상태로 되돌렸음 — 화면(React state)도
+              // 같이 되돌리지 않으면 화면엔 깨진 내용이 남고 서버 파일만 복구된 상태로 어긋남
+              setLatex(latex);
+              setStyCode(styCode);
+              setRefineHistory(h => [...h, {
+                role: 'assistant',
+                chatContent: '⚠ 이 수정은 컴파일에 실패해서 적용되지 않았어요. 이전 상태로 되돌렸습니다.',
+                content: '', changes: '', codeChanged: false, isError: true,
+              }]);
+            }
           }
         });
       }
