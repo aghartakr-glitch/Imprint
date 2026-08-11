@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useEffect } from "react";
+import { T, FS, GLOBAL_CSS } from "./theme.js";
 
 // Imprint 1.0.0
 // 편집 디자인 타이포그래피 스타일 패키지 선택기
@@ -1413,19 +1414,7 @@ async function sendToSheet(payload) {
   }
 }
 
-// ─── Design Tokens ───────────────────────────────────────────────
-const T = {
-  bg:      "#F4F4F4",
-  surface: "#FFFFFF",
-  border:  "#E0E0E0",
-  muted:   "#8C8C8C",
-  ink:     "#1A1A1A",
-  accent:  "#1A1A1A",
-  code:    "#EFEFEF",
-  tagBg:   "#E8E8E8",
-  mono:    "'JetBrains Mono','Fira Code',monospace",
-  sans:    "system-ui,-apple-system,sans-serif",
-};
+// ─── Design Tokens: T, FS는 ./theme.js에서 import (자매 시스템과 공유) ──────
 
 // Style Packages (DB) + Typographic System
 const DB = [
@@ -1812,7 +1801,7 @@ function PagePreview({ p, bodyText }) {
   const pnY = isB ? ph - mb * 0.42 : mt * 0.36;
 
   return (
-    <div style={{ position:"relative", background:"white", border:"1px solid #d0d0d0", width:pw, height:ph, boxShadow:"2px 4px 12px rgba(0,0,0,0.1)", flexShrink:0, overflow:"hidden" }}>
+    <div style={{ position:"relative", background:"white", border:"1px solid #D4D4D0", width:pw, height:ph, boxShadow:"2px 4px 12px rgba(0,0,0,0.1)", flexShrink:0, overflow:"hidden" }}>
       {/* 마진 가이드 */}
       <div style={{ position:"absolute", left:ml, top:mt, width:cw, height:ch, outline:"1px dashed rgba(80,130,220,0.18)", pointerEvents:"none", zIndex:2 }} />
       {/* 열 구분선 */}
@@ -1824,14 +1813,14 @@ function PagePreview({ p, bodyText }) {
       {Array.from({length:nc},(_,i)=>(
         <div key={i} style={{ position:"absolute", left:ml+i*(cw2+gut), top:mt, width:cw2, height:ch, overflow:"hidden",
           fontSize:fs, lineHeight:`${lh}px`, fontFamily:ff, letterSpacing:ls,
-          color:"#1a1a1a", wordBreak:"keep-all", overflowWrap:"break-word",
+          color:"#111111", wordBreak:"keep-all", overflowWrap:"break-word",
           textAlign:"justify", padding:0, whiteSpace:"pre-wrap" }}>
           {bodyText || ""}
         </div>
       ))}
       {/* 쪽번호 */}
       {pos && pos !== "없음" && (
-        <div style={{ position:"absolute", left:pnX, top:pnY, fontSize:7, color:"#aaa", transform:"translateX(-50%)", fontFamily:T.mono, zIndex:3 }}>1</div>
+        <div style={{ position:"absolute", left:pnX, top:pnY, fontSize:10, color:"#6B6B6B", transform:"translateX(-50%)", fontFamily:T.mono, zIndex:3 }}>1</div>
       )}
     </div>
   );
@@ -1944,14 +1933,14 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
   }
 
   const btnStyle = (accent) => ({
-    padding:"5px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer", borderRadius:3,
-    border: accent ? "1.5px solid #c8b898" : "1.5px solid #d0d0d0",
-    background: accent ? "#fff8f0" : "#fafafa",
-    color: accent ? "#7a5a2a" : "#555",
+    padding:"4px 12px", fontSize:12.5, fontWeight:600, cursor:"pointer", borderRadius:12,
+    border: accent ? "1px solid #c8b898" : "1px solid #D4D4D0",
+    background: accent ? "#fff8f0" : "#F7F7F5",
+    color: accent ? "#7a5a2a" : "#111111",
   });
 
   return (
-    <div style={{ marginTop:10 }}>
+    <div style={{ marginTop:8 }}>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
         {/* 현재 로그 복사/보기 */}
         <button onClick={() => copyText(logStr, 'this')} style={btnStyle(true)}>
@@ -1975,12 +1964,12 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
               _LOG_STORE.logs = []; setAllLogs([]); setCurrentLog(null);
             }
           }}
-          style={{ padding:"5px 12px", fontSize:11.5, fontWeight:400, cursor:"pointer",
-            border:"1px solid #e8e8e8", borderRadius:3, background:"transparent", color:"#bbb" }}>
+          style={{ padding:"4px 12px", fontSize:12.5, fontWeight:400, cursor:"pointer",
+            border:"1px solid #F7F7F5", borderRadius:12, background:"transparent", color:"#D4D4D0" }}>
           Clear all
         </button>
 
-        <label style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:"#aaa", marginLeft:4, cursor:"pointer" }}>
+        <label style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, color:"#6B6B6B", marginLeft:4, cursor:"pointer" }}>
           <input type="checkbox" checked={includeFullPrompts} onChange={e => setIncludeFullPrompts(e.target.checked)} />
           full prompts
         </label>
@@ -1990,26 +1979,26 @@ function LogActions({ L, allLogs, setAllLogs, setCurrentLog, includeFullPrompts,
       {showJson && (
         <div style={{ marginTop:8, position:"relative" }}>
           <textarea readOnly value={logStr} rows={14}
-            style={{ width:"100%", fontFamily:"var(--font-mono)", fontSize:10.5, lineHeight:1.5,
-              border:"1px solid #e0d8cc", borderRadius:4, padding:"8px 10px",
+            style={{ width:"100%", fontFamily:"var(--font-mono)", fontSize:10.5, lineHeight:1.6,
+              border:"1px solid #e0d8cc", borderRadius:12, padding:"8px 12px",
               background:"#1a1a18", color:"#d4c9a8", resize:"vertical", boxSizing:"border-box" }}
             onClick={e => e.target.select()} />
-          <div style={{ position:"absolute", top:6, right:8, fontSize:10, color:"#888" }}>클릭→전체선택</div>
+          <div style={{ position:"absolute", top:6, right:8, fontSize:10, color:"#6B6B6B" }}>클릭→전체선택</div>
         </div>
       )}
 
       {/* 전체 로그 인라인 뷰어 */}
       {showAllJson && (
         <div style={{ marginTop:8, position:"relative" }}>
-          <div style={{ fontSize:11, color:"#aaa", marginBottom:4 }}>
+          <div style={{ fontSize:12, color:"#6B6B6B", marginBottom:4 }}>
             {allLogs.length}건 · 세션 종료 시 초기화됨
           </div>
           <textarea readOnly value={allStr} rows={18}
-            style={{ width:"100%", fontFamily:"var(--font-mono)", fontSize:10.5, lineHeight:1.5,
-              border:"1px solid #e0d8cc", borderRadius:4, padding:"8px 10px",
+            style={{ width:"100%", fontFamily:"var(--font-mono)", fontSize:10.5, lineHeight:1.6,
+              border:"1px solid #e0d8cc", borderRadius:12, padding:"8px 12px",
               background:"#1a1a18", color:"#d4c9a8", resize:"vertical", boxSizing:"border-box" }}
             onClick={e => e.target.select()} />
-          <div style={{ position:"absolute", top:6, right:8, fontSize:10, color:"#888" }}>클릭→전체선택</div>
+          <div style={{ position:"absolute", top:6, right:8, fontSize:10, color:"#6B6B6B" }}>클릭→전체선택</div>
         </div>
       )}
     </div>
@@ -7482,7 +7471,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
     padding: "9px 12px", fontSize: 13, lineHeight: 1.65,
     fontFamily: T.sans, color: T.ink,
     background: T.surface,
-    border: `1.5px solid ${focused ? "#888" : T.border}`,
+    border: `1px solid ${focused ? T.muted : T.border}`,
     borderRadius: 6, outline: "none", resize: "vertical",
     transition: "border-color 120ms",
   });
@@ -7490,54 +7479,57 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
   const [focusedField, setFocusedField] = useState(null);
 
   return (
-    <div style={{ height:"100vh", background:T.bg, fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:#CCCCCC; border-radius:2px; }
-        textarea, input { outline:none; resize:none; font-family:inherit; }
-        button { font-family:inherit; }
-      `}</style>
+    <div style={{ height:"100vh", position:"relative",
+      background:"#F7F7F5",
+      fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      {/* 글래스모피즘용 배경 블롭 — 패널 뒤로 비쳐서 blur가 실제로 보이게 함 */}
+      <div style={{ position:"absolute", inset:0, overflow:"hidden", zIndex:-1, pointerEvents:"none" }}>
+        <div style={{ position:"absolute", top:"-10%", left:"5%", width:480, height:480, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(242,97,43,0.55), transparent 70%)", filter:"blur(10px)" }} />
+        <div style={{ position:"absolute", bottom:"-15%", left:"30%", width:520, height:520, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(59,91,219,0.45), transparent 70%)", filter:"blur(10px)" }} />
+        <div style={{ position:"absolute", top:"10%", right:"-8%", width:440, height:440, borderRadius:"50%",
+          background:"radial-gradient(circle, rgba(47,158,68,0.4), transparent 70%)", filter:"blur(10px)" }} />
+      </div>
+      <style>{GLOBAL_CSS}</style>
 
       {/* ══ 헤더 ══════════════════════════════════════════════════════ */}
       <header style={{ height:48, display:"flex", alignItems:"center", gap:12, padding:"0 24px",
         borderBottom:`1px solid ${T.border}`, background:T.surface, flexShrink:0, zIndex:100 }}>
         <span style={{ fontSize:16, fontWeight:700, letterSpacing:"-0.03em" }}>Imprint</span>
         <span style={{ fontSize:10, fontFamily:T.mono, color:T.muted,
-          background:T.tagBg, padding:"2px 5px", borderRadius:2 }}>v{IMPRINT_VERSION}</span>
+          background:T.tagBg, padding:"4px 4px", borderRadius:12 }}>v{IMPRINT_VERSION}</span>
         <div style={{ flex:1 }} />
-        <span style={{ fontSize:11, color:T.muted }}>{DB.length}개 스타일 패키지</span>
+        <span style={{ fontSize:12, color:T.muted }}>{DB.length}개 스타일 패키지</span>
 
         {/* API 키 */}
         <div style={{ position:"relative" }}>
           {showApiInput ? (
-            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
               <input type="password" placeholder="sk-ant-api03-..."
                 defaultValue={apiKey} autoFocus
                 onKeyDown={e => {
                   if (e.key === 'Enter') saveApiKey(e.target.value.trim());
                   if (e.key === 'Escape') setShowApiInput(false);
                 }}
-                style={{ width:200, padding:"5px 10px", fontSize:12, fontFamily:T.mono,
-                  border:`1.5px solid ${T.ink}`, borderRadius:3, background:T.surface, color:T.ink }}
+                style={{ width:200, padding:"4px 12px", fontSize:12, fontFamily:T.mono,
+                  border:`1px solid ${T.ink}`, borderRadius:12, background:T.surface, color:T.ink }}
               />
               <button onClick={e => saveApiKey(e.target.closest('div').querySelector('input').value.trim())}
-                style={{ padding:"5px 12px", fontSize:12, fontWeight:600, border:"none",
-                  borderRadius:3, background:T.ink, color:"#fff", cursor:"pointer" }}>저장</button>
-              <button onClick={() => setShowApiInput(false)}
-                style={{ padding:"5px 8px", fontSize:12, border:`1px solid ${T.border}`,
-                  borderRadius:3, background:"transparent", cursor:"pointer", color:T.muted }}>✕</button>
+                style={{ padding:"4px 12px", fontSize:12, fontWeight:600, border:"none",
+                  borderRadius:8, background:T.ink, color:"#fff", cursor:"pointer" }}>저장</button>
+              <button onClick={() => setShowApiInput(false)} aria-label="API 키 입력 취소"
+                style={{ padding:"4px 8px", fontSize:12, border:`1px solid ${T.border}`,
+                  borderRadius:8, background:"transparent", cursor:"pointer", color:T.muted }}>✕</button>
             </div>
           ) : (
             <button onClick={() => setShowApiInput(true)}
-              style={{ padding:"5px 12px", fontSize:11, fontWeight:500,
-                border:`1px solid ${T.border}`, borderRadius:3,
+              style={{ padding:"4px 12px", fontSize:12, fontWeight:500,
+                border:`1px solid ${T.border}`, borderRadius:8,
                 background:T.surface, color: apiKey ? T.ink : T.muted,
-                cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
-              <span style={{ width:6, height:6, borderRadius:"50%",
-                background: apiKey ? "#444" : "#BBBBBB", display:"inline-block" }} />
+                cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ width:8, height:8, borderRadius:"50%",
+                background: apiKey ? "#111111" : "#D4D4D0", display:"inline-block" }} />
               {apiKey ? "API 연결됨" : "API 키 입력"}
             </button>
           )}
@@ -7546,17 +7538,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
       {/* ══ 3칼럼 본문 ════════════════════════════════════════════════ */}
       <div style={{ flex:1, display:"grid", gridTemplateColumns:"clamp(260px,25vw,380px) 1fr clamp(220px,22vw,320px)",
-        overflow:"hidden", minHeight:0, minWidth:0 }}>
+        gap:12, padding:12, overflow:"hidden", minHeight:0, minWidth:0 }}>
 
         {/* ── 좌: 텍스트 입력 ──────────────────────────────────────── */}
-        <div style={{ borderRight:`1px solid ${T.border}`, display:"flex",
-          flexDirection:"column", background:T.surface, overflow:"hidden" }}>
+        <div style={{ borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+          border:"1px solid rgba(255,255,255,0.5)",
+          display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.8)",
+          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", overflow:"hidden" }}>
 
           {/* 입력 탭 */}
           <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`, padding:"0 20px", flexShrink:0 }}>
             {[["text","텍스트 입력"],["experiment","실험"]].map(([k,label]) => (
               <button key={k} onClick={() => setInputTab(k)}
-                style={{ padding:"11px 14px", fontSize:12,
+                style={{ padding:"12px 16px", fontSize:12,
                   fontWeight: inputTab === k ? 700 : 400,
                   border:"none", borderBottom: inputTab === k
                     ? `2px solid ${T.ink}` : "2px solid transparent",
@@ -7567,7 +7561,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             ))}
           </div>
 
-          <div style={{ flex:1, overflowY:"auto", padding:"18px 20px", display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"20px 20px", display:"flex", flexDirection:"column", gap:12 }}>
             {inputTab === 'text' ? (
               <>
                 {[
@@ -7577,14 +7571,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
-                    <label style={{ display:"block", fontSize:11, fontWeight:600,
-                      color:T.ink, marginBottom:5 }}>
+                    <label style={{ display:"block", fontSize:12, fontWeight:600,
+                      color:T.ink, marginBottom:4 }}>
                       {label}
                     </label>
                     <textarea value={fields[key]} rows={rows} placeholder={placeholder}
                       onChange={e => setFields(f => ({ ...f, [key]: e.target.value }))}
-                      style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                        border:`1px solid ${T.border}`, borderRadius:3,
+                      style={{ width:"100%", padding:"8px 12px", fontSize:13,
+                        border:`1px solid ${T.border}`, borderRadius:12,
                         background:T.bg, color:T.ink, lineHeight:1.6,
                         transition:"border 150ms" }}
                       onFocus={e => e.target.style.borderColor = T.ink}
@@ -7594,13 +7588,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 ))}
                 {/* 면주 */}
                 <div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
-                    <label style={{ fontSize:11, fontWeight:600, color:T.ink }}>면주</label>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:8 }}>
+                    <label style={{ fontSize:12, fontWeight:600, color:T.ink }}>면주</label>
                     {/* 위치 드롭다운 */}
                     <select value={styleConfig.rhPos || '자동'}
                       onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
-                      style={{ padding:"3px 6px", fontSize:11,
-                        border:`1px solid ${T.border}`, borderRadius:3,
+                      style={{ padding:"4px 8px", fontSize:12,
+                        border:`1px solid ${T.border}`, borderRadius:12,
                         background:T.bg, color:T.ink, cursor:"pointer" }}>
                       <option value="자동">자동 (DB 기반)</option>
                       <option value="상단-외측">상단 · 외측</option>
@@ -7615,16 +7609,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   </div>
                   {/* 수직 면주 선택 시: 상단/하단 위치 sub-option */}
                   {(styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') && (
-                    <div style={{ display:"flex", gap:4, marginBottom:6 }}>
+                    <div style={{ display:"flex", gap:4, marginBottom:8 }}>
                       <span style={{ fontSize:10, color:T.muted, paddingTop:4, marginRight:2 }}>세로 위치</span>
                       {[['auto','자동'],['top','상단'],['center','중앙'],['bottom','하단']].map(([val, lbl]) => {
                         const active = (styleConfig.rhVertPos || 'auto') === val;
                         return (
                           <button key={val}
                             onClick={() => setStyleConfig(s => ({ ...s, rhVertPos: val }))}
-                            style={{ padding:"3px 9px", fontSize:11, fontWeight: active?600:400,
+                            style={{ padding:"4px 8px", fontSize:12, fontWeight: active?600:400,
                               border:`1px solid ${active ? T.ink : T.border}`,
-                              borderRadius:3, background: active ? T.ink : "transparent",
+                              borderRadius:12, background: active ? T.ink : "transparent",
                               color: active ? "#fff" : T.ink, cursor:"pointer" }}>
                             {lbl}
                           </button>
@@ -7635,8 +7629,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   <textarea value={fields["면주"]} rows={1}
                     placeholder="면주 텍스트 입력 (비우면 면주 없음)"
                     onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
-                    style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                      border:`1px solid ${T.border}`, borderRadius:3,
+                    style={{ width:"100%", padding:"8px 12px", fontSize:13,
+                      border:`1px solid ${T.border}`, borderRadius:12,
                       background:T.bg, color:T.ink, lineHeight:1.6,
                       transition:"border 150ms" }}
                     onFocus={e => e.target.style.borderColor = T.ink}
@@ -7646,11 +7640,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 {/* ── 스타일 설정 ── */}
                 <div>
                   {/* 스타일 선택 모드 */}
-                  <label style={{ display:"block", fontSize:11, fontWeight:600,
-                    color:T.ink, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:12, fontWeight:600,
+                    color:T.ink, marginBottom:8 }}>
                     스타일 선택 모드
                   </label>
-                  <div style={{ display:"flex", gap:4, marginBottom:10 }}>
+                  <div style={{ display:"flex", gap:4, marginBottom:8 }}>
                     {[
                       ['auto',         '자동 추천'],
                       ['genre-forced', '장르 강제'],
@@ -7664,9 +7658,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           if (mode === 'genre-forced') { setLockedStyleId(null); }
                           if (mode === 'ref-locked') { setHint(''); }
                         }} style={{
-                          flex:1, padding:"5px 8px", fontSize:11, fontWeight: active ? 600 : 400,
+                          flex:1, padding:"4px 8px", fontSize:12, fontWeight: active ? 600 : 400,
                           border:`1px solid ${active ? T.ink : T.border}`,
-                          borderRadius:3,
+                          borderRadius:8,
                           background: active ? T.ink : 'transparent',
                           color: active ? '#fff' : T.ink,
                           cursor:"pointer",
@@ -7680,13 +7674,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   {/* 장르 강제 모드: 장르 드롭다운 표시 */}
                   {selectionMode === 'genre-forced' && (
                     <div style={{ marginBottom:8 }}>
-                      <label style={{ display:"block", fontSize:11, fontWeight:600,
-                        color:T.ink, marginBottom:6 }}>
+                      <label style={{ display:"block", fontSize:12, fontWeight:600,
+                        color:T.ink, marginBottom:8 }}>
                         장르 / 출판 형태 직접 지정
                       </label>
                       <select value={hint} onChange={e => setHint(e.target.value)}
-                        style={{ width:"100%", padding:"9px 11px", fontSize:13,
-                          border:`1px solid ${T.border}`, borderRadius:3,
+                        style={{ width:"100%", padding:"8px 12px", fontSize:13,
+                          border:`1px solid ${T.border}`, borderRadius:12,
                           background:T.bg, color:T.ink, cursor:"pointer" }}>
                         {GENRE_OPTIONS.map(g => (
                           <option key={g} value={g}>{g || "— 장르를 선택하세요 —"}</option>
@@ -7697,8 +7691,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
                   {/* 레퍼런스 고정 모드: 현재 고정된 레퍼런스 표시 */}
                   {selectionMode === 'ref-locked' && (
-                    <div style={{ padding:"8px 10px", background:T.bg,
-                      border:`1px solid ${T.border}`, borderRadius:3,
+                    <div style={{ padding:"8px 12px", background:T.bg,
+                      border:`1px solid ${T.border}`, borderRadius:12,
                       fontSize:12, color:T.ink, marginBottom:8 }}>
                       {lockedStyleId !== null
                         ? <>
@@ -7716,20 +7710,20 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   )}
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:600,
-                    color:T.ink, marginBottom:6 }}>
+                  <label style={{ display:"block", fontSize:12, fontWeight:600,
+                    color:T.ink, marginBottom:8 }}>
                     단 구성
                   </label>
                   {/* 1행: 모드 선택 */}
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:6 }}>
+                  <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
                     {[["auto","자동"],["fixed","고정단"],["variable","가변단"]].map(([val,label]) => {
                       const active = (styleConfig.columnMode || 'auto') === val;
                       return (
                         <button key={val}
                           onClick={() => setStyleConfig(s => ({ ...s, columnMode: val }))}
-                          style={{ padding:"5px 12px", fontSize:12, fontWeight: active?600:400,
+                          style={{ padding:"4px 12px", fontSize:12, fontWeight: active?600:400,
                             border:`1px solid ${active ? T.ink : T.border}`,
-                            borderRadius:3, background: active ? T.ink : "transparent",
+                            borderRadius:8, background: active ? T.ink : "transparent",
                             color: active ? "#fff" : T.ink, cursor:"pointer" }}>
                           {label}
                         </button>
@@ -7744,9 +7738,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         return (
                           <button key={n}
                             onClick={() => setStyleConfig(s => ({ ...s, fixedColumns: n }))}
-                            style={{ padding:"4px 10px", fontSize:11, fontWeight: active?600:400,
+                            style={{ padding:"4px 12px", fontSize:12, fontWeight: active?600:400,
                               border:`1px solid ${active ? T.ink : T.border}`,
-                              borderRadius:3, background: active ? T.ink : "transparent",
+                              borderRadius:12, background: active ? T.ink : "transparent",
                               color: active ? "#fff" : T.ink, cursor:"pointer", minWidth:32 }}>
                             {n}단
                           </button>
@@ -7767,22 +7761,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     const canIndent = !isSide && vgTotal > vgBody;
 
                     // ── 공유 스타일 ──────────────────────────────────
-                    const ni = { width:46, padding:"5px 6px", fontSize:12,
-                      border:`1px solid ${T.border}`, borderRadius:3,
+                    const ni = { width:46, padding:"4px 8px", fontSize:12,
+                      border:`1px solid ${T.border}`, borderRadius:12,
                       background:T.bg, color:T.ink, textAlign:"center" };
                     // 각 행: 레이블(왼) + 컨트롤(오)
-                    const row = { display:"flex", alignItems:"flex-start", gap:10, marginTop:12 };
+                    const row = { display:"flex", alignItems:"flex-start", gap:8, marginTop:12 };
                     // 왼쪽 레이블 — 고정폭, 컨트롤의 입력값 높이에 맞게 수직 중앙
-                    const rowLbl = { fontSize:11, fontWeight:500, color:T.muted,
-                      width:46, flexShrink:0, paddingTop:17, lineHeight:1.2 };
+                    const rowLbl = { fontSize:12, fontWeight:500, color:T.muted,
+                      width:46, flexShrink:0, paddingTop:17, lineHeight:1.4 };
                     // 입력 필드 위의 작은 레이블
-                    const fieldLbl = { fontSize:10, color:T.muted, marginBottom:2, display:'block' };
+                    const fieldLbl = { fontSize:10, color:T.muted, marginBottom:4, display:'block' };
                     const fld = { display:"flex", flexDirection:"column" };
                     // 위치/옵션 버튼 공통
                     const posBtn = (active) => ({
-                      padding:"4px 10px", fontSize:11, fontWeight: active ? 600 : 400,
+                      padding:"4px 12px", fontSize:12, fontWeight: active ? 600 : 400,
                       border:`1px solid ${active ? T.ink : T.border}`,
-                      borderRadius:3, background: active ? T.ink : "transparent",
+                      borderRadius:12, background: active ? T.ink : "transparent",
                       color: active ? "#fff" : T.ink, cursor:"pointer"
                     });
 
@@ -7792,7 +7786,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {/* 행 1: 그리드 — 전체 / (주석이 옆일 때만: 본문 + 주석) / 간격 */}
                         <div style={row}>
                           <span style={rowLbl}>그리드</span>
-                          <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"flex-end" }}>
+                          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
                             {/* 전체 열 */}
                             <div style={fld}>
                               <span style={fieldLbl}>전체 열</span>
@@ -7865,7 +7859,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           const bCols = styleConfig.bodyTextColumns || 1;
                           const perCol = bCols > 1 ? (bodyCols / bCols).toFixed(1) : null;
                           return (
-                            <div style={{ fontSize:11, color:T.muted, marginTop:4, paddingLeft:56, lineHeight:1.5 }}>
+                            <div style={{ fontSize:12, color:T.muted, marginTop:4, paddingLeft:56, lineHeight:1.6 }}>
                               {isSide
                                 ? `본문 ${vg.body}열 + 주석 ${vg.note}열 = 전체 ${vg.total}열`
                                 : `본문 ${vg.total}열 전체 사용`}
@@ -7902,7 +7896,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {/* 행 3: 본문 단 — isSide일 때 btc는 현재 경로에서 미적용 */}
                         <div style={{ ...row, opacity: isSide ? 0.38 : 1, pointerEvents: isSide ? 'none' : 'auto' }}>
                           <span style={rowLbl}>본문 단</span>
-                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                             <div style={fld}>
                               <span style={fieldLbl}>단 수</span>
                               <input type="number" min={1} max={isSide ? vgBody : vgTotal}
@@ -7963,8 +7957,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           <>
                             {/* ── 각주 (번호 달린 전통 각주 / 텍스트 입력 탭 "각주" 칸) ── */}
                             <div style={{ ...row }}>
-                              <span style={{ ...rowLbl, lineHeight:1.2 }}>각주</span>
-                              <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"flex-end" }}>
+                              <span style={{ ...rowLbl, lineHeight:1.4 }}>각주</span>
+                              <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
                                 <div style={fld}>
                                   <span style={fieldLbl}>단 수</span>
                                   <input type="number" min={1} max={4}
@@ -7992,44 +7986,44 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 {!isDone ? (
                   /* 생성 전: 전체 비활성화 안내 */
                   <div style={{ padding:"20px 16px", textAlign:"center" }}>
-                    <div style={{ fontSize:13, color:T.muted, lineHeight:1.8 }}>
+                    <div style={{ fontSize:13, color:T.muted, lineHeight:1.75 }}>
                       아직 생성 전입니다.<br/>
                       <strong style={{ color:T.ink }}>텍스트 입력 탭</strong>에서 본문을 넣고<br/>
                       <strong style={{ color:T.ink }}>조판 스타일 생성하기</strong>를 클릭하세요.
                     </div>
-                    <div style={{ marginTop:20, opacity:0.35, pointerEvents:'none', display:'flex', flexDirection:'column', gap:12 }}>
-                      <div style={{ padding:"10px 12px", background:T.bg, border:`1px solid ${T.border}`,
-                        borderRadius:3, fontSize:12, color:T.muted, textAlign:'left' }}>
+                    <div style={{ marginTop:20, opacity:0.4, pointerEvents:'none', display:'flex', flexDirection:'column', gap:12 }}>
+                      <div style={{ padding:"12px 12px", background:T.bg, border:`1px solid ${T.border}`,
+                        borderRadius:12, fontSize:12, color:T.muted, textAlign:'left' }}>
                         정답 피드백을 입력하세요…
                       </div>
-                      <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
+                      <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
                         {[1,2,3,4,5].map(n => (
-                          <div key={n} style={{ width:36, height:36, borderRadius:3,
+                          <div key={n} style={{ width:36, height:36, borderRadius:12,
                             border:`1px solid ${T.border}`, background:T.bg,
                             display:'flex', alignItems:'center', justifyContent:'center',
-                            fontSize:14, color:T.muted }}>{n}</div>
+                            fontSize:13, color:T.muted }}>{n}</div>
                         ))}
                       </div>
                     </div>
                   </div>
                 ) : (
                   /* 생성 후: 피드백 활성화 */
-                  <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'4px 0' }}>
+                  <div style={{ display:'flex', flexDirection:'column', gap:12, padding:'4px 0' }}>
                     {/* 정답 피드백: 구조화 폼 */}
                     <div>
-                      <label style={{ display:'block', fontSize:11, fontWeight:600,
+                      <label style={{ display:'block', fontSize:12, fontWeight:600,
                         color:T.ink, marginBottom:8 }}>
                         변수별 수정 요청
                       </label>
 
                       {/* 변수 선택 + 입력 */}
                       <div style={{ display:'flex', flexDirection:'column', gap:8,
-                        padding:'10px', background:T.bg, borderRadius:3,
+                        padding:'10px', background:T.bg, borderRadius:12,
                         border:`1px solid ${T.border}` }}>
                         <div style={{ display:'flex', gap:8 }}>
                           <select value={feedbackCurrentVar} onChange={e => setFeedbackCurrentVar(e.target.value)}
-                            style={{ flex:1, padding:'6px 8px', fontSize:11, border:`1px solid ${T.border}`,
-                              borderRadius:3, background:T.surface }}>
+                            style={{ flex:1, padding:'6px 8px', fontSize:12, border:`1px solid ${T.border}`,
+                              borderRadius:12, background:T.surface }}>
                             <option value="body_size">본문 크기</option>
                             <option value="body_leading">본문 행간</option>
                             <option value="heading_h1_size">제목 크기</option>
@@ -8065,32 +8059,32 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                             onChange={e => setFeedbackCustomVarText(e.target.value)}
                             placeholder="예: 제목 크기를 10% 늘려줘"
                             style={{ width:'100%', padding:'6px 8px',
-                              border:`1px solid ${T.border}`, borderRadius:3, fontSize:11 }}
+                              border:`1px solid ${T.border}`, borderRadius:12, fontSize:12 }}
                           />
                         )}
 
                         {feedbackCurrentVar !== '__custom__' && (
-                          <div style={{ display:'flex', gap:8, fontSize:11 }}>
+                          <div style={{ display:'flex', gap:8, fontSize:12 }}>
                             <div style={{ flex:1 }}>
-                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
                                 시스템이 적용한 값 (예: +8%, 3단)
                               </label>
                               <input type="text" value={feedbackCurrentSystemPct}
                                 onChange={e => setFeedbackCurrentSystemPct(e.target.value)}
                                 placeholder="미반영"
                                 style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
-                                  borderRadius:3, fontSize:11 }}
+                                  borderRadius:12, fontSize:12 }}
                               />
                             </div>
                             <div style={{ flex:1 }}>
-                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:3 }}>
+                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
                                 원하는 값 (예: +15%, 2단)
                               </label>
                               <input type="text" value={feedbackCurrentUserPct}
                                 onChange={e => setFeedbackCurrentUserPct(e.target.value)}
                                 placeholder="필수"
                                 style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
-                                  borderRadius:3, fontSize:11 }}
+                                  borderRadius:12, fontSize:12 }}
                               />
                             </div>
                           </div>
@@ -8136,8 +8130,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           setFeedbackCurrentSystemPct('');
                           setFeedbackCurrentUserPct('');
                         }}
-                          style={{ padding:'6px 10px', fontSize:11, fontWeight:600,
-                            background:T.ink, color:'#fff', border:'none', borderRadius:3,
+                          style={{ padding:'6px 10px', fontSize:12, fontWeight:600,
+                            background:T.ink, color:'#fff', border:'none', borderRadius:12,
                             cursor:'pointer' }}>
                           + 변수 추가
                         </button>
@@ -8146,13 +8140,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                       {/* 추가된 변수 리스트 */}
                       {feedbackCorrections.length > 0 && (
                         <div style={{ marginTop:8, padding:'8px 10px', background:T.bg,
-                          borderRadius:3, border:`1px solid ${T.border}` }}>
-                          <div style={{ fontSize:10, fontWeight:600, color:T.muted, marginBottom:6 }}>
+                          borderRadius:12, border:`1px solid ${T.border}` }}>
+                          <div style={{ fontSize:10, fontWeight:600, color:T.muted, marginBottom:8 }}>
                             추가된 항목 ({feedbackCorrections.length})
                           </div>
                           {feedbackCorrections.map((c, i) => (
                             <div key={i} style={{ display:'flex', justifyContent:'space-between',
-                              alignItems:'center', fontSize:11, padding:'4px 0',
+                              alignItems:'center', fontSize:12, padding:'4px 0',
                               borderBottom: i < feedbackCorrections.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                               <div style={{ flex:1 }}>
                                 <span style={{ fontWeight:600, color:T.ink }}>{
@@ -8165,7 +8159,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               </div>
                               <button onClick={() => setFeedbackCorrections(feedbackCorrections.filter((_, j) => i !== j))}
                                 style={{ padding:'2px 8px', fontSize:10, border:`1px solid ${T.border}`,
-                                  background:T.surface, color:T.muted, borderRadius:2, cursor:'pointer' }}>
+                                  background:T.surface, color:T.muted, borderRadius:12, cursor:'pointer' }}>
                                 삭제
                               </button>
                             </div>
@@ -8175,29 +8169,29 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     </div>
                     {/* 만족도 5단계 */}
                     <div>
-                      <label style={{ display:'block', fontSize:11, fontWeight:600,
+                      <label style={{ display:'block', fontSize:12, fontWeight:600,
                         color:T.ink, marginBottom:8 }}>
                         만족도
                       </label>
-                      <div style={{ display:'flex', gap:6 }}>
+                      <div style={{ display:'flex', gap:8 }}>
                         {[
-                          [1, '매우\n불일치'],
-                          [2, '불일치'],
-                          [3, '일부\n일치'],
-                          [4, '일치'],
-                          [5, '매우\n일치'],
+                          [1, '매우 다름'],
+                          [2, '다름'],
+                          [3, '보통'],
+                          [4, '같음'],
+                          [5, '매우 같음'],
                         ].map(([n, lbl]) => {
                           const active = satisfactionScore === n;
                           return (
                             <button key={n} onClick={() => setSatisfactionScore(n)}
-                              style={{ flex:1, padding:'8px 4px', borderRadius:3,
+                              style={{ flex:1, padding:'8px 4px', borderRadius:12,
                                 border:`1px solid ${active ? T.ink : T.border}`,
                                 background: active ? T.ink : T.bg,
                                 color: active ? '#fff' : T.muted,
                                 cursor:'pointer', fontSize:10, lineHeight:1.4,
                                 whiteSpace:'pre-line', textAlign:'center' }}>
                               <div style={{ fontSize:16, fontWeight:700,
-                                color: active ? '#fff' : T.ink, marginBottom:2 }}>{n}</div>
+                                color: active ? '#fff' : T.ink, marginBottom:4 }}>{n}</div>
                               {lbl}
                             </button>
                           );
@@ -8215,7 +8209,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           onClick={handleFeedbackApply}
                           disabled={!canSubmit}
                           style={{ padding:'10px', fontSize:12, fontWeight:600,
-                            border:'none', borderRadius:3,
+                            border:'none', borderRadius:8,
                             background: canSubmit ? T.ink : T.border,
                             color: canSubmit ? '#fff' : T.muted,
                             cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
@@ -8225,22 +8219,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     })()}
                     {experimentAnalysis && (
                       <div style={{ padding:'12px', background:T.bg,
-                        border:`1px solid ${T.border}`, borderRadius:3,
-                        fontSize:12, color:T.ink, display:'flex', flexDirection:'column', gap:10 }}>
+                        border:`1px solid ${T.border}`, borderRadius:12,
+                        fontSize:12, color:T.ink, display:'flex', flexDirection:'column', gap:8 }}>
                         {/* 일치율 */}
                         <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
-                          <span style={{ fontWeight:700, fontSize:20, color:T.ink }}>
+                          <span style={{ fontWeight:700, fontSize:22, color:T.ink }}>
                             {experimentAnalysis.matchRate}%
                           </span>
                           <span style={{ color:T.muted }}>일치율</span>
                         </div>
                         {experimentAnalysis.matchFormula && (
                           <div style={{ background:T.surface, border:`1px solid ${T.border}`,
-                            borderRadius:3, padding:'8px 10px' }}>
+                            borderRadius:12, padding:'8px 10px' }}>
                             <div style={{ fontSize:10, fontWeight:600, color:T.muted,
-                              letterSpacing:1, marginBottom:5 }}>계산식</div>
+                              letterSpacing:1, marginBottom:4 }}>계산식</div>
                             <pre style={{ margin:0, whiteSpace:'pre-wrap', fontFamily:T.mono,
-                              fontSize:11, lineHeight:1.55, color:T.ink }}>
+                              fontSize:12, lineHeight:1.6, color:T.ink }}>
                               {experimentAnalysis.matchFormula}
                             </pre>
                           </div>
@@ -8248,8 +8242,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {/* 비교 테이블 */}
                         {experimentAnalysis.targetVariable && (
                           <div style={{ background:T.surface, border:`1px solid ${T.border}`,
-                            borderRadius:3, padding:'8px 10px', fontFamily:T.mono, fontSize:11 }}>
-                            <div style={{ marginBottom:4, fontFamily:T.sans, fontWeight:600, fontSize:11, color:T.ink }}>
+                            borderRadius:12, padding:'8px 10px', fontFamily:T.mono, fontSize:12 }}>
+                            <div style={{ marginBottom:4, fontFamily:T.sans, fontWeight:600, fontSize:12, color:T.ink }}>
                               비교: {experimentAnalysis.targetVariable}
                             </div>
                             <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'2px 8px', color:T.muted }}>
@@ -8272,7 +8266,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {experimentAnalysis.difference && (
                           <div>
                             <div style={{ fontSize:10, fontWeight:600, color:T.muted,
-                              letterSpacing:1, marginBottom:3 }}>차이점</div>
+                              letterSpacing:1, marginBottom:4 }}>차이점</div>
                             <div style={{ lineHeight:1.6, color:T.ink }}>
                               {experimentAnalysis.difference}
                             </div>
@@ -8281,9 +8275,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {/* 다음 규칙 */}
                         {experimentAnalysis.nextRule && (
                           <div style={{ padding:'8px 10px', background:'#f0f7f0',
-                            border:'1px solid #c8e6c8', borderRadius:3 }}>
+                            border:'1px solid #c8e6c8', borderRadius:12 }}>
                             <div style={{ fontSize:10, fontWeight:600, color:'#2a7',
-                              letterSpacing:1, marginBottom:3 }}>다음 생성 반영 규칙</div>
+                              letterSpacing:1, marginBottom:4 }}>다음 생성 반영 규칙</div>
                             <div style={{ lineHeight:1.6, color:T.ink }}>
                               {experimentAnalysis.nextRule}
                             </div>
@@ -8298,7 +8292,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           </div>
 
           {experimentAnalysis !== null && (
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
 
             {/* ── 기존 실험 로그 → 새 학습 시스템 마이그레이션 ── */}
             {(() => {
@@ -8321,9 +8315,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   }
                   alert(`마이그레이션 완료: ${migrated}개 실험 → 학습 규칙 반영됨\n페이지를 새로고침하면 반영된 규칙이 표시됩니다.`);
                   window.location.reload();
-                }} style={{ width:'100%', padding:'9px', fontSize:11, fontWeight:600,
-                  border:`1px solid #a0c4e8`, borderRadius:3,
-                  background: hasRules ? '#f5f5f5' : '#eef5fc',
+                }} style={{ width:'100%', padding:'9px', fontSize:12, fontWeight:600,
+                  border:`1px solid #a0c4e8`, borderRadius:12,
+                  background: hasRules ? '#F7F7F5' : '#eef5fc',
                   color: hasRules ? T.muted : '#1a6fa8', cursor:'pointer' }}>
                   {hasRules
                     ? `↺ 기존 실험 ${expCount}개 재학습 (현재 규칙 덮어쓰기)`
@@ -8336,7 +8330,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             {(() => {
               const sr = loadSystemRules();
               const activeRules = Object.entries(sr.rules).filter(([, r]) => r.confidence !== 'none' && r.value !== null);
-              const confColor = { high:'#c8440a', medium:'#b07c00', low:'#888' };
+              const confColor = { high:T.accent, medium:'#B07C2E', low:T.muted };
               const confLabel = { high:'강함 ●●●', medium:'중간 ●●○', low:'약함 ●○○' };
               const varLabel  = {
                 column_count:'단 수', font_style:'본문 서체', heading_font:'제목 서체', footnote_font:'각주 서체', running_head_font:'면주·쪽번호 서체', paragraph_spacing:'문단 간격',
@@ -8350,17 +8344,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 margin_top:'상 여백', margin_bottom:'하 여백', margin_inner:'안 여백', margin_outer:'밖 여백',
               };
               return (
-                <div style={{ marginTop:12, border:`1px solid ${T.border}`, borderRadius:4, overflow:'hidden' }}>
+                <div style={{ marginTop:12, border:`1px solid ${T.border}`, borderRadius:12, overflow:'hidden' }}>
                   <div style={{ padding:'8px 12px', background:T.bg, borderBottom:`1px solid ${T.border}`,
                     display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:11, fontWeight:700, color:T.ink }}>
+                    <span style={{ fontSize:12, fontWeight:700, color:T.ink }}>
                       현재 학습된 규칙 {activeRules.length > 0 ? `(${activeRules.length}개 활성)` : '(없음)'}
                     </span>
-                    <div style={{ display:'flex', gap:6 }}>
+                    <div style={{ display:'flex', gap:8 }}>
                       <button onClick={() => {
                         downloadToBookFolder(JSON.stringify(sr, null, 2), 'application/json', fields.제목, currentRunId, 'system_rules.json');
                       }} style={{ padding:'3px 8px', fontSize:10, border:`1px solid ${T.border}`,
-                        borderRadius:3, background:T.surface, color:T.muted, cursor:'pointer' }}>
+                        borderRadius:12, background:T.surface, color:T.muted, cursor:'pointer' }}>
                         JSON 저장
                       </button>
                       <button onClick={() => {
@@ -8369,17 +8363,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           window.location.reload();
                         }
                       }} style={{ padding:'3px 8px', fontSize:10, border:'1px solid #fcc',
-                        borderRadius:3, background:'#fff8f8', color:'#c44', cursor:'pointer' }}>
+                        borderRadius:12, background:'#fff8f8', color:'#c44', cursor:'pointer' }}>
                         초기화
                       </button>
                     </div>
                   </div>
                   {activeRules.length === 0 ? (
-                    <div style={{ padding:'10px 12px', fontSize:11, color:T.muted }}>
+                    <div style={{ padding:'10px 12px', fontSize:12, color:T.muted }}>
                       아직 학습된 규칙이 없습니다. 피드백을 분석하면 여기에 쌓입니다.
                     </div>
                   ) : (
-                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                       <thead>
                         <tr style={{ background:T.bg }}>
                           {['항목','학습값','강도','누적횟수'].map(h => (
@@ -8390,7 +8384,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                       </thead>
                       <tbody>
                         {activeRules.map(([key, rule]) => (
-                          <tr key={key} style={{ borderBottom:`1px solid ${T.bg}` }}>
+                          <tr key={key} style={{ borderBottom:`1px solid ${T.border}` }}>
                             <td style={{ padding:'5px 10px', color:T.ink, fontWeight:500 }}>
                               {varLabel[key] || key}
                             </td>
@@ -8420,19 +8414,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           {/* 실행 버튼 */}
           <div style={{ padding:"16px 20px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
             {!apiKey && (
-              <div style={{ marginBottom:10, fontSize:12, color:T.muted, padding:"8px 12px",
-                background:T.bg, borderRadius:3, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
+              <div style={{ marginBottom:8, fontSize:12, color:T.muted, padding:"8px 12px",
+                background:T.bg, borderRadius:12, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
                 우측 상단 <strong style={{ color:T.ink }}>API 키 입력</strong>을 먼저 완료하세요.<br/>
-                <span style={{ fontSize:11 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
+                <span style={{ fontSize:12 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
               </div>
             )}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
-              style={{ width:"100%", padding:"12px", fontSize:13, fontWeight:600,
-                border:"none", borderRadius:3,
-                background: (isRunning || !matchText || !apiKey) ? T.border : T.ink,
+              style={{ width:"100%", padding:"16px", fontSize:13, fontWeight:600,
+                border:"none", borderRadius:8,
+                background: (isRunning || !matchText || !apiKey) ? T.border : T.accent,
                 color: (isRunning || !matchText || !apiKey) ? T.muted : "#fff",
                 cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
                 transition:"all 150ms" }}>
               {isRunning ? (
                 <>
@@ -8443,8 +8437,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               ) : "조판 스타일 생성하기"}
             </button>
             {err && (
-              <div style={{ marginTop:8, fontSize:12, color:"#555", padding:"7px 10px",
-                background:T.bg, borderRadius:3, border:`1px solid ${T.border}` }}>
+              <div style={{ marginTop:8, fontSize:12, color:"#111111", padding:"8px 12px",
+                background:T.bg, borderRadius:12, border:`1px solid ${T.border}` }}>
                 {err}
               </div>
             )}
@@ -8452,12 +8446,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         </div>
 
         {/* ── 중앙: 결과 패널 ─────────────────────────────────────── */}
-        <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", background:T.bg }}>
+        <div style={{ display:"flex", flexDirection:"column", overflow:"hidden",
+          background:"rgba(255,255,255,0.8)", backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+          border:"1px solid rgba(255,255,255,0.5)",
+          borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)" }}>
 
           {/* 피드백 반영 완료 토스트 */}
           {patchToast && (
             <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)",
-              background:"#1a7f4b", color:"#fff", padding:"10px 20px", borderRadius:6,
+              background:"#1a7f4b", color:"#fff", padding:"12px 20px", borderRadius:12,
               fontSize:13, fontWeight:500, zIndex:9999, boxShadow:"0 4px 16px rgba(0,0,0,0.18)",
               display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ fontSize:16 }}>✓</span>
@@ -8471,9 +8468,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               background:T.surface, flexShrink:0 }}>
               <div style={{ display:"flex", gap:20, alignItems:"center" }}>
                 {runLog.map((entry, i) => (
-                  <div key={entry.id} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12 }}>
+                  <div key={entry.id} style={{ display:"flex", alignItems:"center", gap:8, fontSize:12 }}>
                     {entry.status === "running" ? (
-                      <div style={{ width:8, height:8, border:"1.5px solid #CCC",
+                      <div style={{ width:8, height:8, border:"1px solid #D4D4D0",
                         borderTopColor:T.ink, borderRadius:"50%",
                         animation:"spin 0.8s linear infinite", flexShrink:0 }} />
                     ) : entry.status === "done" ? (
@@ -8496,17 +8493,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             <div style={{ flex:1, display:"flex", flexDirection:"column",
               alignItems:"center", justifyContent:"center", gap:20, padding:48 }}>
               <div style={{ width:40, height:40, border:`1px solid ${T.border}`,
-                borderRadius:4, opacity:0.4 }} />
-              <div style={{ lineHeight:1.8, width:"100%" }}>
-                <div style={{ fontSize:15, fontWeight:600, color:T.ink, marginBottom:8 }}>
+                borderRadius:12, opacity:0.4 }} />
+              <div style={{ lineHeight:1.75, width:"100%" }}>
+                <div style={{ fontSize:16, fontWeight:600, color:T.ink, marginBottom:8 }}>
                   텍스트를 입력하고 조판 스타일 생성하기를 클릭하세요
                 </div>
-                <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>
+                <div style={{ fontSize:12, color:T.muted, lineHeight:1.75 }}>
                   본문을 분석해 253개 편집 디자인 레퍼런스 중 가장 적합한 스타일을 선택하고, XeLaTeX 조판 파일을 자동으로 만들어 드립니다.
                 </div>
               </div>
-              <div style={{ padding:"16px 24px", background:T.surface, borderRadius:3,
-                border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:2, width:"100%" }}>
+              <div style={{ padding:"16px 24px", background:T.surface, borderRadius:12,
+                border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:1.75, width:"100%" }}>
                 <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>작동 방식</strong>
                 ① 입력한 텍스트의 장르·형태 분석<br/>
                 ② 253개 레퍼런스에서 최적 스타일 선택<br/>
@@ -8518,43 +8515,27 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
               {/* ── 선택된 패키지 카드 ── */}
-              <div style={{ padding:"18px 24px 16px", borderBottom:`1px solid ${T.border}`,
+              <div style={{ padding:"20px 24px 16px", borderBottom:`1px solid ${T.border}`,
                 background:T.surface, flexShrink:0 }}>
 
                 {/* 패키지명 + 복사 버튼 */}
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
                   <div>
-                    <div style={{ fontSize:15, fontWeight:600, color:T.ink, lineHeight:1.3, marginBottom:3 }}>
+                    <div style={{ fontSize:FS.lg, fontWeight:700, color:T.ink, lineHeight:1.4, marginBottom:4, letterSpacing:"-0.01em" }}>
                       {pkg.t}
                     </div>
-                    <div style={{ fontSize:11, color:T.muted }}>
+                    <div style={{ fontSize:FS.sm, color:T.muted }}>
                       {pkg.g} · {pkg.pub_type}
                       {pkg.designer && pkg.designer !== '-' &&
                         <span style={{ color:T.ink }}> · {pkg.designer}</span>}
                     </div>
                   </div>
-                  <button onClick={() => {
-                    setLockedStyleId(selIdx);
-                    setSelectionMode('ref-locked');
-                  }} style={{ padding:"6px 12px", fontSize:11, fontWeight:500, whiteSpace:"nowrap",
-                    border:`1px solid ${T.border}`, borderRadius:3,
-                    background: selectionMode === 'ref-locked' && lockedStyleId === selIdx ? T.ink : T.surface,
-                    color: selectionMode === 'ref-locked' && lockedStyleId === selIdx ? '#fff' : T.ink,
-                    cursor:"pointer", transition:"all 150ms", flexShrink:0 }}>
-                    {selectionMode === 'ref-locked' && lockedStyleId === selIdx ? '고정됨 ✓' : '이 스타일 고정'}
-                  </button>
-                  <button onClick={copy}
-                    style={{ padding:"6px 12px", fontSize:11, fontWeight:500, whiteSpace:"nowrap",
-                      border:`1px solid ${T.border}`, borderRadius:3,
-                      background:copied ? T.ink : T.surface,
-                      color:copied ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms",
-                      flexShrink:0 }}>
-                    {copied ? "복사됨 ✓" : "전체 복사"}
-                  </button>
                 </div>
 
-                {/* 스펙 칩 — 전체 동일 스타일 */}
-                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:10 }}>
+                {/* 스펙 — 라벨/값 2열 리스트 */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", rowGap:6, columnGap:16,
+                  marginTop:8, padding:"12px 12px", background:T.bg, borderRadius:8,
+                  border:`1px solid ${T.border}` }}>
                   {[
                     ["판형", `${pkg.f.w}×${pkg.f.h}mm`],
                     ["본문", `${displayBodySize || pkg.b.크기}pt / ${pkg.b.행간}pt`],
@@ -8575,14 +8556,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
                     ["자간", (() => { const v = String(pkg.b.자간); return v && v !== '0' ? v : null; })()],
                   ].filter(([,v]) => v).map(([label, value]) => (
-                    <div key={label} style={{
-                      display:"inline-flex", alignItems:"center", gap:4,
-                      padding:"4px 8px", borderRadius:3,
-                      border:`1px solid ${T.border}`, background:T.bg,
-                    }}>
-                      <span style={{ fontSize:10, fontWeight:500, color:T.muted }}>{label}</span>
-                      <span style={{ fontSize:11, fontWeight:600, color:T.ink,
-                        fontFamily:T.mono }}>{value}</span>
+                    <div key={label} style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"baseline", gap:8 }}>
+                      <span style={{ fontSize:12, fontWeight:400, color:T.muted, flexShrink:0 }}>{label}</span>
+                      <span style={{ fontSize:12, fontWeight:600, color:T.ink,
+                        fontFamily:T.mono, textAlign:"right" }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -8596,9 +8574,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   ["revlog","수정 기록"],
                   ["final","최종 파일"],
                   ["sty","스타일 파일"],
+                  ["export","Export 검증"],
                 ].map(([key,label]) => (
                   <button key={key} onClick={() => setTab(key)}
-                    style={{ padding:"10px 16px", fontSize:13, fontWeight:tab===key?700:400,
+                    style={{ padding:"12px 16px", fontSize:13, fontWeight:tab===key?700:400,
                       border:"none", borderBottom:`2px solid ${tab===key ? T.ink : "transparent"}`,
                       background:"transparent", color:tab===key ? T.ink : T.muted,
                       cursor:"pointer", marginBottom:-1 }}>
@@ -8618,8 +8597,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
     ) : (() => {
       const sr = structuredReason || {};
       const SectionLabel = ({ text }) => (
-        <div style={{ fontSize:9, fontWeight:700, color:T.muted,
-          textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6 }}>
+        <div style={{ fontSize:FS.xs, fontWeight:700, color:T.muted,
+          textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>
           {text}
         </div>
       );
@@ -8637,18 +8616,18 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               ? `레퍼런스 고정${lockedStyleId !== null ? ` — ${DB[lockedStyleId]?.t?.slice(0,20)}` : ''}`
               : '자동 추천';
             const modeColor = selectionMode === 'auto'
-              ? { bg:'#f0f4ff', text:'#3b5bdb' }
+              ? { bg:T.ink, text:'#fff' }
               : selectionMode === 'genre-forced'
-              ? { bg:'#fff4e6', text:'#d9480f' }
-              : { bg:'#f3fce4', text:'#2f9e44' };
+              ? { bg:T.accent, text:'#fff' }
+              : { bg:'#6B6B6B', text:'#fff' };
             return (
-              <div style={{ marginBottom:14 }}>
-                <div style={{ fontSize:9, fontWeight:700, color:T.muted,
-                  textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:6 }}>
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:T.muted,
+                  textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>
                   선택 모드
                 </div>
-                <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:12,
-                  fontSize:12, fontWeight:600,
+                <span style={{ display:"inline-block", padding:"4px 8px", borderRadius:8,
+                  fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em",
                   background: modeColor.bg, color: modeColor.text }}>
                   {modeLabel}
                 </span>
@@ -8707,14 +8686,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           {/* 5b. 레퍼런스 반영 내역 */}
           {sr.style_diff && <>
             <SectionLabel text="레퍼런스 반영 내역" />
-            <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:14 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:16 }}>
               {/* 수정된 항목 */}
               {sr.style_diff.modified?.map((r, i) => (
-                <div key={`m${i}`} style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:12, lineHeight:1.65 }}>
-                  <span style={{ flexShrink:0, color:'#d9480f', fontWeight:700, marginTop:1 }}>→</span>
+                <div key={`m${i}`} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12, lineHeight:1.6 }}>
+                  <span style={{ flexShrink:0, color:T.warning, fontWeight:700, marginTop:4 }}>→</span>
                   <div>
                     <span style={{ fontWeight:600, color:T.ink }}>{r.label}</span>
-                    <span style={{ fontFamily:T.mono, fontSize:11, color:T.muted, marginLeft:6 }}>
+                    <span style={{ fontFamily:T.mono, fontSize:12, color:T.muted, marginLeft:6 }}>
                       {r.ref} → {r.applied}
                     </span>
                     {r.reason && <span style={{ color:T.muted }}> — {r.reason}</span>}
@@ -8723,8 +8702,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               ))}
               {/* 유지된 항목 */}
               {sr.style_diff.kept?.length > 0 && (
-                <div style={{ display:'flex', alignItems:'flex-start', gap:6, fontSize:12, lineHeight:1.65, marginTop: sr.style_diff.modified?.length > 0 ? 4 : 0 }}>
-                  <span style={{ flexShrink:0, color:'#2f9e44', fontWeight:700, marginTop:1 }}>✓</span>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12, lineHeight:1.6, marginTop: sr.style_diff.modified?.length > 0 ? 4 : 0 }}>
+                  <span style={{ flexShrink:0, color:T.ink, fontWeight:700, marginTop:4 }}>✓</span>
                   <span style={{ color:T.muted }}>유지: {sr.style_diff.kept.join(' · ')}</span>
                 </div>
               )}
@@ -8735,13 +8714,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           {/* 6. Evidence Map */}
           {evidenceMap && evidenceMap.length > 0 && <>
             <SectionLabel text="본문 근거 / Evidence Map" />
-            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
               {evidenceMap.map((e, i) => (
                 <div key={i} style={{ background:T.bg, border:`1px solid ${T.border}`,
-                  borderRadius:3, padding:"10px 12px" }}>
+                  borderRadius:12, padding:"12px 12px" }}>
                   <div style={{ fontSize:12, color:T.ink, fontStyle:"italic",
                     marginBottom:4 }}>"{e.textSpan}"</div>
-                  <div style={{ fontSize:11, color:T.muted, lineHeight:1.6 }}>
+                  <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>
                     → {e.interpretation} → {e.affectedVariables?.join(' / ')}
                   </div>
                 </div>
@@ -8750,7 +8729,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             <Divider />
           </>}
           {evidenceMap === null && latex && (
-            <div style={{ marginBottom:14 }}>
+            <div style={{ marginBottom:16 }}>
               <SectionLabel text="본문 근거 / Evidence Map" />
               <div style={{ fontSize:12, color:T.muted }}>분석 중…</div>
             </div>
@@ -8764,7 +8743,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           ].filter(([,v]) => v).map(([label, value], i, arr) => (
             <div key={label}>
               <SectionLabel text={label} />
-              <div style={{ fontSize:13, color:T.ink, lineHeight:1.75,
+              <div style={{ fontSize:FS.base, color:T.ink, lineHeight:1.75,
                 paddingBottom: i < arr.length - 1 ? 14 : 0 }}>{value}</div>
               {i < arr.length - 1 && <Divider />}
             </div>
@@ -8775,7 +8754,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             <div style={{ paddingTop:14, marginTop:4, borderTop:`1px solid ${T.border}` }}>
               <SectionLabel text="검토 후 제외" />
               {sr.rejected.map((r, i) => (
-                <div key={i} style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>
+                <div key={i} style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>
                   <span style={{ color:T.ink, fontWeight:600 }}>{DB[r.i]?.t?.slice(0,20)}</span>
                   {" — "}{r.reason}
                 </div>
@@ -8796,12 +8775,12 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     ) : (
                       <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
                         {revisionLog.map((rev, ri) => (
-                          <div key={rev.id} style={{ border:`1px solid ${T.border}`, borderRadius:4,
-                            padding:"14px 16px", background:T.bg }}>
+                          <div key={rev.id} style={{ border:`1px solid ${T.border}`, borderRadius:12,
+                            padding:"16px 16px", background:T.bg }}>
                             <div style={{ display:"flex", justifyContent:"space-between",
-                              alignItems:"flex-start", marginBottom:10 }}>
+                              alignItems:"flex-start", marginBottom:8 }}>
                               <div>
-                                <span style={{ fontSize:11, fontWeight:700, color:T.ink }}>
+                                <span style={{ fontSize:12, fontWeight:700, color:T.ink }}>
                                   Revision {ri}
                                 </span>
                                 <span style={{ fontSize:10, color:T.muted, marginLeft:8 }}>
@@ -8813,7 +8792,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               </span>
                             </div>
                             {rev.type === 'initial_generation' && (
-                              <div style={{ fontSize:12, lineHeight:1.7, color:T.ink }}>
+                              <div style={{ fontSize:12, lineHeight:1.6, color:T.ink }}>
                                 {rev.selectedReference?.title && (
                                   <div><span style={{ color:T.muted }}>레퍼런스</span> {rev.selectedReference.title}</div>
                                 )}
@@ -8829,26 +8808,26 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               </div>
                             )}
                             {rev.type === 'user_refinement' && (
-                              <div style={{ fontSize:12, lineHeight:1.7 }}>
+                              <div style={{ fontSize:12, lineHeight:1.6 }}>
                                 {rev.userRequest && (
-                                  <div style={{ fontStyle:"italic", color:T.ink, marginBottom:6 }}>"{rev.userRequest}"</div>
+                                  <div style={{ fontStyle:"italic", color:T.ink, marginBottom:8 }}>"{rev.userRequest}"</div>
                                 )}
                                 {rev.systemInterpretation?.designTask && (
-                                  <div style={{ color:T.muted, marginBottom:6 }}>해석: {rev.systemInterpretation.designTask}</div>
+                                  <div style={{ color:T.muted, marginBottom:8 }}>해석: {rev.systemInterpretation.designTask}</div>
                                 )}
                                 {rev.patch?.map((p, pi) => (
-                                  <div key={pi} style={{ display:"flex", gap:6, alignItems:"center", marginBottom:3 }}>
-                                    <span style={{ color:T.muted, fontSize:11 }}>{p.target}</span>
-                                    <span style={{ color:'#c44', fontSize:11 }}>{p.before}</span>
-                                    <span style={{ color:T.muted, fontSize:11 }}>→</span>
-                                    <span style={{ color:'#2d7', fontSize:11 }}>{p.after}</span>
+                                  <div key={pi} style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
+                                    <span style={{ color:T.muted, fontSize:12 }}>{p.target}</span>
+                                    <span style={{ color:'#c44', fontSize:12 }}>{p.before}</span>
+                                    <span style={{ color:T.muted, fontSize:12 }}>→</span>
+                                    <span style={{ color:'#2d7', fontSize:12 }}>{p.after}</span>
                                   </div>
                                 ))}
-                                <div style={{ marginTop:6 }}>
+                                <div style={{ marginTop:8 }}>
                                   <span style={{
-                                    fontSize:10, padding:"2px 8px", borderRadius:2,
-                                    background: rev.userDecision === 'accepted' ? '#e6f4ea' : '#f5f5f5',
-                                    color: rev.userDecision === 'accepted' ? '#2d7d46' : T.muted,
+                                    fontSize:10, padding:"4px 8px", borderRadius:12,
+                                    background: rev.userDecision === 'accepted' ? T.tagBg : '#F7F7F5',
+                                    color: rev.userDecision === 'accepted' ? T.ink : T.muted,
                                   }}>
                                     {rev.userDecision === 'accepted' ? '수락됨' : '검토 중'}
                                   </span>
@@ -8866,7 +8845,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           document.body.appendChild(a); a.click();
                           document.body.removeChild(a); URL.revokeObjectURL(url);
                         }} style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
-                          border:`1px solid ${T.border}`, borderRadius:3,
+                          border:`1px solid ${T.border}`, borderRadius:12,
                           background:T.surface, color:T.ink, cursor:"pointer",
                           alignSelf:"flex-start" }}>
                           수정 기록 Export (JSON)
@@ -8879,7 +8858,148 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 {/* 최종 파일 */}
                 {tab === "final" && latex && (
                   <div style={{ padding:"20px 24px" }}>
-                    {/* 검증 패널 */}
+                    {serverCompileResult && (
+                      <div style={{ padding:"12px 12px", marginBottom:12, borderRadius:12, fontSize:12, lineHeight:1.6,
+                        background: serverCompileResult.compileOk ? T.tagBg : '#FDE9E0',
+                        border:`1px solid ${serverCompileResult.compileOk ? T.border : T.accent}` }}>
+                        {serverCompileResult.compileOk ? (
+                          <>
+                            ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
+                            {serverCompileResult.pdfUrl && (
+                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">최신 PDF</a></>
+                            )}
+                            {serverCompileResult.versionedPdfUrl && (
+                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
+                            )}
+                          </>
+                        ) : (
+                          <>⚠ 파일은 저장됐지만 PDF 컴파일 실패 — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code> ({serverCompileResult.compileReason || '원인 미상'})</>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
+                          main.tex
+                        </div>
+                        <div style={{ fontSize:12, color:T.muted, marginTop:4, lineHeight:1.6 }}>
+                          <strong style={{ color:T.ink }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
+                          imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
+                        </div>
+                      </div>
+                      <div style={{ marginLeft:"auto", display:"flex", gap:8, flexShrink:0 }}>
+                        <button onClick={() => downloadToBookFolder(latex, 'text/plain;charset=utf-8', fields.제목, currentRunId, 'main.tex')}
+                          style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:8, whiteSpace:"nowrap",
+                            background:T.surface, color:T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          ⬇ 다운로드
+                        </button>
+                        <button onClick={copy}
+                          style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:8, whiteSpace:"nowrap",
+                            background:copied ? T.ink : T.surface,
+                            color:copied ? "#fff" : T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          {copied ? "복사됨 ✓" : "전체 복사"}
+                        </button>
+                      </div>
+                    </div>
+                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.6,
+                      background:T.surface, padding:"16px 20px", borderRadius:12,
+                      border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
+                      wordBreak:"break-all", color:T.ink, margin:0 }}>
+                      {latex}
+                    </pre>
+                    <div style={{ marginTop:12, padding:"12px 16px", background:T.surface,
+                      borderRadius:12, border:`1px solid ${T.border}`, fontSize:12,
+                      color:T.muted, lineHeight:1.75 }}>
+                      <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
+                      폴더 구조: <code style={{ fontFamily:T.mono, background:T.bg, padding:"4px 4px", borderRadius:12, fontSize:12 }}>작업폴더/ main.tex · imprint-style.sty · fonts/</code><br/>
+                      1) main.tex + imprint-style.sty → 작업 폴더<br/>
+                      2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
+                      3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:T.muted }}>
+                        <strong style={{ display:"block", marginBottom:4 }}>Missing character 경고가 계속되면</strong>
+                        기존 <code style={{ fontFamily:T.mono, background:T.bg, padding:"4px 4px", borderRadius:12, fontSize:12 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
+                      </div>
+                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
+                        <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>Overleaf</strong>
+                        1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
+                        2) 컴파일러 설정: <strong style={{ color:T.ink }}>XeLaTeX</strong>
+                      </div>
+                    </div>
+                    {requiredFonts.length > 0 && (
+                      <div style={{ marginTop:8, padding:"12px 16px", background:T.bg,
+                        borderRadius:12, border:`1px solid ${T.border}`, fontSize:12, lineHeight:1.75 }}>
+                        <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>
+                          필요한 폰트 파일 — <code style={{ fontFamily:T.mono, background:T.bg, padding:"4px 4px", borderRadius:12 }}>fonts/</code> 하위 폴더에 저장
+                        </strong>
+                        <div style={{ fontFamily:T.mono, fontSize:12, color:T.muted }}>
+                          {requiredFonts.map(f => <div key={f}>{f}</div>)}
+                        </div>
+                        <div style={{ marginTop:8, fontSize:12, color:T.ink }}>
+                          폰트 파일이 없으면 XeLaTeX이 "cannot be found" 오류를 냅니다.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 스타일 파일 */}
+                {tab === "sty" && styCode && (
+                  <div style={{ padding:"20px 24px" }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:8 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
+                          스타일 파일 (imprint-style.sty)
+                        </div>
+                        <div style={{ fontSize:12, color:T.muted, marginTop:4, lineHeight:1.6 }}>
+                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 패키지 파일입니다.<br/>
+                          이 파일 하나로 본문 길이와 관계없이 동일한 스타일이 유지됩니다.<br/>
+                          <strong style={{ color:T.ink }}>사용법:</strong> main.tex과 같은 폴더에 저장.
+                          main.tex에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"4px 4px", borderRadius:12 }}>{"\\usepackage{imprint-style}"}</code> 이미 포함됨.<br/>
+                          <span style={{ color:T.ink, fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
+                        </div>
+                      </div>
+                      <div style={{ marginLeft:"auto", display:"flex", gap:8, flexShrink:0 }}>
+                        <button onClick={() => downloadToBookFolder(styCode, 'text/plain;charset=utf-8', fields.제목, currentRunId, 'imprint-style.sty')}
+                          style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:8, whiteSpace:"nowrap",
+                            background:T.surface, color:T.ink, cursor:"pointer",
+                            transition:"all 150ms" }}>
+                          ⬇ 다운로드
+                        </button>
+                        <button onClick={() => {
+                            const done = () => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); };
+                            if (navigator.clipboard && window.isSecureContext) {
+                              navigator.clipboard.writeText(styCode).then(done).catch(() => { _fallbackCopy(styCode); done(); });
+                            } else { _fallbackCopy(styCode); done(); }
+                          }}
+                          style={{ padding:"8px 16px", fontSize:12, fontWeight:600,
+                            border:`1px solid ${T.border}`, borderRadius:8, whiteSpace:"nowrap",
+                            background:copiedSty ? T.ink : T.surface,
+                            color:copiedSty ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
+                          {copiedSty ? "복사됨 ✓" : "복사"}
+                        </button>
+                      </div>
+                    </div>
+                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.6,
+                      background:T.surface, padding:"16px 20px", borderRadius:12,
+                      border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
+                      wordBreak:"break-all", color:T.ink, margin:0 }}>
+                      {styCode}
+                    </pre>
+                  </div>
+                )}
+
+                {tab === "final" && !latex && (
+                  <div style={{ padding:32, color:T.muted, fontSize:13 }}>아직 생성된 파일이 없습니다.</div>
+                )}
+
+                {/* Export 검증 */}
+                {tab === "export" && latex && (
+                  <div style={{ padding:"20px 24px" }}>
                     {(() => {
                       const { errors: ve, warnings: vw } = validateLatexExport({ mainTex: latex, sty: styCode || '', layoutConfig: styleConfig });
                       const hasParacol = /\\begin\{paracol\}/.test(latex);
@@ -8929,22 +9049,26 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                       ];
 
                       return (
-                        <div style={{ marginBottom:14, padding:"12px 16px", background:T.bg,
-                          borderRadius:3, border:`1px solid ${T.border}`, fontSize:12 }}>
-                          <div style={{ fontWeight:600, color:T.ink, marginBottom:10 }}>Export 검증</div>
+                        <div style={{ padding:"12px 16px", background:T.bg,
+                          borderRadius:12, border:`1px solid ${T.border}`, fontSize:12 }}>
+                          <div style={{ fontWeight:600, color:T.ink, marginBottom:8 }}>Export 검증</div>
                           {groups.map(g => (
                             <div key={g.label} style={{ marginBottom:8 }}>
                               <div style={{ fontSize:10, fontWeight:700, color:T.muted,
                                 textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:4 }}>
                                 {g.label}
                               </div>
-                              <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                                 {g.items.map((c, i) => (
-                                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:6 }}>
-                                    <span style={{ flexShrink:0, color: c.warn ? '#b45309' : c.ok ? '#166534' : '#991b1b', fontWeight:700 }}>
-                                      {c.warn ? '⚠' : c.ok ? '✅' : '❌'}
-                                    </span>
-                                    <span style={{ color: c.warn ? '#b45309' : c.ok ? T.ink : '#991b1b', lineHeight:1.5 }}>
+                                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
+                                    {c.warn ? (
+                                      <span style={{ flexShrink:0, color:T.warning, fontWeight:700 }}>⚠</span>
+                                    ) : (
+                                      <span style={{ flexShrink:0, width:8, height:8, borderRadius:"50%",
+                                        marginTop:4, display:"inline-block",
+                                        background: c.ok ? T.ink : T.accent }} />
+                                    )}
+                                    <span style={{ color: c.warn ? T.warning : c.ok ? T.ink : T.error, lineHeight:1.6 }}>
                                       {c.label}
                                     </span>
                                   </div>
@@ -8955,142 +9079,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         </div>
                       );
                     })()}
-                    {serverCompileResult && (
-                      <div style={{ padding:"10px 12px", marginBottom:12, borderRadius:3, fontSize:12, lineHeight:1.6,
-                        background: serverCompileResult.compileOk ? '#eef9ee' : '#fff8ec',
-                        border:`1px solid ${serverCompileResult.compileOk ? '#b8e0b8' : '#e8d4a0'}` }}>
-                        {serverCompileResult.compileOk ? (
-                          <>
-                            ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:11}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
-                            {serverCompileResult.pdfUrl && (
-                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">최신 PDF</a></>
-                            )}
-                            {serverCompileResult.versionedPdfUrl && (
-                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
-                            )}
-                          </>
-                        ) : (
-                          <>⚠ 파일은 저장됐지만 PDF 컴파일 실패 — <code style={{fontSize:11}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code> ({serverCompileResult.compileReason || '원인 미상'})</>
-                        )}
-                      </div>
-                    )}
-                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
-                          main.tex
-                        </div>
-                        <div style={{ fontSize:12, color:T.muted, marginTop:2, lineHeight:1.7 }}>
-                          <strong style={{ color:T.ink }}>XeLaTeX 전용</strong> — pdfLaTeX 미지원 (fontspec 사용)<br/>
-                          imprint-style.sty와 함께 같은 폴더에 두고 컴파일하세요.
-                        </div>
-                      </div>
-                      <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
-                        <button onClick={() => downloadToBookFolder(latex, 'text/plain;charset=utf-8', fields.제목, currentRunId, 'main.tex')}
-                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
-                            background:T.surface, color:T.ink, cursor:"pointer",
-                            transition:"all 150ms" }}>
-                          ⬇ 다운로드
-                        </button>
-                        <button onClick={copy}
-                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
-                            background:copied ? T.ink : T.surface,
-                            color:copied ? "#fff" : T.ink, cursor:"pointer",
-                            transition:"all 150ms" }}>
-                          {copied ? "복사됨 ✓" : "전체 복사"}
-                        </button>
-                      </div>
-                    </div>
-                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.65,
-                      background:T.surface, padding:"16px 20px", borderRadius:3,
-                      border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
-                      wordBreak:"break-all", color:T.ink, margin:0 }}>
-                      {latex}
-                    </pre>
-                    <div style={{ marginTop:12, padding:"12px 16px", background:T.surface,
-                      borderRadius:3, border:`1px solid ${T.border}`, fontSize:12,
-                      color:T.muted, lineHeight:2 }}>
-                      <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>로컬 LaTeX (TeXworks / TeX Live)</strong>
-                      폴더 구조: <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:11 }}>작업폴더/ main.tex · imprint-style.sty · fonts/</code><br/>
-                      1) main.tex + imprint-style.sty → 작업 폴더<br/>
-                      2) 필요한 폰트 파일(.ttf/.otf) → <strong style={{ color:T.ink }}>fonts/</strong> 하위 폴더<br/>
-                      3) TeXworks에서 main.tex 열기 → <strong style={{ color:T.ink }}>XeLaTeX</strong> → 컴파일
-                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}`, color:T.muted }}>
-                        <strong style={{ display:"block", marginBottom:2 }}>Missing character 경고가 계속되면</strong>
-                        기존 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 4px", borderRadius:3, fontSize:11 }}>main.aux · main.toc · main.out · main.log</code> 파일을 삭제한 뒤 XeLaTeX으로 다시 컴파일하세요.
-                      </div>
-                      <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
-                        <strong style={{ color:T.ink, display:"block", marginBottom:2 }}>Overleaf</strong>
-                        1) 새 프로젝트 → main.tex + imprint-style.sty + 폰트 파일 업로드<br/>
-                        2) 컴파일러 설정: <strong style={{ color:T.ink }}>XeLaTeX</strong>
-                      </div>
-                    </div>
-                    {requiredFonts.length > 0 && (
-                      <div style={{ marginTop:10, padding:"12px 16px", background:T.bg,
-                        borderRadius:3, border:`1px solid ${T.border}`, fontSize:12, lineHeight:1.9 }}>
-                        <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>
-                          필요한 폰트 파일 — <code style={{ fontFamily:T.mono, background:T.surface, padding:"1px 4px", borderRadius:3 }}>fonts/</code> 하위 폴더에 저장
-                        </strong>
-                        <div style={{ fontFamily:T.mono, fontSize:11, color:T.muted }}>
-                          {requiredFonts.map(f => <div key={f}>{f}</div>)}
-                        </div>
-                        <div style={{ marginTop:6, fontSize:11, color:T.ink }}>
-                          폰트 파일이 없으면 XeLaTeX이 "cannot be found" 오류를 냅니다.
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
-
-                {/* 스타일 파일 */}
-                {tab === "sty" && styCode && (
-                  <div style={{ padding:"20px 24px" }}>
-                    <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:10 }}>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>
-                          스타일 파일 (imprint-style.sty)
-                        </div>
-                        <div style={{ fontSize:12, color:T.muted, marginTop:2, lineHeight:1.6 }}>
-                          판형·여백·서체·단 구성 등 모든 디자인 규칙이 정의된 패키지 파일입니다.<br/>
-                          이 파일 하나로 본문 길이와 관계없이 동일한 스타일이 유지됩니다.<br/>
-                          <strong style={{ color:T.ink }}>사용법:</strong> main.tex과 같은 폴더에 저장.
-                          main.tex에 <code style={{ fontFamily:T.mono, background:T.bg, padding:"1px 5px", borderRadius:3 }}>{"\\usepackage{imprint-style}"}</code> 이미 포함됨.<br/>
-                          <span style={{ color:T.ink, fontWeight:600 }}>XeLaTeX 전용</span> — fontspec 기반, pdfLaTeX 미지원
-                        </div>
-                      </div>
-                      <div style={{ marginLeft:"auto", display:"flex", gap:6, flexShrink:0 }}>
-                        <button onClick={() => downloadToBookFolder(styCode, 'text/plain;charset=utf-8', fields.제목, currentRunId, 'imprint-style.sty')}
-                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
-                            background:T.surface, color:T.ink, cursor:"pointer",
-                            transition:"all 150ms" }}>
-                          ⬇ 다운로드
-                        </button>
-                        <button onClick={() => {
-                            const done = () => { setCopiedSty(true); setTimeout(() => setCopiedSty(false), 2000); };
-                            if (navigator.clipboard && window.isSecureContext) {
-                              navigator.clipboard.writeText(styCode).then(done).catch(() => { _fallbackCopy(styCode); done(); });
-                            } else { _fallbackCopy(styCode); done(); }
-                          }}
-                          style={{ padding:"7px 14px", fontSize:12, fontWeight:600,
-                            border:`1px solid ${T.border}`, borderRadius:3, whiteSpace:"nowrap",
-                            background:copiedSty ? T.ink : T.surface,
-                            color:copiedSty ? "#fff" : T.ink, cursor:"pointer", transition:"all 150ms" }}>
-                          {copiedSty ? "복사됨 ✓" : "복사"}
-                        </button>
-                      </div>
-                    </div>
-                    <pre style={{ fontFamily:T.mono, fontSize:12, lineHeight:1.65,
-                      background:T.surface, padding:"16px 20px", borderRadius:3,
-                      border:`1px solid ${T.border}`, whiteSpace:"pre-wrap",
-                      wordBreak:"break-all", color:T.ink, margin:0 }}>
-                      {styCode}
-                    </pre>
-                  </div>
-                )}
-
-                {tab === "final" && !latex && (
+                {tab === "export" && !latex && (
                   <div style={{ padding:32, color:T.muted, fontSize:13 }}>아직 생성된 파일이 없습니다.</div>
                 )}
               </div>
@@ -9099,12 +9090,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         </div>
 
         {/* ── 우: 채팅 (스타일 조정) ──────────────────────────────── */}
-        <div style={{ borderLeft:`1px solid ${T.border}`, display:"flex",
-          flexDirection:"column", background:T.surface, overflow:"hidden" }}>
+        <div style={{ borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+          border:"1px solid rgba(255,255,255,0.5)",
+          display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.8)",
+          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", overflow:"hidden" }}>
 
-          <div style={{ padding:"14px 16px", borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
+          <div style={{ padding:"16px 16px", borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
             <div style={{ fontSize:12, fontWeight:600, color:T.ink }}>스타일 조정</div>
-            <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>
+            <div style={{ fontSize:12, color:T.muted, marginTop:4 }}>
               생성 결과를 자연어로 수정 요청하세요
             </div>
           </div>
@@ -9113,17 +9106,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
           {/* 채팅 메시지 */}
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px",
-            display:"flex", flexDirection:"column", gap:10 }}>
+            display:"flex", flexDirection:"column", gap:8 }}>
             {refineHistory.length === 0 ? (
               <div style={{ fontSize:12, color:T.muted, textAlign:"center",
-                paddingTop:24, lineHeight:1.8 }}>
+                paddingTop:24, lineHeight:1.75 }}>
                 {isDone
                   ? "스타일 생성 완료.\n수정이 필요하면 아래에 입력하세요."
                   : "조판 스타일을 먼저 생성하세요."}
               </div>
             ) : refineHistory.map((msg, i) => (
               <div key={i} style={{
-                padding:"10px 12px", borderRadius:3, fontSize:12, lineHeight:1.6,
+                padding:"12px 12px", borderRadius:12, fontSize:12, lineHeight:1.6,
                 background: msg.role === "user" ? T.ink : T.bg,
                 color: msg.role === "user" ? "#fff" : T.ink,
                 alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
@@ -9132,9 +9125,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               }}>
                 {msg.role === 'user' && msg.intent && msg.intent !== 'ambiguous' && (
                   <div style={{
-                    display:'inline-block', fontSize:9, fontWeight:700,
-                    padding:'1px 5px', borderRadius:2, marginBottom:4,
-                    background: msg.intent === 'question' ? '#1a5276' : '#1a4a1a',
+                    display:'inline-block', fontSize:10, fontWeight:700,
+                    padding:'1px 5px', borderRadius:12, marginBottom:4,
+                    background: msg.intent === 'question' ? '#111111' : T.ink,
                     color: '#fff', letterSpacing:'0.05em',
                   }}>
                     {msg.intent === 'question' ? '질문' : '수정'}
@@ -9144,23 +9137,23 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   <div>
                     {msg.isStructural ? (
                       // 구조 변경 안내
-                      <span style={{color:'#e67e22', fontSize:12}}>{msg.chatContent}</span>
+                      <span style={{color:T.warning, fontSize:12}}>{msg.chatContent}</span>
                     ) : msg.isError ? (
                       // 오류
-                      <span style={{color:'#c0392b', fontSize:12}}>{msg.chatContent}</span>
+                      <span style={{color:T.error, fontSize:12}}>{msg.chatContent}</span>
                     ) : (
                       <>
                         {/* 인텐트 레이블 (assistant 응답 상단) */}
                         {msg.intent && !msg.isStructural && !msg.isError && (
                           <div style={{
-                            display:'inline-block', fontSize:9, fontWeight:700,
-                            padding:'1px 5px', borderRadius:2, marginBottom:6,
+                            display:'inline-block', fontSize:10, fontWeight:700,
+                            padding:'1px 5px', borderRadius:12, marginBottom:8,
                             background: msg.intent === 'question'
                               ? T.border
-                              : (msg.codeChanged ? '#1a4a1a' : T.border),
+                              : (msg.codeChanged ? T.ink : T.border),
                             color: msg.intent === 'question'
                               ? T.muted
-                              : (msg.codeChanged ? '#6fcf97' : T.muted),
+                              : (msg.codeChanged ? '#fff' : T.muted),
                             letterSpacing:'0.05em',
                           }}>
                             {msg.intent === 'question'
@@ -9170,7 +9163,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         )}
                         {/* 자연어 응답 */}
                         {msg.chatContent && (
-                          <div style={{fontSize:12, lineHeight:1.7, whiteSpace:'pre-wrap', marginBottom: msg.changes ? 8 : 0}}>
+                          <div style={{fontSize:12, lineHeight:1.6, whiteSpace:'pre-wrap', marginBottom: msg.changes ? 8 : 0}}>
                             {msg.chatContent}
                           </div>
                         )}
@@ -9187,16 +9180,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                                 const oldVal = colonIdx >= 0 ? parts[0].slice(colonIdx+1).trim() : '';
                                 const newVal = parts[1].trim();
                                 return (
-                                  <div key={li} style={{fontSize:11, lineHeight:1.7, marginTop: li > 0 ? 3 : 0}}>
+                                  <div key={li} style={{fontSize:12, lineHeight:1.6, marginTop: li > 0 ? 3 : 0}}>
                                     <span style={{color:T.muted}}>{label}</span>
-                                    <span style={{color:'#bbb', margin:'0 3px'}}>:</span>
-                                    {oldVal && <span style={{color:'#c0392b', textDecoration:'line-through', marginRight:4}}>{oldVal}</span>}
-                                    <span style={{color:'#888', marginRight:3}}>→</span>
-                                    <span style={{color:'#2d7d46', fontWeight:700}}>{newVal}</span>
+                                    <span style={{color:'#D4D4D0', margin:'0 3px'}}>:</span>
+                                    {oldVal && <span style={{color:T.error, textDecoration:'line-through', marginRight:4}}>{oldVal}</span>}
+                                    <span style={{color:'#6B6B6B', marginRight:3}}>→</span>
+                                    <span style={{color:T.accent, fontWeight:700}}>{newVal}</span>
                                   </div>
                                 );
                               }
-                              return <div key={li} style={{fontSize:11, color:T.muted, marginTop: li > 0 ? 3 : 0}}>{raw}</div>;
+                              return <div key={li} style={{fontSize:12, color:T.muted, marginTop: li > 0 ? 3 : 0}}>{raw}</div>;
                             })}
                           </div>
                         )}
@@ -9208,7 +9201,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             ))}
             {/* 스트리밍 중 실시간 말풍선 */}
             {refineLoading && (
-              <div style={{ padding:"10px 12px", borderRadius:3, fontSize:12, lineHeight:1.7,
+              <div style={{ padding:"12px 12px", borderRadius:12, fontSize:12, lineHeight:1.6,
                 background:T.bg, border:`1px solid ${T.border}`, color:T.ink,
                 alignSelf:"flex-start", maxWidth:"92%", whiteSpace:"pre-wrap" }}>
                 {streamingText
@@ -9217,8 +9210,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                       background:T.ink, marginLeft:2, verticalAlign:'text-bottom',
                       animation:"blink 1s step-end infinite",
                     }} /></>
-                  : <span style={{color:T.muted, display:'flex', alignItems:'center', gap:6}}>
-                      <span style={{ width:8, height:8, border:"1.5px solid #ccc",
+                  : <span style={{color:T.muted, display:'flex', alignItems:'center', gap:8}}>
+                      <span style={{ width:8, height:8, border:"1px solid #D4D4D0",
                         borderTopColor:T.ink, borderRadius:"50%", display:'inline-block',
                         animation:"spin 0.8s linear infinite" }} />
                       생각 중…
@@ -9230,7 +9223,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
           {/* 입력창 */}
           <div style={{ padding:"12px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
-            <div style={{ display:"flex", gap:6 }}>
+            <div style={{ display:"flex", gap:8 }}>
               <textarea
                 value={refineInput} rows={2}
                 onChange={e => setRefineInput(e.target.value)}
@@ -9242,14 +9235,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     if (refineInput.trim() && !refineLoading) refine();
                   }
                 }}
-                style={{ flex:1, padding:"8px 10px", fontSize:12,
-                  border:`1px solid ${T.border}`, borderRadius:3,
+                style={{ flex:1, padding:"8px 12px", fontSize:12,
+                  border:`1px solid ${T.border}`, borderRadius:12,
                   background: (!isDone || loading || refineLoading) ? T.bg : T.surface,
-                  color:T.ink, lineHeight:1.5, resize:"none" }}
+                  color:T.ink, lineHeight:1.6, resize:"none" }}
               />
               <button onClick={refine} disabled={!isDone || loading || refineLoading || !refineInput.trim()}
                 style={{ padding:"0 14px", fontSize:12, fontWeight:600,
-                  border:"none", borderRadius:3,
+                  border:"none", borderRadius:8,
                   background: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.border : T.ink,
                   color: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.muted : "#fff",
                   cursor: (!isDone || loading || refineLoading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
