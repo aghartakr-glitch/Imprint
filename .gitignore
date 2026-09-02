@@ -23,9 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# 로컬 컴파일 서버 산출물 / 공용 폰트 (용량 문제로 미커밋)
+# 로컬 컴파일 서버 산출물 (용량 문제로 미커밋)
 Imprint-Data/
-fonts/
+# fonts/는 커밋함 — Railway Docker 빌드가 GitHub 저장소만 보고 이미지에
+# COPY하므로, gitignore로 빼두면 배포 빌드에서 "not found"로 실패한다.
 
 # 환경변수 (Supabase 키 등 민감정보)
 .env
