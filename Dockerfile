@@ -1,14 +1,17 @@
 # Imprint 컴파일 서버 — XeLaTeX(kotex/memoir 포함) + Node
 # Railway/Render 같은 곳에 이 Dockerfile 그대로 올리면 됩니다.
-FROM node:20-slim
+#
+# texlive/texlive 베이스는 TeX Live 전체가 이미 미리 빌드되어 들어있는 이미지라,
+# apt-get으로 texlive-* 패키지를 직접 설치하지 않는다 — 그 설치 과정(수천 개
+# 폰트 압축 해제 + texhash 재생성)이 Railway 빌드 서버 메모리를 초과해서
+# "container process is already dead"로 빌드가 죽는 문제가 실제로 있었음.
+# 여기서는 Node.js만 추가로 설치한다.
+FROM texlive/texlive:latest
 
-# XeLaTeX + 한국어(kotex/xetexko) + memoir 클래스 + 기본 폰트
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    texlive-xetex \
-    texlive-lang-korean \
-    texlive-latex-extra \
-    texlive-fonts-recommended \
-    fontconfig \
+    curl ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
