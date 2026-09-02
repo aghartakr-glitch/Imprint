@@ -8,9 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.mjs"
+    "server": "node --env-file=.env server/index.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.113.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

@@ -12,6 +12,12 @@ import {
   overwriteGenerationFiles, appendRevisionLog, snapshotVersion,
 } from './saveOutputs.mjs'
 import { OUTPUTS_DIR } from './env.mjs'
+import { recordDocument, recordRevision, recordExperiment } from './supabase.mjs'
+
+// runDir(폴더 경로) → Supabase documents.id 매핑. 이 서버는 단일 로컬 프로세스로만
+// 돌아가는 개발 도구라 인메모리로 충분하다 (재시작하면 기존 문서는 새 수정 시
+// documents 테이블에 다시 upsert되면서 자연히 다시 채워짐).
+const documentIdByRunDir = new Map()
 
 // 같은 폴더(runDir)에 대한 컴파일 요청이 겹치면 xelatex가 main.aux/main.log를 동시에
 // 써서 충돌한다 (생성 직후 곧바로 채팅 수정을 보내는 경우 실제로 재현됨 — 2026-08-03 확인).
@@ -57,6 +63,11 @@ async function handleSaveAndCompile(req, res) {
     linkFontsInto(runDir)
     const compileResult = await enqueueCompile(runDir, () => compileMainTex(runDir))
     const folderName = runDir.split(/[\\/]/).slice(-2).join('/')
+    // Supabase 저장은 best-effort — 실패해도 로컬 저장/컴파일 흐름은 그대로 진행
+    recordDocument({
+      runDir, runId: folderName, bookTitle: bookTitle || null, mainTex, styContent,
+      compileOk: compileResult.ok, compileReason: compileResult.reason || null,
+    }).then(id => { if (id) documentIdByRunDir.set(runDir, id) })
     return sendJson(res, 200, {
       ok: true,
       folder: folderName,
@@ -72,6 +83,24 @@ async function handleSaveAndCompile(req, res) {
 
 // 스타일 조정 채팅에서 수정 적용 시 호출 — 같은 폴더의 main.tex/sty를 덮어쓰고 재컴파일,
 // 수정 이력은 revision-log.json에 계속 append (덮어쓰지 않음)
+// 실험 탭의 만족도/피드백 데이터를 Supabase experiments 테이블에 저장.
+// folder를 넘겨받으면 documentIdByRunDir에서 연결된 document_id를 찾아 같이 저장한다.
+async function handleExperiment(req, res) {
+  let body
+  try {
+    body = await readJsonBody(req)
+  } catch (err) {
+    return sendJson(res, 400, { ok: false, error: '잘못된 JSON 본문: ' + String(err.message || err) })
+  }
+  const { folder, experimentId, targetVariable, customText, systemPct, userPct, directionMatch, satisfactionScore, notes } = body || {}
+  const runDir = folder ? join(OUTPUTS_DIR, folder) : null
+  const documentId = runDir ? documentIdByRunDir.get(runDir) : null
+  await recordExperiment({
+    documentId, experimentId, targetVariable, customText, systemPct, userPct, directionMatch, satisfactionScore, notes,
+  })
+  return sendJson(res, 200, { ok: true })
+}
+
 async function handleUpdateAndCompile(req, res) {
   let body
   try {
@@ -103,6 +132,14 @@ async function handleUpdateAndCompile(req, res) {
     const revisionCount = logEntry
       ? appendRevisionLog(runDir, { ...logEntry, version: version ?? null, compileFailed: !compileResult.ok, rolledBack })
       : null
+    if (logEntry) {
+      const documentId = documentIdByRunDir.get(runDir)
+      recordRevision({
+        runDir, documentId, version: version ?? null,
+        userRequest: logEntry.user_request, changes: logEntry.changes, intent: logEntry.intent,
+        mainTex, styContent, compileFailed: !compileResult.ok, rolledBack,
+      })
+    }
     return sendJson(res, 200, {
       ok: true,
       folder,
@@ -149,6 +186,9 @@ export function createApp() {
       }
       if (req.method === 'POST' && req.url.startsWith('/api/update-and-compile')) {
         return handleUpdateAndCompile(req, res)
+      }
+      if (req.method === 'POST' && req.url.startsWith('/api/experiment')) {
+        return handleExperiment(req, res)
       }
       if (req.method === 'GET' && req.url.startsWith('/outputs/')) {
         return serveStatic(req, res, req.url)

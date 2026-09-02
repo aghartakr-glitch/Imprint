@@ -1,6 +1,12 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { T, FS, GLOBAL_CSS } from "./theme.js";
 
+// 로컬 개발: Vite 프록시(/compile-api → localhost:8789)를 그대로 씀.
+// 배포(Vercel): 컴파일 서버가 별도 호스팅(Railway 등)에 있으므로 VITE_COMPILE_SERVER_URL로 절대 주소 지정.
+const COMPILE_SERVER_URL = import.meta.env.VITE_COMPILE_SERVER_URL || "";
+const COMPILE_API = COMPILE_SERVER_URL ? `${COMPILE_SERVER_URL}/api` : "/compile-api";
+const COMPILE_OUTPUTS = COMPILE_SERVER_URL ? `${COMPILE_SERVER_URL}/outputs` : "/compile-outputs";
+
 // Imprint 1.0.0
 // 편집 디자인 타이포그래피 스타일 패키지 선택기
 // Concept: 각 레퍼런스 = LaTeX .sty 패키지 (재사용 가능한 타이포 규칙 묶음)
@@ -800,7 +806,7 @@ function sessionFolderPath(bookTitle, runId) {
 // 서버가 꺼져 있으면 조용히 실패(네트워크 에러) — 브라우저 다운로드는 별도로 항상 동작하므로 치명적이지 않음.
 async function saveAndCompileOnServer(mainTex, styContent, bookTitle, log) {
   try {
-    const res = await fetch('/compile-api/save-and-compile', {
+    const res = await fetch(`${COMPILE_API}/save-and-compile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mainTex, styContent, bookTitle, log }),
@@ -824,7 +830,7 @@ async function saveAndCompileOnServer(mainTex, styContent, bookTitle, log) {
 // 덮어쓰고 PDF도 재컴파일. 수정 이력(logEntry)은 그 폴더의 revision-log.json에 계속 누적됨(덮어쓰지 않음).
 async function updateAndCompileOnServer(folder, mainTex, styContent, logEntry, version) {
   try {
-    const res = await fetch('/compile-api/update-and-compile', {
+    const res = await fetch(`${COMPILE_API}/update-and-compile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ folder, mainTex, styContent, logEntry, version }),
@@ -6415,6 +6421,26 @@ ${customTexts.join('\n')}`;
           overallStatus: overallStatusVal,
         }).catch(err => console.warn('[logFeedbackApply] 실패:', err.message));
       }
+
+      // ── Supabase experiments 테이블 로깅 (변수별로 한 행씩, best-effort) ──
+      if (serverCompileResult?.folder) {
+        (analysis.corrections || []).forEach(c => {
+          fetch(`${COMPILE_API}/experiment`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              folder: serverCompileResult.folder,
+              experimentId: exp.experiment_id,
+              targetVariable: c.target_variable,
+              customText: c.target_variable === '__custom__' ? c.custom_text : null,
+              systemPct: c.system_pct,
+              userPct: c.user_pct,
+              directionMatch: c.direction_match,
+              satisfactionScore,
+              notes: userFeedbackText || null,
+            }),
+          }).catch(err => console.warn('[supabase experiment] 실패:', err.message));
+        });
+      }
       if (false) {
         const cl = currentLog;
         const rawId = `raw_${exp.experiment_id}`;
@@ -7449,6 +7475,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
   const [showLogs, setShowLogs] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('imprint_api_key') || '');
   const [showApiInput, setShowApiInput] = useState(false);
+  const [lang, setLang] = useState('ko');
+  const L = (ko, en) => lang === 'ko' ? ko : en;
 
   function saveApiKey(key) {
     setApiKey(key);
@@ -7461,6 +7489,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
     "","건축·공간","그래픽디자인","문학","사진","시각문화·매체",
     "아트이론·비평","인문·사회","전시·큐레이션","타이포그래피","현대미술","기타",
   ];
+  // 표시용 영문 라벨만 별도 매핑 — GENRE_OPTIONS 값(한글) 자체는 DB 매칭에 쓰이므로 그대로 유지
+  const GENRE_OPTIONS_EN = {
+    "":"","건축·공간":"Architecture · Space","그래픽디자인":"Graphic Design","문학":"Literature",
+    "사진":"Photography","시각문화·매체":"Visual Culture · Media","아트이론·비평":"Art Theory · Criticism",
+    "인문·사회":"Humanities · Social","전시·큐레이션":"Exhibition · Curation","타이포그래피":"Typography",
+    "현대미술":"Contemporary Art","기타":"Other",
+  };
 
   // ── Refine quick hints ──────────────────────────────────────────
   const REFINE_HINTS = ["여백을 더 넓게", "2단 구성으로", "글자 크기 줄여줘", "각주 스타일 추가", "행간 넓혀줘"];
@@ -7500,7 +7535,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         <span style={{ fontSize:10, fontFamily:T.mono, color:T.muted,
           background:T.tagBg, padding:"4px 4px", borderRadius:12 }}>v{IMPRINT_VERSION}</span>
         <div style={{ flex:1 }} />
-        <span style={{ fontSize:12, color:T.muted }}>{DB.length}개 스타일 패키지</span>
+        <span style={{ fontSize:12, color:T.muted }}>{L(`${DB.length}개 스타일 패키지`, `${DB.length} style packages`)}</span>
+
+        {/* 언어 토글 */}
+        <div style={{ display:"flex", border:`1px solid ${T.border}`, borderRadius:8, overflow:"hidden" }}>
+          {['ko','en'].map(code => (
+            <button key={code} onClick={() => setLang(code)}
+              style={{ padding:"4px 10px", fontSize:11, fontWeight:600, border:"none",
+                background: lang === code ? T.ink : "transparent",
+                color: lang === code ? "#fff" : T.muted, cursor:"pointer" }}>
+              {code === 'ko' ? 'KOR' : 'ENG'}
+            </button>
+          ))}
+        </div>
 
         {/* API 키 */}
         <div style={{ position:"relative" }}>
@@ -7530,7 +7577,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ width:8, height:8, borderRadius:"50%",
                 background: apiKey ? "#111111" : "#D4D4D0", display:"inline-block" }} />
-              {apiKey ? "API 연결됨" : "API 키 입력"}
+              {apiKey ? L("API 연결됨", "API Connected") : L("API 키 입력", "Enter API Key")}
             </button>
           )}
         </div>
@@ -7548,7 +7595,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
           {/* 입력 탭 */}
           <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`, padding:"0 20px", flexShrink:0 }}>
-            {[["text","텍스트 입력"],["experiment","실험"]].map(([k,label]) => (
+            {[["text",L("텍스트 입력","Text Input")],["experiment",L("실험","Experiment")]].map(([k,label]) => (
               <button key={k} onClick={() => setInputTab(k)}
                 style={{ padding:"12px 16px", fontSize:12,
                   fontWeight: inputTab === k ? 700 : 400,
@@ -7565,10 +7612,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             {inputTab === 'text' ? (
               <>
                 {[
-                  { key:"제목", label:"제목", rows:2, placeholder:"출판물 제목" },
-                  { key:"소제목", label:"소제목", rows:1, placeholder:"부제 · 챕터 제목 (선택)" },
-                  { key:"본문", label:"본문", rows:10, placeholder:`본문 텍스트를 입력하세요\n\n각주 마커: ¹²³ 또는 [1] 또는 ^1` },
-                  { key:"각주", label:"각주", rows:3, placeholder:"1. 첫 번째 각주\n2. 두 번째 각주" },
+                  { key:"제목", label:L("제목","Title"), rows:2, placeholder:L("출판물 제목","Publication title") },
+                  { key:"소제목", label:L("소제목","Subtitle"), rows:1, placeholder:L("부제 · 챕터 제목 (선택)","Subtitle · chapter title (optional)") },
+                  { key:"본문", label:L("본문","Body"), rows:10, placeholder:L(`본문 텍스트를 입력하세요\n\n각주 마커: ¹²³ 또는 [1] 또는 ^1`, `Enter body text\n\nFootnote markers: ¹²³ or [1] or ^1`) },
+                  { key:"각주", label:L("각주","Footnotes"), rows:3, placeholder:L("1. 첫 번째 각주\n2. 두 번째 각주","1. First footnote\n2. Second footnote") },
                 ].map(({ key, label, rows, placeholder }) => (
                   <div key={key}>
                     <label style={{ display:"block", fontSize:12, fontWeight:600,
@@ -7589,29 +7636,29 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 {/* 면주 */}
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:8 }}>
-                    <label style={{ fontSize:12, fontWeight:600, color:T.ink }}>면주</label>
+                    <label style={{ fontSize:12, fontWeight:600, color:T.ink }}>{L("면주","Running Head")}</label>
                     {/* 위치 드롭다운 */}
                     <select value={styleConfig.rhPos || '자동'}
                       onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
                       style={{ padding:"4px 8px", fontSize:12,
                         border:`1px solid ${T.border}`, borderRadius:12,
                         background:T.bg, color:T.ink, cursor:"pointer" }}>
-                      <option value="자동">자동 (DB 기반)</option>
-                      <option value="상단-외측">상단 · 외측</option>
-                      <option value="상단-내측">상단 · 내측</option>
-                      <option value="상단-중앙">상단 · 중앙</option>
-                      <option value="하단-외측">하단 · 외측</option>
-                      <option value="하단-내측">하단 · 내측</option>
-                      <option value="하단-중앙">하단 · 중앙</option>
-                      <option value="외측-수직">외측 여백 (세로)</option>
-                      <option value="내측-수직">내측 여백 (세로)</option>
+                      <option value="자동">{L("자동 (DB 기반)","Auto (from DB)")}</option>
+                      <option value="상단-외측">{L("상단 · 외측","Top · Outer")}</option>
+                      <option value="상단-내측">{L("상단 · 내측","Top · Inner")}</option>
+                      <option value="상단-중앙">{L("상단 · 중앙","Top · Center")}</option>
+                      <option value="하단-외측">{L("하단 · 외측","Bottom · Outer")}</option>
+                      <option value="하단-내측">{L("하단 · 내측","Bottom · Inner")}</option>
+                      <option value="하단-중앙">{L("하단 · 중앙","Bottom · Center")}</option>
+                      <option value="외측-수직">{L("외측 여백 (세로)","Outer margin (vertical)")}</option>
+                      <option value="내측-수직">{L("내측 여백 (세로)","Inner margin (vertical)")}</option>
                     </select>
                   </div>
                   {/* 수직 면주 선택 시: 상단/하단 위치 sub-option */}
                   {(styleConfig.rhPos === '외측-수직' || styleConfig.rhPos === '내측-수직') && (
                     <div style={{ display:"flex", gap:4, marginBottom:8 }}>
-                      <span style={{ fontSize:10, color:T.muted, paddingTop:4, marginRight:2 }}>세로 위치</span>
-                      {[['auto','자동'],['top','상단'],['center','중앙'],['bottom','하단']].map(([val, lbl]) => {
+                      <span style={{ fontSize:10, color:T.muted, paddingTop:4, marginRight:2 }}>{L("세로 위치","Vertical position")}</span>
+                      {[['auto',L('자동','Auto')],['top',L('상단','Top')],['center',L('중앙','Center')],['bottom',L('하단','Bottom')]].map(([val, lbl]) => {
                         const active = (styleConfig.rhVertPos || 'auto') === val;
                         return (
                           <button key={val}
@@ -7627,7 +7674,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     </div>
                   )}
                   <textarea value={fields["면주"]} rows={1}
-                    placeholder="면주 텍스트 입력 (비우면 면주 없음)"
+                    placeholder={L("면주 텍스트 입력 (비우면 면주 없음)","Enter running head text (leave blank for none)")}
                     onChange={e => setFields(f => ({ ...f, 면주: e.target.value }))}
                     style={{ width:"100%", padding:"8px 12px", fontSize:13,
                       border:`1px solid ${T.border}`, borderRadius:12,
@@ -7642,13 +7689,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   {/* 스타일 선택 모드 */}
                   <label style={{ display:"block", fontSize:12, fontWeight:600,
                     color:T.ink, marginBottom:8 }}>
-                    스타일 선택 모드
+                    {L("스타일 선택 모드","Style Selection Mode")}
                   </label>
                   <div style={{ display:"flex", gap:4, marginBottom:8 }}>
                     {[
-                      ['auto',         '자동 추천'],
-                      ['genre-forced', '장르 강제'],
-                      ['ref-locked',   '레퍼런스 고정'],
+                      ['auto',         L('자동 추천','Auto Recommend')],
+                      ['genre-forced', L('장르 강제','Force Genre')],
+                      ['ref-locked',   L('레퍼런스 고정','Lock Reference')],
                     ].map(([mode, label]) => {
                       const active = selectionMode === mode;
                       return (
@@ -7676,14 +7723,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     <div style={{ marginBottom:8 }}>
                       <label style={{ display:"block", fontSize:12, fontWeight:600,
                         color:T.ink, marginBottom:8 }}>
-                        장르 / 출판 형태 직접 지정
+                        {L("장르 / 출판 형태 직접 지정","Specify Genre / Publication Type")}
                       </label>
                       <select value={hint} onChange={e => setHint(e.target.value)}
                         style={{ width:"100%", padding:"8px 12px", fontSize:13,
                           border:`1px solid ${T.border}`, borderRadius:12,
                           background:T.bg, color:T.ink, cursor:"pointer" }}>
                         {GENRE_OPTIONS.map(g => (
-                          <option key={g} value={g}>{g || "— 장르를 선택하세요 —"}</option>
+                          <option key={g} value={g}>{g ? L(g, GENRE_OPTIONS_EN[g]) : L("— 장르를 선택하세요 —","— Select a genre —")}</option>
                         ))}
                       </select>
                     </div>
@@ -7712,11 +7759,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 <div>
                   <label style={{ display:"block", fontSize:12, fontWeight:600,
                     color:T.ink, marginBottom:8 }}>
-                    단 구성
+                    {L("단 구성","Column Layout")}
                   </label>
                   {/* 1행: 모드 선택 */}
                   <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
-                    {[["auto","자동"],["fixed","고정단"],["variable","가변단"]].map(([val,label]) => {
+                    {[["auto",L("자동","Auto")],["fixed",L("고정단","Fixed")],["variable",L("가변단","Flexible")]].map(([val,label]) => {
                       const active = (styleConfig.columnMode || 'auto') === val;
                       return (
                         <button key={val}
@@ -7742,7 +7789,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               border:`1px solid ${active ? T.ink : T.border}`,
                               borderRadius:12, background: active ? T.ink : "transparent",
                               color: active ? "#fff" : T.ink, cursor:"pointer", minWidth:32 }}>
-                            {n}단
+                            {L(`${n}단`, `${n}col`)}
                           </button>
                         );
                       })}
@@ -7785,11 +7832,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
                         {/* 행 1: 그리드 — 전체 / (주석이 옆일 때만: 본문 + 주석) / 간격 */}
                         <div style={row}>
-                          <span style={rowLbl}>그리드</span>
+                          <span style={rowLbl}>{L("그리드","Grid")}</span>
                           <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
                             {/* 전체 열 */}
                             <div style={fld}>
-                              <span style={fieldLbl}>전체 열</span>
+                              <span style={fieldLbl}>{L("전체 열","Total cols")}</span>
                               <input type="number" min={1} max={20}
                                 value={vg.total || ''}
                                 onChange={e => {
@@ -7809,7 +7856,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                             {isSide && (<>
                               <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>=</div>
                               <div style={fld}>
-                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>본문 열</span>
+                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>{L("본문 열","Body cols")}</span>
                                 <input type="number" min={1} max={vg.total}
                                   value={vg.body || ''}
                                   onChange={e => {
@@ -7824,7 +7871,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               </div>
                               <div style={{ fontSize:12, color:T.muted, paddingBottom:7, userSelect:'none' }}>+</div>
                               <div style={fld}>
-                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>주석 열</span>
+                                <span style={{ ...fieldLbl, color: overflow ? '#e05' : T.muted }}>{L("주석 열","Note cols")}</span>
                                 <input type="number" min={1} max={vg.total - 1}
                                   value={vg.note || ''}
                                   onChange={e => {
@@ -7841,7 +7888,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
                             {/* 열 간격 */}
                             <div style={fld}>
-                              <span style={fieldLbl}>간격 mm</span>
+                              <span style={fieldLbl}>{L("간격 mm","Gap mm")}</span>
                               <input type="number" min={2} max={20} step={1}
                                 value={styleConfig.columnGapMm ?? 8}
                                 onChange={e => setStyleConfig(s => ({
@@ -7861,9 +7908,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           return (
                             <div style={{ fontSize:12, color:T.muted, marginTop:4, paddingLeft:56, lineHeight:1.6 }}>
                               {isSide
-                                ? `본문 ${vg.body}열 + 주석 ${vg.note}열 = 전체 ${vg.total}열`
-                                : `본문 ${vg.total}열 전체 사용`}
-                              {perCol && ` · ${bodyCols}열 ÷ ${bCols}단 = ${perCol}열/단`}
+                                ? L(`본문 ${vg.body}열 + 주석 ${vg.note}열 = 전체 ${vg.total}열`, `Body ${vg.body}col + Note ${vg.note}col = Total ${vg.total}col`)
+                                : L(`본문 ${vg.total}열 전체 사용`, `Body uses all ${vg.total} cols`)}
+                              {perCol && L(` · ${bodyCols}열 ÷ ${bCols}단 = ${perCol}열/단`, ` · ${bodyCols}col ÷ ${bCols} = ${perCol}col/section`)}
                               {overflow && <span style={{ color:'#e05' }}>  ⚠ {vg.body}+{vg.note}={vg.body+vg.note} › {vg.total}</span>}
                             </div>
                           );
@@ -7871,9 +7918,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
                         {/* 행 2: 주석 위치 */}
                         <div style={row}>
-                          <span style={rowLbl}>주석</span>
+                          <span style={rowLbl}>{L("주석","Notes")}</span>
                           <div style={{ display:"flex", gap:4, flexWrap:"wrap", paddingTop:1 }}>
-                            {[['right','오른쪽'],['left','왼쪽'],['top','상단'],['bottom','하단']].map(([val, label]) => (
+                            {[['right',L('오른쪽','Right')],['left',L('왼쪽','Left')],['top',L('상단','Top')],['bottom',L('하단','Bottom')]].map(([val, label]) => (
                               <button key={val}
                                 onClick={() => setStyleConfig(s => {
                                   const isNewSide = val === 'right' || val === 'left';
@@ -7895,10 +7942,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
                         {/* 행 3: 본문 단 — isSide일 때 btc는 현재 경로에서 미적용 */}
                         <div style={{ ...row, opacity: isSide ? 0.38 : 1, pointerEvents: isSide ? 'none' : 'auto' }}>
-                          <span style={rowLbl}>본문 단</span>
+                          <span style={rowLbl}>{L("본문 단","Body cols")}</span>
                           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                             <div style={fld}>
-                              <span style={fieldLbl}>단 수</span>
+                              <span style={fieldLbl}>{L("단 수","Count")}</span>
                               <input type="number" min={1} max={isSide ? vgBody : vgTotal}
                                 value={styleConfig.bodyTextColumns || 1}
                                 onChange={e => setStyleConfig(s => ({
@@ -7913,7 +7960,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                             </div>
                             {canIndent && (
                               <div style={fld}>
-                                <span style={fieldLbl}>시작 열</span>
+                                <span style={fieldLbl}>{L("시작 열","Start col")}</span>
                                 <input type="number" min={1} max={Math.max(1, vgTotal - vgBody + 1)}
                                   value={styleConfig.bodyColumnStart || 1}
                                   onChange={e => setStyleConfig(s => {
@@ -7929,9 +7976,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {/* 행 4: 주석 단 — 위치별 조건부 */}
                         {isSide && (
                           <div style={row}>
-                            <span style={rowLbl}>주석 단</span>
+                            <span style={rowLbl}>{L("주석 단","Note cols")}</span>
                             <div style={fld}>
-                              <span style={fieldLbl}>단 수</span>
+                              <span style={fieldLbl}>{L("단 수","Count")}</span>
                               <input type="number" min={1} max={vg.note}
                                 value={styleConfig.noteTextColumns || 1}
                                 onChange={e => setStyleConfig(s => ({
@@ -7943,9 +7990,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         )}
                         {isTop && (
                           <div style={row}>
-                            <span style={rowLbl}>주석 단</span>
+                            <span style={rowLbl}>{L("주석 단","Note cols")}</span>
                             <div style={fld}>
-                              <span style={fieldLbl}>단 수</span>
+                              <span style={fieldLbl}>{L("단 수","Count")}</span>
                               <input type="number" min={1} max={4}
                                 value={fields.각주단 || 1}
                                 onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
@@ -7957,10 +8004,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           <>
                             {/* ── 각주 (번호 달린 전통 각주 / 텍스트 입력 탭 "각주" 칸) ── */}
                             <div style={{ ...row }}>
-                              <span style={{ ...rowLbl, lineHeight:1.4 }}>각주</span>
+                              <span style={{ ...rowLbl, lineHeight:1.4 }}>{L("각주","Footnotes")}</span>
                               <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
                                 <div style={fld}>
-                                  <span style={fieldLbl}>단 수</span>
+                                  <span style={fieldLbl}>{L("단 수","Count")}</span>
                                   <input type="number" min={1} max={4}
                                     value={fields.각주단 || 1}
                                     onChange={e => setFields(f => ({ ...f, 각주단: String(Math.min(4, Math.max(1, parseInt(e.target.value)||1))) }))}
@@ -7987,14 +8034,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   /* 생성 전: 전체 비활성화 안내 */
                   <div style={{ padding:"20px 16px", textAlign:"center" }}>
                     <div style={{ fontSize:13, color:T.muted, lineHeight:1.75 }}>
-                      아직 생성 전입니다.<br/>
-                      <strong style={{ color:T.ink }}>텍스트 입력 탭</strong>에서 본문을 넣고<br/>
-                      <strong style={{ color:T.ink }}>조판 스타일 생성하기</strong>를 클릭하세요.
+                      {L("아직 생성 전입니다.","Not generated yet.")}<br/>
+                      <strong style={{ color:T.ink }}>{L("텍스트 입력 탭","Text Input tab")}</strong>{L("에서 본문을 넣고"," — enter body text,")}<br/>
+                      <strong style={{ color:T.ink }}>{L("조판 스타일 생성하기","Generate Typeset Style")}</strong>{L("를 클릭하세요."," and click it.")}
                     </div>
                     <div style={{ marginTop:20, opacity:0.4, pointerEvents:'none', display:'flex', flexDirection:'column', gap:12 }}>
                       <div style={{ padding:"12px 12px", background:T.bg, border:`1px solid ${T.border}`,
                         borderRadius:12, fontSize:12, color:T.muted, textAlign:'left' }}>
-                        정답 피드백을 입력하세요…
+                        {L("정답 피드백을 입력하세요…","Enter your feedback…")}
                       </div>
                       <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
                         {[1,2,3,4,5].map(n => (
@@ -8013,7 +8060,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:600,
                         color:T.ink, marginBottom:8 }}>
-                        변수별 수정 요청
+                        {L("변수별 수정 요청","Per-Variable Edit Request")}
                       </label>
 
                       {/* 변수 선택 + 입력 */}
@@ -8024,40 +8071,40 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           <select value={feedbackCurrentVar} onChange={e => setFeedbackCurrentVar(e.target.value)}
                             style={{ flex:1, padding:'6px 8px', fontSize:12, border:`1px solid ${T.border}`,
                               borderRadius:12, background:T.surface }}>
-                            <option value="body_size">본문 크기</option>
-                            <option value="body_leading">본문 행간</option>
-                            <option value="heading_h1_size">제목 크기</option>
-                            <option value="heading_h1_leading">제목 행간 (복수줄)</option>
-                            <option value="heading_h2_size">소제목 크기</option>
-                            <option value="heading_h2_leading">소제목 행간 (복수줄)</option>
-                            <option value="heading_h3_size">소소제목 크기</option>
-                            <option value="heading_h3_leading">소소제목 행간 (복수줄)</option>
-                            <option value="heading_gap">제목↔소제목 간격</option>
-                            <option value="body_gap">제목/소제목↔본문 간격</option>
-                            <option value="heading_layout">제목 정렬</option>
-                            <option value="margin_top">상 여백</option>
-                            <option value="margin_bottom">하 여백</option>
-                            <option value="margin_inner">안쪽 여백</option>
-                            <option value="margin_outer">바깥쪽 여백</option>
-                            <option value="tracking">자간</option>
-                            <option value="column_count">단 수</option>
-                            <option value="footnote_size">각주 크기</option>
-                            <option value="footnote_leading">각주 행간</option>
-                            <option value="column_gap">단 간격</option>
-                            <option value="folio_size">쪽번호 크기</option>
-                            <option value="font_style">본문 서체 (고딕/명조)</option>
-                            <option value="heading_font">제목 서체 (고딕/명조)</option>
-                            <option value="footnote_font">각주 서체 (고딕/명조)</option>
-                            <option value="running_head_font">면주·쪽번호 서체 (고딕/명조)</option>
-                            <option value="paragraph_spacing">문단 간격</option>
-                            <option value="__custom__">기타 (직접 입력)</option>
+                            <option value="body_size">{L("본문 크기","Body size")}</option>
+                            <option value="body_leading">{L("본문 행간","Body leading")}</option>
+                            <option value="heading_h1_size">{L("제목 크기","Title size")}</option>
+                            <option value="heading_h1_leading">{L("제목 행간 (복수줄)","Title leading (multi-line)")}</option>
+                            <option value="heading_h2_size">{L("소제목 크기","Subtitle size")}</option>
+                            <option value="heading_h2_leading">{L("소제목 행간 (복수줄)","Subtitle leading (multi-line)")}</option>
+                            <option value="heading_h3_size">{L("소소제목 크기","Sub-subtitle size")}</option>
+                            <option value="heading_h3_leading">{L("소소제목 행간 (복수줄)","Sub-subtitle leading (multi-line)")}</option>
+                            <option value="heading_gap">{L("제목↔소제목 간격","Title↔subtitle gap")}</option>
+                            <option value="body_gap">{L("제목/소제목↔본문 간격","Title/subtitle↔body gap")}</option>
+                            <option value="heading_layout">{L("제목 정렬","Title alignment")}</option>
+                            <option value="margin_top">{L("상 여백","Top margin")}</option>
+                            <option value="margin_bottom">{L("하 여백","Bottom margin")}</option>
+                            <option value="margin_inner">{L("안쪽 여백","Inner margin")}</option>
+                            <option value="margin_outer">{L("바깥쪽 여백","Outer margin")}</option>
+                            <option value="tracking">{L("자간","Tracking")}</option>
+                            <option value="column_count">{L("단 수","Column count")}</option>
+                            <option value="footnote_size">{L("각주 크기","Footnote size")}</option>
+                            <option value="footnote_leading">{L("각주 행간","Footnote leading")}</option>
+                            <option value="column_gap">{L("단 간격","Column gap")}</option>
+                            <option value="folio_size">{L("쪽번호 크기","Page number size")}</option>
+                            <option value="font_style">{L("본문 서체 (고딕/명조)","Body typeface (sans/serif)")}</option>
+                            <option value="heading_font">{L("제목 서체 (고딕/명조)","Title typeface (sans/serif)")}</option>
+                            <option value="footnote_font">{L("각주 서체 (고딕/명조)","Footnote typeface (sans/serif)")}</option>
+                            <option value="running_head_font">{L("면주·쪽번호 서체 (고딕/명조)","Running head/page number typeface (sans/serif)")}</option>
+                            <option value="paragraph_spacing">{L("문단 간격","Paragraph spacing")}</option>
+                            <option value="__custom__">{L("기타 (직접 입력)","Other (custom)")}</option>
                           </select>
                         </div>
 
                         {feedbackCurrentVar === '__custom__' && (
                           <input type="text" value={feedbackCustomVarText}
                             onChange={e => setFeedbackCustomVarText(e.target.value)}
-                            placeholder="예: 제목 크기를 10% 늘려줘"
+                            placeholder={L("예: 제목 크기를 10% 늘려줘","e.g. increase title size by 10%")}
                             style={{ width:'100%', padding:'6px 8px',
                               border:`1px solid ${T.border}`, borderRadius:12, fontSize:12 }}
                           />
@@ -8067,22 +8114,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           <div style={{ display:'flex', gap:8, fontSize:12 }}>
                             <div style={{ flex:1 }}>
                               <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
-                                시스템이 적용한 값 (예: +8%, 3단)
+                                {L("시스템이 적용한 값 (예: +8%, 3단)","System-applied value (e.g. +8%, 3col)")}
                               </label>
                               <input type="text" value={feedbackCurrentSystemPct}
                                 onChange={e => setFeedbackCurrentSystemPct(e.target.value)}
-                                placeholder="미반영"
+                                placeholder={L("미반영","Not applied")}
                                 style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
                                   borderRadius:12, fontSize:12 }}
                               />
                             </div>
                             <div style={{ flex:1 }}>
                               <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
-                                원하는 값 (예: +15%, 2단)
+                                {L("원하는 값 (예: +15%, 2단)","Desired value (e.g. +15%, 2col)")}
                               </label>
                               <input type="text" value={feedbackCurrentUserPct}
                                 onChange={e => setFeedbackCurrentUserPct(e.target.value)}
-                                placeholder="필수"
+                                placeholder={L("필수","Required")}
                                 style={{ width:'100%', padding:'6px 8px', border:`1px solid ${T.border}`,
                                   borderRadius:12, fontSize:12 }}
                               />
@@ -8133,7 +8180,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           style={{ padding:'6px 10px', fontSize:12, fontWeight:600,
                             background:T.ink, color:'#fff', border:'none', borderRadius:12,
                             cursor:'pointer' }}>
-                          + 변수 추가
+                          {L("+ 변수 추가","+ Add Variable")}
                         </button>
                       </div>
 
@@ -8142,7 +8189,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         <div style={{ marginTop:8, padding:'8px 10px', background:T.bg,
                           borderRadius:12, border:`1px solid ${T.border}` }}>
                           <div style={{ fontSize:10, fontWeight:600, color:T.muted, marginBottom:8 }}>
-                            추가된 항목 ({feedbackCorrections.length})
+                            {L("추가된 항목","Added items")} ({feedbackCorrections.length})
                           </div>
                           {feedbackCorrections.map((c, i) => (
                             <div key={i} style={{ display:'flex', justifyContent:'space-between',
@@ -8150,8 +8197,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               borderBottom: i < feedbackCorrections.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                               <div style={{ flex:1 }}>
                                 <span style={{ fontWeight:600, color:T.ink }}>{
-                                  c.target_variable === '__custom__' ? '기타' :
-                                  ({'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','body_gap':'제목↔본문간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'}[c.target_variable] || c.target_variable)
+                                  c.target_variable === '__custom__' ? L('기타','Other') :
+                                  (lang === 'ko'
+                                    ? ({'body_size':'본문크기','body_leading':'본문행간','heading_h1_size':'제목크기','heading_h1_leading':'제목행간','heading_h2_size':'소제목크기','heading_h2_leading':'소제목행간','heading_h3_size':'소소제목크기','heading_h3_leading':'소소제목행간','heading_gap':'제목간격','body_gap':'제목↔본문간격','heading_layout':'제목정렬','margin_top':'상여백','margin_bottom':'하여백','margin_inner':'안여백','margin_outer':'밖여백','tracking':'자간','column_count':'단수','footnote_size':'각주크기','footnote_leading':'각주행간','column_gap':'단간격','folio_size':'쪽번호','font_style':'서체','paragraph_spacing':'문단간격'}[c.target_variable] || c.target_variable)
+                                    : ({'body_size':'Body size','body_leading':'Body leading','heading_h1_size':'Title size','heading_h1_leading':'Title leading','heading_h2_size':'Subtitle size','heading_h2_leading':'Subtitle leading','heading_h3_size':'Sub-subtitle size','heading_h3_leading':'Sub-subtitle leading','heading_gap':'Title gap','body_gap':'Title↔body gap','heading_layout':'Title align','margin_top':'Top margin','margin_bottom':'Bottom margin','margin_inner':'Inner margin','margin_outer':'Outer margin','tracking':'Tracking','column_count':'Column count','footnote_size':'Footnote size','footnote_leading':'Footnote leading','column_gap':'Column gap','folio_size':'Page number','font_style':'Typeface','paragraph_spacing':'Paragraph spacing'}[c.target_variable] || c.target_variable))
                                 }</span>
                                 <span style={{ color:T.muted, marginLeft:8 }}>
                                   {c.target_variable === '__custom__' ? c.custom_text : `${c.system_pct} → ${c.user_pct}`}
@@ -8160,7 +8209,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               <button onClick={() => setFeedbackCorrections(feedbackCorrections.filter((_, j) => i !== j))}
                                 style={{ padding:'2px 8px', fontSize:10, border:`1px solid ${T.border}`,
                                   background:T.surface, color:T.muted, borderRadius:12, cursor:'pointer' }}>
-                                삭제
+                                {L("삭제","Remove")}
                               </button>
                             </div>
                           ))}
@@ -8171,15 +8220,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     <div>
                       <label style={{ display:'block', fontSize:12, fontWeight:600,
                         color:T.ink, marginBottom:8 }}>
-                        만족도
+                        {L("만족도","Satisfaction")}
                       </label>
                       <div style={{ display:'flex', gap:8 }}>
                         {[
-                          [1, '매우 다름'],
-                          [2, '다름'],
-                          [3, '보통'],
-                          [4, '같음'],
-                          [5, '매우 같음'],
+                          [1, L('매우 다름','Very Diff.')],
+                          [2, L('다름','Different')],
+                          [3, L('보통','Neutral')],
+                          [4, L('같음','Similar')],
+                          [5, L('매우 같음','Very Similar')],
                         ].map(([n, lbl]) => {
                           const active = satisfactionScore === n;
                           return (
@@ -8213,7 +8262,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                             background: canSubmit ? T.ink : T.border,
                             color: canSubmit ? '#fff' : T.muted,
                             cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-                          {experimentLoading ? '분석 중…' : '피드백 적용하기'}
+                          {experimentLoading ? L('분석 중…','Analyzing…') : L('피드백 적용하기','Apply Feedback')}
                         </button>
                       );
                     })()}
@@ -8416,8 +8465,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             {!apiKey && (
               <div style={{ marginBottom:8, fontSize:12, color:T.muted, padding:"8px 12px",
                 background:T.bg, borderRadius:12, border:`1px solid ${T.border}`, lineHeight:1.6 }}>
-                우측 상단 <strong style={{ color:T.ink }}>API 키 입력</strong>을 먼저 완료하세요.<br/>
-                <span style={{ fontSize:12 }}>console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)</span>
+                {L("우측 상단 ","Complete the ")}<strong style={{ color:T.ink }}>{L("API 키 입력","Enter API Key")}</strong>{L("을 먼저 완료하세요.", " field in the top right first.")}<br/>
+                <span style={{ fontSize:12 }}>{L("console.anthropic.com에서 발급 (claude.ai 계정으로 로그인)","Get a key at console.anthropic.com (sign in with your claude.ai account)")}</span>
               </div>
             )}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
@@ -8432,9 +8481,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 <>
                   <div style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.3)",
                     borderTopColor:"#fff", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
-                  분석 및 스타일 생성 중…
+                  {L("분석 및 스타일 생성 중…","Analyzing & generating style…")}
                 </>
-              ) : "조판 스타일 생성하기"}
+              ) : L("조판 스타일 생성하기","Generate Typeset Style")}
             </button>
             {err && (
               <div style={{ marginTop:8, fontSize:12, color:"#111111", padding:"8px 12px",
@@ -8496,19 +8545,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 borderRadius:12, opacity:0.4 }} />
               <div style={{ lineHeight:1.75, width:"100%" }}>
                 <div style={{ fontSize:16, fontWeight:600, color:T.ink, marginBottom:8 }}>
-                  텍스트를 입력하고 조판 스타일 생성하기를 클릭하세요
+                  {L("텍스트를 입력하고 조판 스타일 생성하기를 클릭하세요","Enter text and click Generate Typeset Style")}
                 </div>
                 <div style={{ fontSize:12, color:T.muted, lineHeight:1.75 }}>
-                  본문을 분석해 253개 편집 디자인 레퍼런스 중 가장 적합한 스타일을 선택하고, XeLaTeX 조판 파일을 자동으로 만들어 드립니다.
+                  {L("본문을 분석해 253개 편집 디자인 레퍼런스 중 가장 적합한 스타일을 선택하고, XeLaTeX 조판 파일을 자동으로 만들어 드립니다.","We analyze your text, pick the best-fitting style out of 253 editorial design references, and automatically generate the XeLaTeX typesetting files.")}
                 </div>
               </div>
               <div style={{ padding:"16px 24px", background:T.surface, borderRadius:12,
                 border:`1px solid ${T.border}`, fontSize:12, color:T.muted, lineHeight:1.75, width:"100%" }}>
-                <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>작동 방식</strong>
-                ① 입력한 텍스트의 장르·형태 분석<br/>
-                ② 253개 레퍼런스에서 최적 스타일 선택<br/>
-                ③ 판형·여백·서체·단 구성 자동 결정<br/>
-                ④ TeXworks·TeX Live·Overleaf용 LaTeX 파일 생성 (XeLaTeX)
+                <strong style={{ color:T.ink, display:"block", marginBottom:4 }}>{L("작동 방식","How it works")}</strong>
+                {L("① 입력한 텍스트의 장르·형태 분석","① Analyze the genre/format of your text")}<br/>
+                {L("② 253개 레퍼런스에서 최적 스타일 선택","② Select the best-fitting style from 253 references")}<br/>
+                {L("③ 판형·여백·서체·단 구성 자동 결정","③ Auto-decide format, margins, typeface, and columns")}<br/>
+                {L("④ TeXworks·TeX Live·Overleaf용 LaTeX 파일 생성 (XeLaTeX)","④ Generate LaTeX files for TeXworks · TeX Live · Overleaf (XeLaTeX)")}
               </div>
             </div>
           ) : isDone && (
@@ -8570,11 +8619,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`,
                 padding:"0 24px", background:T.surface, flexShrink:0 }}>
                 {[
-                  ["intent","작업 의도"],
-                  ["revlog","수정 기록"],
-                  ["final","최종 파일"],
-                  ["sty","스타일 파일"],
-                  ["export","Export 검증"],
+                  ["intent",L("작업 의도","Intent")],
+                  ["revlog",L("수정 기록","Revisions")],
+                  ["final",L("최종 파일","Final Files")],
+                  ["sty",L("스타일 파일","Style File")],
+                  ["export",L("Export 검증","Export Check")],
                 ].map(([key,label]) => (
                   <button key={key} onClick={() => setTab(key)}
                     style={{ padding:"12px 16px", fontSize:13, fontWeight:tab===key?700:400,
@@ -8611,10 +8660,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           {/* 0. 선택 모드 배지 */}
           {(() => {
             const modeLabel = selectionMode === 'genre-forced'
-              ? `장르 강제${hint ? ` (${hint})` : ''}`
+              ? `${L('장르 강제','Force Genre')}${hint ? ` (${hint})` : ''}`
               : selectionMode === 'ref-locked'
-              ? `레퍼런스 고정${lockedStyleId !== null ? ` — ${DB[lockedStyleId]?.t?.slice(0,20)}` : ''}`
-              : '자동 추천';
+              ? `${L('레퍼런스 고정','Lock Reference')}${lockedStyleId !== null ? ` — ${DB[lockedStyleId]?.t?.slice(0,20)}` : ''}`
+              : L('자동 추천','Auto Recommend');
             const modeColor = selectionMode === 'auto'
               ? { bg:T.ink, text:'#fff' }
               : selectionMode === 'genre-forced'
@@ -8624,7 +8673,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               <div style={{ marginBottom:16 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:T.muted,
                   textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>
-                  선택 모드
+                  {L("선택 모드","Selection Mode")}
                 </div>
                 <span style={{ display:"inline-block", padding:"4px 8px", borderRadius:8,
                   fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.03em",
@@ -8866,10 +8915,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           <>
                             ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
                             {serverCompileResult.pdfUrl && (
-                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">최신 PDF</a></>
+                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer">최신 PDF</a></>
                             )}
                             {serverCompileResult.versionedPdfUrl && (
-                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', '/compile-outputs/')} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
+                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
                             )}
                           </>
                         ) : (
@@ -9096,9 +9145,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", overflow:"hidden" }}>
 
           <div style={{ padding:"16px 16px", borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:T.ink }}>스타일 조정</div>
+            <div style={{ fontSize:12, fontWeight:600, color:T.ink }}>{L("스타일 조정","Style Adjustments")}</div>
             <div style={{ fontSize:12, color:T.muted, marginTop:4 }}>
-              생성 결과를 자연어로 수정 요청하세요
+              {L("생성 결과를 자연어로 수정 요청하세요","Request edits to the result in plain language")}
             </div>
           </div>
 
@@ -9111,8 +9160,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               <div style={{ fontSize:12, color:T.muted, textAlign:"center",
                 paddingTop:24, lineHeight:1.75 }}>
                 {isDone
-                  ? "스타일 생성 완료.\n수정이 필요하면 아래에 입력하세요."
-                  : "조판 스타일을 먼저 생성하세요."}
+                  ? L("스타일 생성 완료.\n수정이 필요하면 아래에 입력하세요.","Style generated.\nEnter a request below if you need changes.")
+                  : L("조판 스타일을 먼저 생성하세요.","Generate a typeset style first.")}
               </div>
             ) : refineHistory.map((msg, i) => (
               <div key={i} style={{
@@ -9228,7 +9277,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 value={refineInput} rows={2}
                 onChange={e => setRefineInput(e.target.value)}
                 disabled={!isDone || loading || refineLoading}
-                placeholder={isDone ? "수정 사항을 입력하세요…" : "먼저 조판 스타일을 생성하세요"}
+                placeholder={isDone ? L("수정 사항을 입력하세요…","Describe the change you want…") : L("먼저 조판 스타일을 생성하세요","Generate a typeset style first")}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -9246,7 +9295,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   background: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.border : T.ink,
                   color: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.muted : "#fff",
                   cursor: (!isDone || loading || refineLoading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
-                {refineLoading ? "처리 중…" : "전송"}
+                {refineLoading ? L("처리 중…","Processing…") : L("전송","Send")}
               </button>
             </div>
           </div>

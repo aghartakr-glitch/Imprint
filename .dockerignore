@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+.git
+Imprint-Data
+[Results]
+*.log
+.env
+.env.local
+src
+index.html
+vite.config.js
+vercel.json
+public
