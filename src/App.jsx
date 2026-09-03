@@ -6060,6 +6060,15 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     return m ? { size: m[1], leading: m[2] } : null;
   }
 
+  // 폰트 이름(예: NotoSerif, NanumMyeongjo, Pretendard)으로 명조/고딕 계열 판정.
+  // 알 수 없는 이름이면 null(호출부가 기존 관습으로 폴백).
+  function isSerifFontName(name) {
+    if (!name) return null;
+    if (/serif|myeongjo|명조|바탕/i.test(name)) return true;
+    if (/sans|gothic|pretendard|고딕/i.test(name)) return false;
+    return null;
+  }
+
   function extractLatexCommandMap(latexStr) {
     const map = {};
     // \fontsize{Xpt}{Ypt} — 본문 (첫 번째 등장, \newcommand로 감싸여 있지 않아 별도 처리)
@@ -6170,7 +6179,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         signal: ctrl.signal,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
+          max_tokens: 1200,
           temperature: 0,
           system: 'Return ONLY valid JSON array, no other text.',
           messages: [{ role: 'user', content: prompt }],
@@ -6858,7 +6867,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           max_tokens: 3000,
           temperature: 0.7,
           stream: true,
-          system: systemPrompt,
+          // 문서를 수정하지 않고 질문만 이어갈 때는 systemPrompt(현재 수치·레퍼런스 근거·
+          // main.tex 전체 포함)가 직전 턴과 완전히 동일 → 캐싱하면 매번 처음부터 재처리하지
+          // 않고 캐시 히트로 응답 속도가 크게 빨라짐. 문서가 실제로 바뀌면 캐시는 자연히 무효화됨.
+          system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
           messages,
         }),
       });
@@ -7258,7 +7270,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const hLead = clampLeading(hSize, patches[level + 'Leading'] || cur?.leading);
             if (hSize && hLead) patchedSty = patchFontSizeLeading(patchedSty, cmd, hSize, hLead);
           } else if (key === 'letterSpace') {
-            patchedSty = patchedSty.replace(/(LetterSpace=)[-\d.]+/, `$1${val}`);
+            // 문서 생성 시 LetterSpace 옵션 자체를 안 넣기 때문에(fontspecCmd 참고),
+            // 기존 값 치환만으로는 첫 자간 요청이 항상 무반응이었다 — 없으면 새로 삽입.
+            if (/LetterSpace=/.test(patchedSty)) {
+              patchedSty = patchedSty.replace(/(LetterSpace=)[-\d.]+/g, `$1${val}`);
+            } else {
+              patchedSty = patchedSty.replace(/(Path=\.\/fonts\/,)/g, `$1\n  LetterSpace=${val},`);
+            }
           } else if (['marginTop','marginBottom','marginInner','marginOuter'].includes(key)) {
             const propMap = { marginTop:'top', marginBottom:'bottom', marginInner:'inner', marginOuter:'outer' };
             patchedSty = patchedSty.replace(
