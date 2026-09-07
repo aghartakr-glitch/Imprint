@@ -8928,16 +8928,29 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     {serverCompileResult && (
                       <div style={{ padding:"12px 12px", marginBottom:12, borderRadius:12, fontSize:12, lineHeight:1.6,
                         background: serverCompileResult.compileOk ? T.tagBg : '#FDE9E0',
-                        border:`1px solid ${serverCompileResult.compileOk ? T.border : T.accent}` }}>
+                        border:`1px solid ${serverCompileResult.compileOk ? T.border : T.accent}`,
+                        display:"flex", alignItems:"center", flexWrap:"wrap", gap:10 }}>
                         {serverCompileResult.compileOk ? (
                           <>
-                            ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
-                            {serverCompileResult.pdfUrl && (
-                              <> · <a href={serverCompileResult.pdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer">최신 PDF</a></>
-                            )}
-                            {serverCompileResult.versionedPdfUrl && (
-                              <> · <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer">v{styleVersion} PDF</a></>
-                            )}
+                            <span>
+                              ✓ 로컬 저장 + PDF 컴파일 완료{styleVersion > 0 && ` (v${styleVersion})`} — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code>
+                            </span>
+                            <span style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+                              {serverCompileResult.pdfUrl && (
+                                <a href={serverCompileResult.pdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer"
+                                  style={{ padding:"6px 14px", borderRadius:7, fontSize:12, fontWeight:600, whiteSpace:"nowrap",
+                                    background:T.accent, color:"#fff", textDecoration:"none" }}>
+                                  최종 PDF 확인
+                                </a>
+                              )}
+                              {serverCompileResult.versionedPdfUrl && (
+                                <a href={serverCompileResult.versionedPdfUrl.replace('/outputs/', `${COMPILE_OUTPUTS}/`)} target="_blank" rel="noreferrer"
+                                  style={{ padding:"6px 12px", borderRadius:7, fontSize:12, fontWeight:600, whiteSpace:"nowrap",
+                                    background:T.surface, color:T.ink, border:`1px solid ${T.border}`, textDecoration:"none" }}>
+                                  v{styleVersion} PDF
+                                </a>
+                              )}
+                            </span>
                           </>
                         ) : (
                           <>⚠ 파일은 저장됐지만 PDF 컴파일 실패 — <code style={{fontSize:12}}>Imprint/Imprint-Data/{serverCompileResult.folder}/</code> ({serverCompileResult.compileReason || '원인 미상'})</>
