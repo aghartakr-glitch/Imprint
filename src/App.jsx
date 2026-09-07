@@ -2631,7 +2631,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
       // styContent의 eso-pic 블록이 resolvedVertPos에 따라 Y좌표·makebox 정렬을 결정
     } else {
       // 수평 6위치: 기존 슬롯 기반 배치
-      const rs = placementSlots(rhCmd, rPos);
+      const rs = placementSlots(rhInner, rPos);
       const target = rs.top ? headSlots : footSlots;
       ['odd','even'].forEach(side => {
         [0,1,2].forEach(i => {
