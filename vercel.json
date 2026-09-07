@@ -3,6 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/anthropic/:path*", "destination": "https://api.anthropic.com/:path*" },
+    { "source": "/gas/:path*", "destination": "https://script.google.com/:path*" },
+    { "source": "/gasusercontent/:path*", "destination": "https://script.googleusercontent.com/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

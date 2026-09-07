@@ -1899,7 +1899,7 @@ async function generateRationale(p) {
     '이 편집 디자인의 핵심 의도를 한국어 3문장으로 설명해. 편집 디자이너 시각으로.';
   try {
     const res = await fetch('/anthropic/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001', max_tokens: 180, temperature: 0,
         system: '편집 디자이너. 한국어 3문장. 핵심만.',
@@ -3345,7 +3345,7 @@ export default function App() {
     if (cached) return cached;
     try {
       const res = await fetch('/anthropic/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001', max_tokens: 200, temperature: 0,
           system: sysPrompt,
@@ -3440,7 +3440,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const tid = setTimeout(() => ctrl.abort(), 20000);
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         signal: ctrl.signal,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
@@ -3569,7 +3569,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 25000);
       const res = await fetch('/anthropic/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey }, signal: ctrl.signal,
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, signal: ctrl.signal,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001', max_tokens: 600, temperature: 0,
           system: 'Return ONLY valid JSON, no other text.',
@@ -5074,7 +5074,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         const tid = setTimeout(() => ctrl.abort(), 180000);
         const res = await fetch('/anthropic/v1/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           signal: ctrl.signal,
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
@@ -6175,7 +6175,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const tid = setTimeout(() => ctrl.abort(), 30000);
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': _apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         signal: ctrl.signal,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
@@ -6216,7 +6216,7 @@ ${customTexts.join('\n')}`;
     try {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 300,
@@ -6860,7 +6860,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
     try {
       const res = await fetch('/anthropic/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
         signal: controller.signal,
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
