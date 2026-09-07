@@ -17,17 +17,25 @@ if (!supabase) {
 
 const PDF_BUCKET = 'imprint-pdfs'
 
+// Supabase Storage 키는 한글/공백 등 비-ASCII 문자를 거부한다 (책 제목이 그대로 들어간
+// runId를 경로로 썼다가 "Invalid key" 업로드 실패로 로깅이 전부 씹히던 실제 사고 이후 추가).
+// 사람이 읽을 필요 없는 저장 경로이므로 안전하지 않은 문자는 전부 하이픈으로 뭉갠다.
+function safeStorageKey(str) {
+  return String(str).replace(/[^a-zA-Z0-9_\-./]/g, '-')
+}
+
 async function uploadPdf(runDir, fileName, storagePath) {
   if (!supabase) return null
   const filePath = join(runDir, fileName)
   if (!existsSync(filePath)) return null
+  const safePath = safeStorageKey(storagePath)
   try {
     const bytes = readFileSync(filePath)
-    const { error } = await supabase.storage.from(PDF_BUCKET).upload(storagePath, bytes, {
+    const { error } = await supabase.storage.from(PDF_BUCKET).upload(safePath, bytes, {
       contentType: 'application/pdf', upsert: true,
     })
     if (error) { console.warn('[supabase] PDF 업로드 실패:', error.message); return null }
-    return storagePath
+    return safePath
   } catch (err) {
     console.warn('[supabase] PDF 업로드 예외:', String(err.message || err))
     return null
