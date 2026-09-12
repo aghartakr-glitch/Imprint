@@ -6135,6 +6135,26 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 제목 굵기 — \hone/\htwo/\hthree는 항상 같은 hFont 접두어를 공유하므로 \hone만 검사
     const h1Prefix = latexStr.match(/\\newcommand\{\\hone\}\{((?:\\[a-zA-Z]+)*)\\fontsize/);
     if (h1Prefix) map.headingWeight = /\\bfseries/.test(h1Prefix[1]) ? 'bold' : 'normal';
+    // 제목 정렬 — \hone{}=...\selectfont 뒤에 붙는 \centering/\raggedleft/\raggedright (없으면 기본)
+    const h1AlignM = latexStr.match(/\\newcommand\{\\hone\}\{(?:\\[a-zA-Z]+)*\\fontsize\{[\d.]+pt\}\{[\d.]+pt\}\\selectfont([^}]*)\}/);
+    if (h1AlignM) {
+      const a = h1AlignM[1];
+      map.headingAlign = /\\centering/.test(a) ? 'center' : /\\raggedleft/.test(a) ? 'right' : /\\raggedright/.test(a) ? 'left' : 'default';
+    }
+    // 각주 표시 형식 — [1] 대괄호 vs 1. 점
+    const noteLabelM = latexStr.match(/\\newcommand\{\\ImpNoteLabel\}\[1\]\{(\[#1\]\\ |#1\.\\ )\}/);
+    if (noteLabelM) map.footnoteMarker = noteLabelM[1].startsWith('[') ? 'bracket' : 'dot';
+    // 각주 구분선(각주 위 가로줄) 표시 여부
+    const footRuleM = latexStr.match(/\\renewcommand\{\\footnoterule\}\{([^}]*)\}/);
+    if (footRuleM) map.footnoteRule = footRuleM[1].trim() === '' ? 'off' : 'on';
+    // 사이드노트 레이아웃 본문/각주 칸 폭 (mm) — 사이드노트가 아닌 레이아웃엔 없음
+    const bWidthM = latexStr.match(/\\setlength\{\\imprintbodywidth\}\{([\d.]+)mm\}/);
+    if (bWidthM) map.bodyWidth = bWidthM[1];
+    const nWidthM = latexStr.match(/\\setlength\{\\imprintnotewidth\}\{([\d.]+)mm\}/);
+    if (nWidthM) map.noteWidth = nWidthM[1];
+    // 면주(러닝헤드) 텍스트 내용
+    const rhTextM = latexStr.match(/\\renewcommand\{\\imprintrunninghead\}\{([^}]*)\}/);
+    if (rhTextM) map.rhText = rhTextM[1];
     // 쪽번호 mm 단위 미세 이동 (구버전 sty에는 없을 수 있음 — 그 경우 undefined로 남아 "미지원"으로 처리됨)
     const pnX = latexStr.match(/\\setlength\{\\imprintpnxshift\}\{(-?[\d.]+)mm\}/);
     if (pnX) map.pnXShift = pnX[1];
@@ -6768,6 +6788,11 @@ ${customTexts.join('\n')}`;
       cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
       (cmdMap.parSkip !== undefined) && `문단(단락) 사이 간격(\\parskip): ${cmdMap.parSkip}pt`,
       (cmdMap.headingWeight !== undefined) && `제목 굵기(\\hone/\\htwo/\\hthree): ${cmdMap.headingWeight === 'bold' ? '굵게' : '보통'}`,
+      (cmdMap.headingAlign !== undefined) && `제목 정렬: ${{center:'가운데',right:'오른쪽',left:'왼쪽',default:'기본'}[cmdMap.headingAlign]}`,
+      (cmdMap.footnoteMarker !== undefined) && `각주 표시 형식: ${cmdMap.footnoteMarker === 'bracket' ? '대괄호 [1]' : '점 1.'}`,
+      (cmdMap.footnoteRule !== undefined) && `각주 구분선(각주 위 가로줄): ${cmdMap.footnoteRule === 'on' ? '있음' : '없음'}`,
+      (cmdMap.bodyWidth !== undefined) && `사이드노트 본문 칸 폭: ${cmdMap.bodyWidth}mm / 각주 칸 폭: ${cmdMap.noteWidth}mm`,
+      (cmdMap.rhText !== undefined) && `면주(러닝헤드) 텍스트: "${cmdMap.rhText}"`,
       cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
       cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
       (cmdMap.parIndent !== undefined) && `문단 들여쓰기: ${cmdMap.parIndent}em`,
@@ -6798,9 +6823,14 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight noteSize noteLeading footnoteSep headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 기본값 0pt는 "들여쓰기로만 문단을 구분"하는 상태이므로, 여기서 "더 좁혀달라"는 요청은 적용 불가 — 0pt보다 작은 음수는 쓰지 말고 "이미 최소 상태"라고 답할 것. "넓혀달라"는 요청은 자유롭게 값을 올릴 것)
   (제목을 굵게/얇게 해달라는 요청 → headingWeight=bold 또는 normal. \hone \htwo \hthree 전부에 함께 적용됨 — 특정 레벨만 다르게 해달라는 요청은 적용 불가로 답할 것)
+  (제목을 가운데/왼쪽/오른쪽으로 옮겨달라는 요청 → headingAlign=center/left/right, 원래대로 되돌리려면 default. 이것도 \hone \htwo \hthree 전부에 함께 적용됨)
+  (각주 번호를 대괄호[1]/점1. 형식으로 바꿔달라는 요청 → footnoteMarker=bracket 또는 dot)
+  (각주 위에 구분선을 넣거나 빼달라는 요청 → footnoteRule=on 또는 off)
+  (cmdMap에 bodyWidth/noteWidth가 있을 때만 — 사이드노트 레이아웃에서 본문 칸과 각주 칸 폭 비율을 바꿔달라는 요청 → bodyWidth/noteWidth, mm 단위. 없으면(undefined) 사이드노트 레이아웃이 아니므로 "적용 불가: 사이드노트 레이아웃 아님"으로 답할 것)
+  (면주에 다른 문구를 넣어달라는 요청 → rhText=새 문구. cmdMap에 rhText가 없으면(undefined) 면주 자체가 꺼져있는 상태이므로 "적용 불가: 면주가 꺼져있음, rhPos로 먼저 켤 것"으로 답할 것)
   (bodyAlign 값: justified 또는 ragged. hyphenation 값: on 또는 off)
   (쪽번호/면주 글자 크기 — pnSize/pnLeading(\foliof), rhSize/rhLeading(\runningheadf). "main.tex에 정의 안 됨"이라고 답하지 말 것 — sty에 있음)
   ("본문 서체를 고딕/명조로 바꿔줘" → bodyFontFamily=sans 또는 serif. sty에 명조(\rmfamily)와 고딕(\sffamily) 둘 다 이미 로드되어 있으므로 새 폰트 파일 필요 없음 — "재생성 필요"라고 답하지 말 것. 완전히 다른 서체 종류(예: 특정 브랜드 폰트)를 새로 요청하는 경우에만 재생성 필요.)
@@ -7035,12 +7065,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
           parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
-          headingWeight:'제목 굵기',
+          headingWeight:'제목 굵기', headingAlign:'제목 정렬',
+          footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
+          bodyWidth:'사이드노트 본문 칸 폭', noteWidth:'사이드노트 각주 칸 폭',
+          rhText:'면주 텍스트',
           letterSpace:'자간',
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        let rhTextPatched = false;
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
         const clampLeading = (size, lead) => {
           const s = Number(size), l = Number(lead);
@@ -7185,6 +7219,41 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   return pre + famNoWeight + (wantBold ? '\\bfseries' : '\\mdseries') + rest;
                 });
             });
+          } else if (key === 'headingAlign') {
+            // \hone/\htwo/\hthree의 \selectfont 뒤, 닫는 중괄호 앞에 붙는 정렬 커맨드를 통째로 교체.
+            const alignCmd = { center:' \\centering', right:' \\raggedleft', left:' \\raggedright', default:'' }[val] ?? '';
+            ['hone', 'htwo', 'hthree'].forEach(cmdName => {
+              patchedSty = patchedSty.replace(
+                new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{(?:\\\\[a-zA-Z]+)*\\\\fontsize\\{[\\d.]+pt\\}\\{[\\d.]+pt\\}\\\\selectfont)[^}]*(\\})`),
+                `$1${alignCmd}$2`);
+            });
+          } else if (key === 'footnoteMarker') {
+            const wantBracket = val === 'bracket';
+            patchedSty = patchedSty.replace(
+              /(\\newcommand\{\\ImpNoteLabel\}\[1\]\{)(?:\[#1\]\\ |#1\.\\ )(\})/,
+              `$1${wantBracket ? '[#1]\\ ' : '#1.\\ '}$2`);
+          } else if (key === 'footnoteRule') {
+            const wantOn = val === 'on';
+            patchedSty = patchedSty.replace(
+              /\\renewcommand\{\\footnoterule\}\{[^}]*\}/,
+              wantOn
+                ? '\\renewcommand{\\footnoterule}{\\vspace*{-3pt}\\hrule width .4\\linewidth\\vspace*{2.6pt}}'
+                : '\\renewcommand{\\footnoterule}{}');
+          } else if (key === 'bodyWidth') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintbodywidth\}\{)[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'noteWidth') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\imprintnotewidth\}\{)[\d.]+mm(\})/,
+              `$1${val}mm$2`);
+          } else if (key === 'rhText') {
+            // 면주 텍스트는 .sty가 아니라 main.tex에 있음 — patchedSty가 아니라 finalLatex를 직접 수정.
+            const newRhLine = `\\renewcommand{\\imprintrunninghead}{${escapeLatex(val)}}`;
+            if (/\\renewcommand\{\\imprintrunninghead\}\{[^}]*\}/.test(finalLatex)) {
+              finalLatex = finalLatex.replace(/\\renewcommand\{\\imprintrunninghead\}\{[^}]*\}/, newRhLine);
+              rhTextPatched = true;
+            }
           } else if (key === 'colGap') {
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\columnsep\}\{)[\d.]+mm(\})/,
@@ -7316,6 +7385,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           styChanged = true;
           codeChanged = true;
           setTab('sty');
+        }
+        if (rhTextPatched) {
+          // finalLatex는 이미 위 루프에서 rhText 케이스가 직접 갱신함 — 저장/재컴파일 트리거만 세팅.
+          codeChanged = true;
         }
       }
 
