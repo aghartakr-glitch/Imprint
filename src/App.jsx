@@ -6129,6 +6129,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // \imprintbodygap — 제목/소제목↔본문 간격
     const bGap = latexStr.match(/\\setlength\{\\imprintbodygap\}\{([\d.]+)pt\}/);
     if (bGap) map.bodyGap = bGap[1];
+    // \parskip — 문단(단락) 사이 수직 간격. 기본 0pt(들여쓰기로만 문단 구분)
+    const parSkipM = latexStr.match(/\\setlength\{\\parskip\}\{([\d.]+)pt\}/);
+    if (parSkipM) map.parSkip = parSkipM[1];
+    // 제목 굵기 — \hone/\htwo/\hthree는 항상 같은 hFont 접두어를 공유하므로 \hone만 검사
+    const h1Prefix = latexStr.match(/\\newcommand\{\\hone\}\{((?:\\[a-zA-Z]+)*)\\fontsize/);
+    if (h1Prefix) map.headingWeight = /\\bfseries/.test(h1Prefix[1]) ? 'bold' : 'normal';
     // 쪽번호 mm 단위 미세 이동 (구버전 sty에는 없을 수 있음 — 그 경우 undefined로 남아 "미지원"으로 처리됨)
     const pnX = latexStr.match(/\\setlength\{\\imprintpnxshift\}\{(-?[\d.]+)mm\}/);
     if (pnX) map.pnXShift = pnX[1];
@@ -6760,6 +6766,8 @@ ${customTexts.join('\n')}`;
       cmdMap.footnoteSep  && `각주 항목 간 간격(\\footnotesep, 각주1↔각주2 사이 여백): ${cmdMap.footnoteSep}pt`,
       cmdMap.headingGap   && `제목↔소제목 간격(\\imprintheadinggap): ${cmdMap.headingGap}pt`,
       cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
+      (cmdMap.parSkip !== undefined) && `문단(단락) 사이 간격(\\parskip): ${cmdMap.parSkip}pt`,
+      (cmdMap.headingWeight !== undefined) && `제목 굵기(\\hone/\\htwo/\\hthree): ${cmdMap.headingWeight === 'bold' ? '굵게' : '보통'}`,
       cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
       cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
       (cmdMap.parIndent !== undefined) && `문단 들여쓰기: ${cmdMap.parIndent}em`,
@@ -6790,7 +6798,9 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading noteSize noteLeading footnoteSep headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight noteSize noteLeading footnoteSep headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos letterSpace marginTop marginBottom marginInner marginOuter
+  (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 기본값 0pt는 "들여쓰기로만 문단을 구분"하는 상태이므로, 여기서 "더 좁혀달라"는 요청은 적용 불가 — 0pt보다 작은 음수는 쓰지 말고 "이미 최소 상태"라고 답할 것. "넓혀달라"는 요청은 자유롭게 값을 올릴 것)
+  (제목을 굵게/얇게 해달라는 요청 → headingWeight=bold 또는 normal. \hone \htwo \hthree 전부에 함께 적용됨 — 특정 레벨만 다르게 해달라는 요청은 적용 불가로 답할 것)
   (bodyAlign 값: justified 또는 ragged. hyphenation 값: on 또는 off)
   (쪽번호/면주 글자 크기 — pnSize/pnLeading(\foliof), rhSize/rhLeading(\runningheadf). "main.tex에 정의 안 됨"이라고 답하지 말 것 — sty에 있음)
   ("본문 서체를 고딕/명조로 바꿔줘" → bodyFontFamily=sans 또는 serif. sty에 명조(\rmfamily)와 고딕(\sffamily) 둘 다 이미 로드되어 있으므로 새 폰트 파일 필요 없음 — "재생성 필요"라고 답하지 말 것. 완전히 다른 서체 종류(예: 특정 브랜드 폰트)를 새로 요청하는 경우에만 재생성 필요.)
@@ -7024,12 +7034,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
-          parIndent:'문단 들여쓰기', colGap:'단 간격',
+          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
+          headingWeight:'제목 굵기',
           letterSpace:'자간',
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', colGap:'mm' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'' };
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
         const clampLeading = (size, lead) => {
           const s = Number(size), l = Number(lead);
@@ -7158,6 +7169,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\parindent\}\{)[\d.]+em(\})/,
               `$1${val}em$2`);
+          } else if (key === 'parSkip') {
+            patchedSty = patchedSty.replace(
+              /(\\setlength\{\\parskip\}\{)[\d.]+pt(\})/,
+              `$1${val}pt$2`);
+          } else if (key === 'headingWeight') {
+            // \hone \htwo \hthree는 모두 같은 hFont 접두어(가족+굵기)를 공유한다 —
+            // 생성 시 동일한 hFont 변수로 세 커맨드를 만들기 때문(위 headingCmdsBlock 참고).
+            const wantBold = val === 'bold';
+            ['hone', 'htwo', 'hthree'].forEach(cmdName => {
+              patchedSty = patchedSty.replace(
+                new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{)((?:\\\\[a-zA-Z]+)*)(\\\\fontsize)`),
+                (whole, pre, fam, rest) => {
+                  const famNoWeight = fam.replace(/\\bfseries|\\mdseries/g, '');
+                  return pre + famNoWeight + (wantBold ? '\\bfseries' : '\\mdseries') + rest;
+                });
+            });
           } else if (key === 'colGap') {
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\columnsep\}\{)[\d.]+mm(\})/,
