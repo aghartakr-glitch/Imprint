@@ -5985,6 +5985,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     { re: /주석\s*위치|주석을?\s*(오른쪽|왼쪽|상단|하단|우측|좌측)/, label: '주석 위치', path: '왼쪽 패널 → 단 구성 → 주석 위치' },
     { re: /총\s*그리드|본문\s*열|주석\s*열|가변단|고정단/, label: '단 구성 그리드', path: '왼쪽 패널 → 단 구성' },
     { re: /각주\s*단\s*수|각주\s*\d+\s*단|주석\s*하단.*\d+\s*단|하단.*각주.*\d+\s*단/, label: '각주 단 수', path: '왼쪽 패널 → 단 구성 → 각주 단 수' },
+    // path: null — UI 어디에도 없는, 아예 미지원 기능. 채팅에 그대로 넘기면 AI가 위험한
+    // 자유 편집(구조적 요청 fallback)으로 시도해버리므로, 여기서 먼저 걸러 정직하게 답한다.
+    { re: /세로쓰기|종서(로)?|세로\s*(방향|조판|글)/, label: '세로쓰기(종서) 전체 전환', path: null },
   ];
   // ── 되돌리기 요청 감지 — API 호출 없이 클라이언트에서 즉시 복원 ──────────
   function detectUndoRequest(msg) {
@@ -6721,7 +6724,9 @@ ${customTexts.join('\n')}`;
         { role: 'user', content: userMsg },
         {
           role: 'assistant',
-          chatContent: `"${structural.label}" 변경은 채팅으로 처리할 수 없습니다. ${structural.path} 값을 바꾼 뒤 [조판 스타일 생성하기]를 다시 누르세요.`,
+          chatContent: structural.path
+            ? `"${structural.label}" 변경은 채팅으로 처리할 수 없습니다. ${structural.path} 값을 바꾼 뒤 [조판 스타일 생성하기]를 다시 누르세요.`
+            : `"${structural.label}"은 현재 Imprint가 지원하지 않는 기능입니다. UI에도 관련 설정이 없습니다.`,
           content: '',
           changes: '',
           isStructural: true,
