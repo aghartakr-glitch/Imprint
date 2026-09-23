@@ -3240,6 +3240,9 @@ export default function App() {
   const [styCode, setStyCode] = useState(() => {
     try { return localStorage.getItem('imprint_baseline_sty') || ""; } catch { return ""; }
   });
+  // 채팅 수정 되돌리기용 스냅샷 스택 — 매 수정 시도 직전 (latex, styCode)를 쌓아두고,
+  // "되돌려줘/원래대로/방금 전으로" 같은 요청은 API 호출 없이 여기서 즉시 복원한다.
+  const undoStackRef = useRef([]);
   const [requiredFonts, setRequiredFonts] = useState([]);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
@@ -5983,6 +5986,11 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     { re: /총\s*그리드|본문\s*열|주석\s*열|가변단|고정단/, label: '단 구성 그리드', path: '왼쪽 패널 → 단 구성' },
     { re: /각주\s*단\s*수|각주\s*\d+\s*단|주석\s*하단.*\d+\s*단|하단.*각주.*\d+\s*단/, label: '각주 단 수', path: '왼쪽 패널 → 단 구성 → 각주 단 수' },
   ];
+  // ── 되돌리기 요청 감지 — API 호출 없이 클라이언트에서 즉시 복원 ──────────
+  function detectUndoRequest(msg) {
+    return /되돌려|되돌리|원래대로|원래로|방금\s*전(으로|의)?|바로\s*전\s*상태|이전\s*상태로|아까\s*그거|취소해\s*줘/.test(msg);
+  }
+
   function detectStructuralRequest(msg) {
     for (const { re, label, path } of STRUCTURAL_PATTERNS) {
       if (re.test(msg)) return { label, path };
@@ -6761,8 +6769,34 @@ ${customTexts.join('\n')}`;
       return;
     }
 
+    // ── 되돌리기 인터셉터 — API 호출 없이 직전 스냅샷으로 즉시 복원 ─────────
+    if (detectUndoRequest(userMsg)) {
+      setRefineInput('');
+      const prev = undoStackRef.current.pop();
+      if (!prev) {
+        setRefineHistory(h => [...h,
+          { role: 'user', content: userMsg },
+          { role: 'assistant', chatContent: '되돌릴 이전 상태가 없습니다 — 이번 세션에서 아직 수정한 적이 없거나, 이미 맨 처음 상태입니다.', content: '', changes: '', codeChanged: false },
+        ]);
+        return;
+      }
+      setLatex(prev.latex);
+      setStyCode(prev.styCode);
+      setRefineHistory(h => [...h,
+        { role: 'user', content: userMsg },
+        { role: 'assistant', chatContent: `직전 수정(${prev.label}) 이전 상태로 되돌렸습니다.`, content: '', changes: '', codeChanged: true },
+      ]);
+      return;
+    }
+
     // ── 인텐트 분류 (API 호출 전) ────────────────────────────────
     const intent = classifyChatIntent(userMsg); // "question" | "modify" | "ambiguous"
+
+    // 실제로 수정을 시도하는 요청일 때만 되돌리기용 스냅샷을 쌓는다 (질문 모드는 제외).
+    if (intent !== 'question') {
+      undoStackRef.current.push({ latex, styCode, label: userMsg.slice(0, 24) });
+      if (undoStackRef.current.length > 10) undoStackRef.current.shift();
+    }
 
     setRefineInput('');
     setRefineLoading(true);
@@ -6802,7 +6836,7 @@ ${customTexts.join('\n')}`;
       (cmdMap.pnPos !== undefined) && `쪽번호 위치 슬롯: ${cmdMap.pnPos} (상단/하단 × 외측/내측/중앙 중 하나 — pnPos로 슬롯 자체 변경 가능)`,
       (cmdMap.pnXShift !== undefined) && `쪽번호 미세 이동: 가로 ${cmdMap.pnXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.pnYShift}mm(+위/-아래)`,
       (cmdMap.rhSize !== undefined) && `면주 글자 크기(\\runningheadf): ${cmdMap.rhSize}pt / 행간 ${cmdMap.rhLeading}pt`,
-      (cmdMap.rhPos !== undefined) && `면주 위치 슬롯: ${cmdMap.rhPos} (rhPos로 슬롯 자체 변경 가능, '없음'이면 면주 미사용 상태)`,
+      (cmdMap.rhPos !== undefined) && `면주 위치 슬롯: ${cmdMap.rhPos} (rhPos로 슬롯 자체 변경 가능 — "면주를 없애줘/꺼줘"는 rhPos=없음 으로 patch할 것. '없음'이면 현재 면주 미사용 상태)`,
       (cmdMap.rhXShift !== undefined) && `면주 미세 이동: 가로 ${cmdMap.rhXShift}mm(+오른쪽/-왼쪽), 세로 ${cmdMap.rhYShift}mm(+위/-아래)`,
     ].filter(Boolean).join('\n');
 
@@ -6831,6 +6865,8 @@ ${customTexts.join('\n')}`;
   (각주 위에 구분선을 넣거나 빼달라는 요청 → footnoteRule=on 또는 off)
   (cmdMap에 bodyWidth/noteWidth가 있을 때만 — 사이드노트 레이아웃에서 본문 칸과 각주 칸 폭 비율을 바꿔달라는 요청 → bodyWidth/noteWidth, mm 단위. 없으면(undefined) 사이드노트 레이아웃이 아니므로 "적용 불가: 사이드노트 레이아웃 아님"으로 답할 것)
   (면주에 다른 문구를 넣어달라는 요청 → rhText=새 문구. cmdMap에 rhText가 없으면(undefined) 면주 자체가 꺼져있는 상태이므로 "적용 불가: 면주가 꺼져있음, rhPos로 먼저 켤 것"으로 답할 것)
+  ("아주 살짝만", "확 바꿔줘", "무리하지 않는 선에서"처럼 강도만 있고 무엇을 조정할지 대상이 없는 요청 — 바로 위 히스토리에서 방금 언급된 대상이 있으면 그것에 강도를 적용하고, 대화 맨 처음이거나 대상을 특정할 수 없으면 절대 아무 값이나 임의로 추측해 바꾸지 말 것. 대신 "어떤 부분을 조정할까요? (예: 여백, 자간, 제목 크기 등)"처럼 대상을 되물을 것 — sty_patch 태그 없이 자연어 질문만 출력)
+  ("고급스럽게", "단단해 보이게", "힘있게"처럼 특정 변수로 바로 연결되지 않는 추상적 요청은, 가장 근접한 해석 하나(예: 여백/자간/제목 굵기 조합)를 스스로 정해 시도하되, 응답 맨 앞에 "(해석: ...)" 한 줄로 어떻게 해석했는지 먼저 밝힐 것 — 사용자가 의도와 다르면 바로 정정 요청을 할 수 있게)
   (bodyAlign 값: justified 또는 ragged. hyphenation 값: on 또는 off)
   (쪽번호/면주 글자 크기 — pnSize/pnLeading(\foliof), rhSize/rhLeading(\runningheadf). "main.tex에 정의 안 됨"이라고 답하지 말 것 — sty에 있음)
   ("본문 서체를 고딕/명조로 바꿔줘" → bodyFontFamily=sans 또는 serif. sty에 명조(\rmfamily)와 고딕(\sffamily) 둘 다 이미 로드되어 있으므로 새 폰트 파일 필요 없음 — "재생성 필요"라고 답하지 말 것. 완전히 다른 서체 종류(예: 특정 브랜드 폰트)를 새로 요청하는 경우에만 재생성 필요.)
