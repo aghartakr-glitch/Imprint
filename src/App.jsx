@@ -470,6 +470,37 @@ function wordSpaceBlockLines(em = 0) {
   ];
 }
 
+// 제목 굵기 — bold/normal은 서체 접두어의 \bfseries/\mdseries만 바꾸고, black은 Pretendard-Black 서체로 바꾼다.
+// black 서체 정의는 .sty에 없을 때만 \hone 앞에 넣는다 (fonts/ 폴더에 Pretendard-Black.otf가 있어야 컴파일됨).
+const HEAD_BLACK_DEF = '\\newfontfamily\\ImpHeadBlack[Path=./fonts/,Extension=.otf]{Pretendard-Black}';
+const WEIGHT_LABEL = { bold: '굵게', black: '가장 굵게(Black)', normal: '보통' };
+// .sty 끝에 줄을 덧붙인다. 생성된 .sty는 마지막 줄이 \endinput이라 그 뒤에 붙이면 LaTeX가 무시하므로 그 앞에 넣는다.
+function appendBeforeEndinput(sty, text) {
+  if (/\\endinput\s*$/.test(sty)) return sty.replace(/\\endinput\s*$/, `${text}\n\\endinput\n`);
+  return sty + '\n' + text + '\n';
+}
+function applyHeadingWeight(sty, cmdNames, weight) {
+  let out = sty;
+  cmdNames.forEach(cmdName => {
+    out = out.replace(
+      new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{)((?:\\\\[a-zA-Z]+)*)(\\\\fontsize)`),
+      (whole, pre, fam, rest) => {
+        const famNoWeight = fam.replace(/\\bfseries|\\mdseries/g, '');
+        if (weight === 'black') {
+          const famNoFace = famNoWeight.replace(/\\rmfamily|\\sffamily|\\ImpHeadBlack/g, '');
+          return pre + '\\ImpHeadBlack' + famNoFace + rest;
+        }
+        // 굵기를 bold/normal로 되돌릴 때는 black 서체를 본문 쪽 고딕(\sffamily)으로 되돌린다
+        const famBackToSans = famNoWeight.replace(/\\ImpHeadBlack/g, '\\sffamily');
+        return pre + famBackToSans + (weight === 'bold' ? '\\bfseries' : '\\mdseries') + rest;
+      });
+  });
+  if (weight === 'black' && !/\\newfontfamily\\ImpHeadBlack/.test(out)) {
+    out = out.replace(/(\\newcommand\{\\hone\})/, `${HEAD_BLACK_DEF}\n$1`);
+  }
+  return out;
+}
+
 // ── 변수 ID/라벨/그룹 매핑 사전 ─────────────────────────────────────────────
 const VARIABLE_MAP = {
   body_size:           { variable_id:'body_font_size',           variable_label:'본문 크기',        variable_group:'body_text',    unit:'pt' },
@@ -4659,6 +4690,8 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `\\setlength{\\parindent}{1em}`,
         `\\setlength{\\parskip}{0pt}`,
         ...wordSpaceBlockLines(0),
+        // 본문↔각주 사이 간격 (\skip\footins) — LaTeX 기본값과 같으므로 생성 직후에는 변화 없음 (footinsSkip)
+        `\\setlength{\\skip\\footins}{10pt plus 4pt minus 2pt}`,
         `\\AtBeginDocument{\\mdseries\\selectfont} % 본문 굵기 (bodyWeight)`,
         `\\widowpenalty=10000`,
         `\\clubpenalty=10000`,
@@ -6162,13 +6195,17 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // \parskip — 문단(단락) 사이 수직 간격. 기본 0pt(들여쓰기로만 문단 구분)
     const parSkipM = latexStr.match(/\\setlength\{\\parskip\}\{([\d.]+)pt\}/);
     if (parSkipM) map.parSkip = parSkipM[1];
+    // 본문↔각주 사이 간격 (\skip\footins, pt) — 위치 이동은 이 값으로 한다
+    const finsM = latexStr.match(/\\setlength\{\\skip\\footins\}\{(-?[\d.]+)pt/);
+    if (finsM) map.footinsSkip = finsM[1];
     // 제목 굵기 — \hone/\htwo/\hthree는 항상 같은 hFont 접두어를 공유하므로 \hone만 검사
     const h1Prefix = latexStr.match(/\\newcommand\{\\hone\}\{((?:\\[a-zA-Z]+)*)\\fontsize/);
-    if (h1Prefix) map.headingWeight = /\\bfseries/.test(h1Prefix[1]) ? 'bold' : 'normal';
+    const weightOf = fam => /\\ImpHeadBlack/.test(fam) ? 'black' : /\\bfseries/.test(fam) ? 'bold' : 'normal';
+    if (h1Prefix) map.headingWeight = weightOf(h1Prefix[1]);
     // 레벨별 제목 굵기 — \hone/\htwo/\hthree 각각의 서체 접두어를 따로 본다 (headingWeight는 전체 일괄)
     [['hone', 'h1Weight'], ['htwo', 'h2Weight'], ['hthree', 'h3Weight']].forEach(([cmdName, mapKey]) => {
       const m = latexStr.match(new RegExp(`\\\\newcommand\\{\\\\${cmdName}\\}\\{((?:\\\\[a-zA-Z]+)*)\\\\fontsize`));
-      if (m) map[mapKey] = /\\bfseries/.test(m[1]) ? 'bold' : 'normal';
+      if (m) map[mapKey] = weightOf(m[1]);
     });
     // 제목 정렬 — \hone{}=...\selectfont 뒤에 붙는 \centering/\raggedleft/\raggedright (없으면 기본)
     const h1AlignM = latexStr.match(/\\newcommand\{\\hone\}\{(?:\\[a-zA-Z]+)*\\fontsize\{[\d.]+pt\}\{[\d.]+pt\}\\selectfont([^}]*)\}/);
@@ -6850,12 +6887,13 @@ ${customTexts.join('\n')}`;
       cmdMap.headingGap   && `제목↔소제목 간격(\\imprintheadinggap): ${cmdMap.headingGap}pt`,
       cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
       (cmdMap.parSkip !== undefined) && `문단(단락) 사이 간격(\\parskip): ${cmdMap.parSkip}pt`,
-      (cmdMap.headingWeight !== undefined) && `제목 굵기(\\hone/\\htwo/\\hthree): ${cmdMap.headingWeight === 'bold' ? '굵게' : '보통'}`,
-      (cmdMap.h1Weight !== undefined) && `제목(\\hone) 굵기: ${cmdMap.h1Weight === 'bold' ? '굵게' : '보통'}`,
-      (cmdMap.h2Weight !== undefined) && `소제목(\\htwo) 굵기: ${cmdMap.h2Weight === 'bold' ? '굵게' : '보통'}`,
-      (cmdMap.h3Weight !== undefined) && `소소제목(\\hthree) 굵기: ${cmdMap.h3Weight === 'bold' ? '굵게' : '보통'}`,
+      (cmdMap.headingWeight !== undefined) && `제목 굵기(\\hone/\\htwo/\\hthree): ${WEIGHT_LABEL[cmdMap.headingWeight] || '보통'}`,
+      (cmdMap.h1Weight !== undefined) && `제목(\\hone) 굵기: ${WEIGHT_LABEL[cmdMap.h1Weight] || '보통'}`,
+      (cmdMap.h2Weight !== undefined) && `소제목(\\htwo) 굵기: ${WEIGHT_LABEL[cmdMap.h2Weight] || '보통'}`,
+      (cmdMap.h3Weight !== undefined) && `소소제목(\\hthree) 굵기: ${WEIGHT_LABEL[cmdMap.h3Weight] || '보통'}`,
       (cmdMap.bodyWeight !== undefined) && `본문 굵기(\\bodyf): ${cmdMap.bodyWeight === 'bold' ? '굵게' : '보통'}`,
       `단어 사이 간격 보정(wordSpace): ${cmdMap.wordSpace}em (0=기본, 음수=좁힘, 양수=넓힘)`,
+      (cmdMap.footinsSkip !== undefined) && `본문↔각주 간격(\\skip\\footins): ${cmdMap.footinsSkip}pt`,
       (cmdMap.headingAlign !== undefined) && `제목 정렬: ${{center:'가운데',right:'오른쪽',left:'왼쪽',default:'기본'}[cmdMap.headingAlign]}`,
       (cmdMap.footnoteMarker !== undefined) && `각주 표시 형식: ${cmdMap.footnoteMarker === 'bracket' ? '대괄호 [1]' : '점 1.'}`,
       (cmdMap.footnoteRule !== undefined) && `각주 구분선(각주 위 가로줄): ${cmdMap.footnoteRule === 'on' ? '있음' : '없음'}`,
@@ -6891,9 +6929,14 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
+  (제목을 "아주 굵게", "블랙", "Black", "제일 진하게"처럼 기존 굵게보다 더 강하게 해달라는 요청 → headingWeight=black (또는 h1Weight/h2Weight/h3Weight=black). bold로는 부족한 요청이 이것이다. 값이 black이면 Pretendard Black 서체가 쓰임)
+  (본문과 각주 사이 여백을 넓히거나 좁혀 각주를 위·아래로 옮기는 요청 → footinsSkip=pt 값. 음수면 본문에 더 붙고 양수면 떨어짐. 각주 항목 사이 간격은 footnoteSep이므로 혼동하지 말 것)
+  (변화량 해석 기준: "조금/살짝"은 현재값의 약 5%, "많이/확실히"는 약 15%, "아주/훨씬"은 약 25%. 이 기준보다 작게 바꾸면 "많이"라는 말의 의미가 깨지므로 기준을 따를 것)
+  (단 간격(colGap) 요청 → 본문에 다단 환경(multicols/paracol)이 없으면 colGap을 바꾸지 말고 "적용 대상 없음: 본문이 단일 단이라 단 간격이 없음"이라고 답할 것. 행간과 맞춰달라는 요청은 행간(bodyLeading) 기준이며 자간으로 해석하지 말 것)
+  (사용자 입력이 AI 답변 목록 형식(- **항목** …)으로 붙여넣어진 경우 목록 안의 요청 문장만 골라서 적용하고, 어떤 항목을 바꿀지 불분명하면 실행하지 말고 되물을 것)
   (단어 사이 공백이 유난히 벌어지거나 좁아 보인다는 요청 → wordSpace=em 값. 음수면 좁힘(-0.05em 정도가 작은 조정), 양수면 넓힘. 범위는 -0.15~0.15em로 제한되며 기본 0. 줄 늘어남 자체를 막는 것은 아님)
   (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 기본값 0pt는 "들여쓰기로만 문단을 구분"하는 상태이므로, 여기서 "더 좁혀달라"는 요청은 적용 불가 — 0pt보다 작은 음수는 쓰지 말고 "이미 최소 상태"라고 답할 것. "넓혀달라"는 요청은 자유롭게 값을 올릴 것)
   (제목을 굵게/얇게 해달라는 요청 → headingWeight=bold 또는 normal. \hone \htwo \hthree 전부에 함께 적용됨 — 특정 레벨만 다르게 해달라는 요청은 적용 불가로 답할 것)
@@ -7139,7 +7182,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
           parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
-          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', headingAlign:'제목 정렬',
+          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
           bodyWidth:'사이드노트 본문 칸 폭', noteWidth:'사이드노트 각주 칸 폭',
           rhText:'면주 텍스트',
@@ -7147,7 +7190,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
         const clampLeading = (size, lead) => {
@@ -7242,6 +7285,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 /(\\AtBeginDocument\{\\fontsize\{[\d.]+pt\}\{[\d.]+pt\}\\selectfont\})/,
                 `$1\n\\AtBeginDocument{${wClass}\\selectfont}`);
             }
+          } else if (key === 'footinsSkip') {
+            // 본문과 각주 사이 간격. 값만 바꾸고 stretch/shrink(plus/minus)는 그대로 둔다. 줄이 없던 구버전 sty는 끝에 추가
+            const fv = Math.max(-40, Math.min(60, Number(val) || 0));
+            if (/\\setlength\{\\skip\\footins\}\{/.test(patchedSty)) {
+              patchedSty = patchedSty.replace(/(\\setlength\{\\skip\\footins\}\{)-?[\d.]+pt/, `$1${fv}pt`);
+            } else {
+              patchedSty = appendBeforeEndinput(patchedSty, `\\setlength{\\skip\\footins}{${fv}pt plus 4pt minus 2pt}`);
+            }
           } else if (key === 'wordSpace') {
             // 기존 블록이 있으면 값만 교체, 없으면(구버전 sty) 블록을 sty 끝에 추가
             const ws = Math.max(-0.15, Math.min(0.15, Number(val) || 0));
@@ -7250,15 +7301,12 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 /(\\setlength\{\\imprintwordspace\}\{)-?[\d.]+em(\})/,
                 `$1${ws}em$2`);
             } else {
-              patchedSty = patchedSty + '\n' + wordSpaceBlockLines(ws).join('\n') + '\n';
+              patchedSty = appendBeforeEndinput(patchedSty, wordSpaceBlockLines(ws).join('\n'));
             }
           } else if (['h1Weight', 'h2Weight', 'h3Weight'].includes(key)) {
             // 레벨별 제목 굵기 — headingWeight와 같은 방식으로 해당 커맨드의 서체 접두어만 바꾼다
             const cmdName = { h1Weight: 'hone', h2Weight: 'htwo', h3Weight: 'hthree' }[key];
-            const wantBold = val === 'bold';
-            patchedSty = patchedSty.replace(
-              new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{)((?:\\\\[a-zA-Z]+)*)(\\\\fontsize)`),
-              (whole, pre, fam, rest) => pre + fam.replace(/\\bfseries|\\mdseries/g, '') + (wantBold ? '\\bfseries' : '\\mdseries') + rest);
+            patchedSty = applyHeadingWeight(patchedSty, [cmdName], val);
           } else if (key === 'bodyAlign') {
             const wantRagged = val === 'ragged';
             if (wantRagged) {
@@ -7317,15 +7365,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           } else if (key === 'headingWeight') {
             // \hone \htwo \hthree는 모두 같은 hFont 접두어(가족+굵기)를 공유한다 —
             // 생성 시 동일한 hFont 변수로 세 커맨드를 만들기 때문(위 headingCmdsBlock 참고).
-            const wantBold = val === 'bold';
-            ['hone', 'htwo', 'hthree'].forEach(cmdName => {
-              patchedSty = patchedSty.replace(
-                new RegExp(`(\\\\newcommand\\{\\\\${cmdName}\\}\\{)((?:\\\\[a-zA-Z]+)*)(\\\\fontsize)`),
-                (whole, pre, fam, rest) => {
-                  const famNoWeight = fam.replace(/\\bfseries|\\mdseries/g, '');
-                  return pre + famNoWeight + (wantBold ? '\\bfseries' : '\\mdseries') + rest;
-                });
-            });
+            patchedSty = applyHeadingWeight(patchedSty, ['hone', 'htwo', 'hthree'], val);
           } else if (key === 'headingAlign') {
             // \hone/\htwo/\hthree의 \selectfont 뒤, 닫는 중괄호 앞에 붙는 정렬 커맨드를 통째로 교체.
             const alignCmd = { center:' \\centering', right:' \\raggedleft', left:' \\raggedright', default:'' }[val] ?? '';
@@ -7547,6 +7587,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
       // ── 로컬 컴파일 서버에도 반영: 작업본(main.pdf)은 덮어쓰지만, 버전 넘버 붙인 스냅샷
       // (main_v{n}.pdf/tex/sty)은 계속 쌓인다. 수정 이력도 revision-log.json에 누적.
+      // 수정 기록 id — 컴파일 결과가 비동기로 돌아왔을 때 같은 기록을 갱신하려고 미리 정한다
+      const revId = `rev_${Date.now().toString(36)}`;
       if (codeChanged && serverCompileResult?.folder) {
         const nextVersion = styleVersion + 1;
         updateAndCompileOnServer(
@@ -7565,9 +7607,14 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               // 같이 되돌리지 않으면 화면엔 깨진 내용이 남고 서버 파일만 복구된 상태로 어긋남
               setLatex(latex);
               setStyCode(styCode);
+              const firstError = result.compileErrors?.[0];
+              // 실패 기록: 적용 안 됨 표시 + xelatex 오류 줄 저장 (이전엔 'accepted'로만 남았음)
+              setRevisionLog(prev => prev.map(r => r.id === revId
+                ? { ...r, userDecision: 'rolled_back', compileErrors: result.compileErrors || [] }
+                : r));
               setRefineHistory(h => [...h, {
                 role: 'assistant',
-                chatContent: '⚠ 이 수정은 컴파일에 실패해서 적용되지 않았어요. 이전 상태로 되돌렸습니다.',
+                chatContent: `⚠ 이 수정은 컴파일에 실패해서 적용되지 않았어요. 이전 상태로 되돌렸습니다.${firstError ? `\n원인: ${firstError}` : ''}`,
                 content: '', changes: '', codeChanged: false, isError: true,
               }]);
             }
@@ -7595,9 +7642,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             reason: '',
           }));
         setRevisionLog(prev => {
-          const newId = `rev_${String(prev.length).padStart(3, '0')}`;
           return [...prev, {
-            id: newId,
+            id: revId,
             type: 'user_refinement',
             timestamp: new Date().toISOString(),
             userRequest: userMsg,

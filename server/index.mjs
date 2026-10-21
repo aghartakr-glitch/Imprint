@@ -130,7 +130,7 @@ async function handleUpdateAndCompile(req, res) {
       rolledBack = true
     }
     const revisionCount = logEntry
-      ? appendRevisionLog(runDir, { ...logEntry, version: version ?? null, compileFailed: !compileResult.ok, rolledBack })
+      ? appendRevisionLog(runDir, { ...logEntry, version: version ?? null, compileFailed: !compileResult.ok, rolledBack, compileErrors: compileResult.errors || [] })
       : null
     if (logEntry) {
       const documentId = documentIdByRunDir.get(runDir)
@@ -148,6 +148,7 @@ async function handleUpdateAndCompile(req, res) {
       compileOk: compileResult.ok,
       compileReason: compileResult.reason || null,
       compileLog: compileResult.ok ? null : compileResult.log,
+      compileErrors: compileResult.ok ? [] : (compileResult.errors || []),
       pdfUrl: compileResult.ok ? `/outputs/${folder}/main.pdf` : null,
       versionedPdfUrl,
       rolledBack,
