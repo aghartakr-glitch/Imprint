@@ -3395,6 +3395,19 @@ export default function App() {
   const [requiredFonts, setRequiredFonts] = useState([]);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("intent");
+  // 중앙 PDF 미리보기 — 컴파일이 성공할 때마다 그 결과 PDF를 보여준다 (실패하면 마지막 성공 버전 유지)
+  const [pdfPreview, setPdfPreview] = useState(null); // { url, nonce, folder }
+  useEffect(() => {
+    if (serverCompileResult && !serverCompileResult.compileOk) {
+      setTab('pdf'); // 실패도 중앙에서 바로 보이게 — 마지막 성공 PDF와 실패 안내를 함께 보여준다
+      return;
+    }
+    if (!serverCompileResult?.compileOk || !serverCompileResult.pdfUrl) return;
+    // 버전 PDF(main_v{n}.pdf)가 있으면 그것을, 없으면 작업본 main.pdf를 쓴다. nonce로 브라우저 캐시를 피한다
+    const path = serverCompileResult.versionedPdfUrl || serverCompileResult.pdfUrl;
+    setPdfPreview({ url: path.replace('/outputs/', `${COMPILE_OUTPUTS}/`), nonce: Date.now(), folder: serverCompileResult.folder });
+    setTab('pdf'); // 컴파일이 끝나면 결과를 바로 보여준다
+  }, [serverCompileResult]);
   const [copied, setCopied] = useState(false);
   const [copiedSty, setCopiedSty] = useState(false);
   const [refineInput, setRefineInput] = useState("");
@@ -9096,6 +9109,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`,
                 padding:"0 24px", background:T.surface, flexShrink:0 }}>
                 {[
+                  ["pdf",L("PDF 미리보기","PDF Preview")],
                   ["intent",L("작업 의도","Intent")],
                   ["revlog",L("수정 기록","Revisions")],
                   ["final",L("최종 파일","Final Files")],
@@ -9116,6 +9130,33 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               <div style={{ flex:1, overflowY:"auto" }}>
 
                 {/* 작업 의도 */}
+                {/* ── PDF 미리보기 (중앙): 수정할 때마다 컴파일된 결과를 바로 본다 ── */}
+                {tab === "pdf" && (
+                  <div style={{ padding:"16px 24px" }}>
+                    {serverCompileResult && !serverCompileResult.compileOk && (
+                      <div style={{ padding:"10px 12px", marginBottom:12, borderRadius:12, fontSize:12, lineHeight:1.6,
+                        background:'#FDE9E0', border:`1px solid ${T.accent}` }}>
+                        ⚠ 이번 수정은 PDF 컴파일에 실패해서 적용되지 않았어요 ({serverCompileResult.compileReason || '원인 미상'}).
+                        아래는 마지막으로 성공한 버전입니다.
+                      </div>
+                    )}
+                    {pdfPreview ? (
+                      <>
+                        <div style={{ fontSize:12, color:T.muted, marginBottom:8 }}>
+                          {styleVersion > 0 ? `v${styleVersion}` : '초기 생성'} · {pdfPreview.folder}
+                        </div>
+                        <iframe title="PDF 미리보기" src={`${pdfPreview.url}?t=${pdfPreview.nonce}`}
+                          style={{ width:"100%", height:"78vh", minHeight:560, border:`1px solid ${T.border}`,
+                            borderRadius:12, background:"#fff" }} />
+                      </>
+                    ) : (
+                      <div style={{ fontSize:13, color:T.muted }}>
+                        아직 컴파일된 PDF가 없어요. 수정을 요청하면 결과가 여기에 보입니다.
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {tab === "intent" && (
   <div style={{ padding:"20px 24px" }}>
     {!structuredReason && !pkg ? (
