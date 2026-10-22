@@ -499,6 +499,9 @@ function normalizeStyPatchValue(key, raw) {
     bodyAlign: { justified:'justified', 양쪽:'justified', 양끝:'justified', ragged:'ragged', 왼쪽:'ragged', 좌측:'ragged' },
     hyphenation: { on:'on', 켜기:'on', 있음:'on', off:'off', 끄기:'off', 없음:'off' },
     bodyFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    footnoteFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    rhFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    pnFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
   };
   if (ENUM_PATCH[key]) {
     const hit = ENUM_PATCH[key][v.toLowerCase()] ?? ENUM_PATCH[key][v];
@@ -541,6 +544,12 @@ function placementSlotsFor(innerContent, posStr) {
   if (posStr.includes('우측')) return { odd: [mt, mt, cmdR], even: [mt, mt, cmdR], top: isTop };
   if (posStr.includes('좌측')) return { odd: [cmdL, mt, mt], even: [cmdL, mt, mt], top: isTop };
   return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
+}
+
+// 문단 사이 간격 — 본문 문단 뒤의 \vspace{X\baselineskip}(모델이 쓰는 기본 형식)를 \vspace{\imprintparagap}로 바꾼다.
+// 제목 뒤 간격(\imprintheadinggap, \imprintbodygap)은 건드리지 않는다. \par} 뒤에 바로 붙은 것만 대상이다.
+function applyParagraphGapVspaces(mainTex) {
+  return mainTex.replace(/\\par\}\\vspace\{[^{}]*baselineskip\}/g, '\\par}\\vspace{\\imprintparagap}');
 }
 
 // 한글 음절 사이 신축(hangulTrack) — v는 1/100 em 단위. 신축은 v, 축소는 v/2로 둔다.
@@ -2214,14 +2223,24 @@ function escapeLatexPreservingImpFN(s) {
 
 // 사용자 입력으로 본문 블록 직접 생성 (Claude fallback / 기본 구조)
 // 반각 CJK 문자(U+FF61-FF9F) → 전각 등가로 치환. 한국어 폰트 대부분이 전각만 지원.
+// 직선 따옴표 → 여는/닫는 따옴표. TeX는 '와 "를 항상 닫는 모양(’, ”)으로 그리므로 그대로 두면
+// 여는 따옴표도 닫는 모양이 된다. 단어 앞(공백·여는 괄호 뒤)에 있는 것만 여는 쪽으로 바꾼다.
+function smartQuotes(s) {
+  return s
+    .replace(/(^|[\s(\[{「『“‘—–\-\/])'/g, '$1‘')
+    .replace(/'/g, '’')
+    .replace(/(^|[\s(\[{「『‘—–\-\/])"/g, '$1“')
+    .replace(/"/g, '”');
+}
+
 function sanitizeUnicodeForLatex(s) {
-  return String(s || '')
+  return smartQuotes(String(s || '')
     .replace(/｢/g, '「')  // ｢ → 「
     .replace(/｣/g, '」')  // ｣ → 」
     .replace(/｡/g, '。')  // ｡ → 。
     .replace(/､/g, '、')  // ､ → 、
     .replace(/･/g, '・')  // ･ → ・
-    .replace(/[ｦ-ﾟ]/g, ''); // 나머지 반각 가타카나 제거
+    .replace(/[ｦ-ﾟ]/g, '')); // 나머지 반각 가타카나 제거
 }
 
 function validateNoHalfwidthCJK(name, content) {
@@ -4813,6 +4832,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         ...wordSpaceBlockLines(0),
         // 본문↔각주 사이 간격 (\skip\footins) — LaTeX 기본값과 같으므로 생성 직후에는 변화 없음 (footinsSkip)
         `\\setlength{\\skip\\footins}{10pt plus 4pt minus 2pt}`,
+        // 문단 사이 간격 (parSkip 키가 조절) — 본문의 문단 뒤 \vspace{\imprintparagap}로 쓴다. 기본은 행간의 절반(예전 0.5\baselineskip과 같은 크기)
+        `\\newlength{\\imprintparagap}`,
+        `\\setlength{\\imprintparagap}{${(0.5 * adjustedBodyLead).toFixed(1)}pt}`,
         // 한글 음절 사이 신축/축소 (hangulTrack, 1/100 em) — 0이면 양끝맞춤에서 자간이 줄마다 변하지 않고 어절 사이가 여백을 흡수한다.
         // 기본값은 xetexko의 기본 plus.08em minus.04em과 같다. xetexko가 없는 환경에서는 건너뛴다.
         `\\ifdefined\\xetexkostretchshrink \\xetexkostretchshrink{plus0.08em minus0.04em}\\fi % hangulTrack`,
@@ -5864,6 +5886,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         }
 
         finalMainTex = normalizeHeadingGapVspaces(finalMainTex);
+        finalMainTex = applyParagraphGapVspaces(finalMainTex); // 문단 간격을 parSkip 키 하나로 조절할 수 있게 통일
 
         // LaTeX 구조 검증 (sanitize 후 검증)
         const { errors: _valErrors, warnings: _valWarnings } = validateLatexExport({ mainTex: finalMainTex, sty: finalStyContent, layoutConfig: styleConfig });
@@ -6323,11 +6346,19 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     const bGap = latexStr.match(/\\setlength\{\\imprintbodygap\}\{([\d.]+)pt\}/);
     if (bGap) map.bodyGap = bGap[1];
     // \parskip — 문단(단락) 사이 수직 간격. 기본 0pt(들여쓰기로만 문단 구분)
+    // 문단 사이 간격(pt) — \imprintparagap이 있으면 그 값(문단 간격 키가 쓰는 값), 없으면 예전 \parskip 값
+    const paraGapM = latexStr.match(/\\setlength\{\\imprintparagap\}\{([\d.]+)pt\}/);
     const parSkipM = latexStr.match(/\\setlength\{\\parskip\}\{([\d.]+)pt\}/);
-    if (parSkipM) map.parSkip = parSkipM[1];
+    if (paraGapM) map.parSkip = paraGapM[1];
+    else if (parSkipM) map.parSkip = parSkipM[1];
     // 본문↔각주 사이 간격 (\skip\footins, pt) — 위치 이동은 이 값으로 한다
     const finsM = latexStr.match(/\\setlength\{\\skip\\footins\}\{(-?[\d.]+)pt/);
     if (finsM) map.footinsSkip = finsM[1];
+    // 각주·면주·쪽번호 서체 계열 — 각 커맨드 정의의 \rmfamily(명조)/\sffamily(고딕)
+    [['notef', 'footnoteFontFamily'], ['runningheadf', 'rhFontFamily'], ['foliof', 'pnFontFamily']].forEach(([famCmd, mapKey]) => {
+      const m = latexStr.match(new RegExp(`\\\\newcommand\\{\\\\${famCmd}\\}\\{(\\\\rmfamily|\\\\sffamily)`));
+      if (m) map[mapKey] = m[1] === '\\sffamily' ? 'sans' : 'serif';
+    });
     // 한글 음절 사이 신축(1/100 em) — hangulTrack 줄에서 읽는다
     const htM = latexStr.match(/\\xetexkostretchshrink\{plus([\d.]+)em/);
     if (htM) map.hangulTrack = String(Math.round(Number(htM[1]) * 100));
@@ -7025,7 +7056,7 @@ ${customTexts.join('\n')}`;
       cmdMap.footnoteSep  && `각주 항목 간 간격(\\footnotesep, 각주1↔각주2 사이 여백): ${cmdMap.footnoteSep}pt`,
       cmdMap.headingGap   && `제목↔소제목 간격(\\imprintheadinggap): ${cmdMap.headingGap}pt`,
       cmdMap.bodyGap      && `제목/소제목↔본문 간격(\\imprintbodygap): ${cmdMap.bodyGap}pt`,
-      (cmdMap.parSkip !== undefined) && `문단(단락) 사이 간격(\\parskip): ${cmdMap.parSkip}pt`,
+      (cmdMap.parSkip !== undefined) && `문단(단락) 사이 전체 간격(parSkip): ${cmdMap.parSkip}pt`,
       (cmdMap.headingWeight !== undefined) && `제목 굵기(\\hone/\\htwo/\\hthree): ${WEIGHT_LABEL[cmdMap.headingWeight] || '보통'}`,
       (cmdMap.h1Weight !== undefined) && `제목(\\hone) 굵기: ${WEIGHT_LABEL[cmdMap.h1Weight] || '보통'}`,
       (cmdMap.h2Weight !== undefined) && `소제목(\\htwo) 굵기: ${WEIGHT_LABEL[cmdMap.h2Weight] || '보통'}`,
@@ -7071,9 +7102,10 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily rhFontFamily pnFontFamily headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
+  (각주만 명조/고딕으로 바꿔달라는 요청 → footnoteFontFamily=serif 또는 sans. 면주 서체는 rhFontFamily, 쪽번호 서체는 pnFontFamily. 이 셋은 본문 서체(bodyFontFamily)와 독립이다 — "본문과 같은 계열이라 따로 바꿀 수 없다"고 답하지 말고 값을 설정할 것)
   (양끝맞춤(justified)에서 자간이 줄마다 들쭉날쭉하다, 자간을 균일하게 해달라는 요청 → hangulTrack=0. 기본은 8이며 값이 클수록 줄마다 자간 차이가 커진다. 본문 정렬이 왼쪽(ragged)이면 효과가 없으므로 그 사실을 답할 것. 어절 사이 간격이 더 벌어지는 부작용이 생길 수 있음을 함께 밝힐 것)
   (제목·소제목 위쪽 여백을 늘리거나 줄이라는 요청 → headingSpaceBefore=pt 값(0이면 원래대로). 소제목만 따로 할 수는 없고 모든 제목에 같이 적용됨 — 그 사실을 답에 밝힐 것)
   (제목·소제목이 쪽이나 단 맨 아래에 혼자 남지 않게 해달라는 요청 → headingKeepLines=줄 수 (기본 4, 더 확실하게는 6). 제목 뒤 본문이 최소 몇 줄 들어갈 공간을 남기는 값이며, 완전히 보장하지는 않으므로 PDF 확인을 권할 것)
@@ -7086,7 +7118,7 @@ ${customTexts.join('\n')}`;
   (단 간격(colGap) 요청 → 본문에 다단 환경(multicols/paracol)이 없으면 colGap을 바꾸지 말고 "적용 대상 없음: 본문이 단일 단이라 단 간격이 없음"이라고 답할 것. 행간과 맞춰달라는 요청은 행간(bodyLeading) 기준이며 자간으로 해석하지 말 것)
   (사용자 입력이 AI 답변 목록 형식(- **항목** …)으로 붙여넣어진 경우 목록 안의 요청 문장만 골라서 적용하고, 어떤 항목을 바꿀지 불분명하면 실행하지 말고 되물을 것)
   (단어 사이 공백이 유난히 벌어지거나 좁아 보인다는 요청 → wordSpace=em 값. 음수면 좁힘(-0.05em 정도가 작은 조정), 양수면 넓힘. 범위는 -0.15~0.15em로 제한되며 기본 0. 줄 늘어남 자체를 막는 것은 아님)
-  (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 기본값 0pt는 "들여쓰기로만 문단을 구분"하는 상태이므로, 여기서 "더 좁혀달라"는 요청은 적용 불가 — 0pt보다 작은 음수는 쓰지 말고 "이미 최소 상태"라고 답할 것. "넓혀달라"는 요청은 자유롭게 값을 올릴 것)
+  (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 현재 cmdMap.parSkip 값이 문단 사이 전체 간격이다(본문 문단 뒤 간격 포함). 좁히라면 현재 값보다 작은 값(0pt까지 가능), 넓히라면 현재 값보다 큰 값으로 설정할 것. "이미 최소"라고 답하지 말 것 — 0pt는 간격이 없는 상태이므로 실제로 설정할 수 있다)
   (제목을 굵게/얇게 해달라는 요청 → headingWeight=bold 또는 normal. \hone \htwo \hthree 전부에 함께 적용됨 — 특정 레벨만 다르게 해달라는 요청은 적용 불가로 답할 것)
   (제목을 가운데/왼쪽/오른쪽으로 옮겨달라는 요청 → headingAlign=center/left/right, 원래대로 되돌리려면 default. 이것도 \hone \htwo \hthree 전부에 함께 적용됨)
   (각주 번호를 대괄호[1]/점1. 형식으로 바꿔달라는 요청 → footnoteMarker=bracket 또는 dot)
@@ -7341,7 +7373,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
-          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
+          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
           bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', hangulTrack:'양끝맞춤 자간 균일도', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
@@ -7351,7 +7383,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
@@ -7447,6 +7479,13 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 /(\\AtBeginDocument\{\\fontsize\{[\d.]+pt\}\{[\d.]+pt\}\\selectfont\})/,
                 `$1\n\\AtBeginDocument{${wClass}\\selectfont}`);
             }
+          } else if (key === 'footnoteFontFamily' || key === 'rhFontFamily' || key === 'pnFontFamily') {
+            // 각주(\notef) · 면주(\runningheadf) · 쪽번호(\foliof) 서체를 명조/고딕으로 — 본문 서체와 따로 바꾼다
+            const famCmd = { footnoteFontFamily: 'notef', rhFontFamily: 'runningheadf', pnFontFamily: 'foliof' }[key];
+            const famTok = val === 'sans' ? '\\sffamily' : '\\rmfamily';
+            patchedSty = patchedSty.replace(
+              new RegExp(`(\\\\newcommand\\{\\\\${famCmd}\\}\\{)(?:\\\\rmfamily|\\\\sffamily)`),
+              (m, pre) => `${pre}${famTok}`);
           } else if (key === 'hangulTrack') {
             // 양끝맞춤 자간 균일 조정 — 0이면 줄마다 자간이 달라지지 않는다. 기본값 8. 가운데/왼쪽 정렬에서는 효과가 없다
             const hv = Math.max(0, Math.min(20, Math.round(Number(val) || 0)));
@@ -7540,9 +7579,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               /(\\setlength\{\\parindent\}\{)[\d.]+em(\})/,
               `$1${val}em$2`);
           } else if (key === 'parSkip') {
-            patchedSty = patchedSty.replace(
-              /(\\setlength\{\\parskip\}\{)[\d.]+pt(\})/,
-              `$1${val}pt$2`);
+            // 문단 사이 전체 간격(pt) — \imprintparagap 하나로 관리하고 본문의 문단 뒤 간격도 같은 길이로 맞춘다.
+            // \parskip은 0으로 둬서 두 간격이 더해지지 않게 한다 (구버전 문서는 \parskip 줄이 있으면 0으로 바꾼다)
+            const pg = Math.max(0, Math.min(60, Number(val) || 0));
+            if (/\\setlength\{\\imprintparagap\}\{/.test(patchedSty)) {
+              patchedSty = patchedSty.replace(/(\\setlength\{\\imprintparagap\}\{)-?[\d.]+pt/, `$1${pg}pt`);
+            } else {
+              const hasLen = /\\newlength\{\\imprintparagap\}/.test(patchedSty);
+              patchedSty = appendBeforeEndinput(patchedSty,
+                (hasLen ? '' : '\\newlength{\\imprintparagap}\n') + `\\setlength{\\imprintparagap}{${pg}pt}`);
+            }
+            patchedSty = patchedSty.replace(/(\\setlength\{\\parskip\}\{)[\d.]+pt(\})/, (m, a, b) => `${a}0pt${b}`);
+            finalLatex = applyParagraphGapVspaces(finalLatex);
+            mainTexPatched = true;
           } else if (key === 'headingWeight') {
             // \hone \htwo \hthree는 모두 같은 hFont 접두어(가족+굵기)를 공유한다 —
             // 생성 시 동일한 hFont 변수로 세 커맨드를 만들기 때문(위 headingCmdsBlock 참고).
