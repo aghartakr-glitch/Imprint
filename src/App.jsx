@@ -529,6 +529,28 @@ function placementSlotsFor(innerContent, posStr) {
   return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
 }
 
+// 제목 위쪽 여백 — main.tex의 각 제목(\hone/\htwo/\hthree) 앞에 \vspace{\imprintheadspace}를 둔다.
+// 실제 길이 값은 .sty의 \imprintheadspace에 있으므로 여기서는 넣을지 뺄지만 정한다.
+function applyHeadingSpaceBefore(mainTex, pt) {
+  const cleaned = mainTex.replace(/\\vspace\{\\imprintheadspace\}\n?/g, '');
+  if (Number(pt) === 0) return cleaned;
+  return cleaned.replace(
+    /(\\Needspace\{[^}]+\}\n)?(\{(?:\\noindent)?\\h(?:one|two|three)\b)/g,
+    (m, need, head) => `\\vspace{\\imprintheadspace}\n${need || ''}${head}`);
+}
+
+// 제목 앞 최소 여유 줄 수 — 제목 앞의 \Needspace{N\baselineskip}을 N으로 맞추고, 없는 제목에는 새로 넣는다.
+// 여유가 모자라면 제목이 단·쪽 맨 아래에 혼자 남으므로, 이 값을 키우면 그런 일이 줄어든다.
+function applyHeadingKeepLines(mainTex, lines) {
+  const n = Math.round(Number(lines));
+  const replaced = mainTex.replace(
+    /\\Needspace\{[^}]+\}\n(?=\{(?:\\noindent)?\\h(?:one|two|three)\b)/g,
+    `\\Needspace{${n}\\baselineskip}\n`);
+  return replaced.replace(
+    /(?<!\\Needspace\{[^}]+\}\n)(\{(?:\\noindent)?\\h(?:one|two|three)\b)/g,
+    (m, head) => `\\Needspace{${n}\\baselineskip}\n${head}`);
+}
+
 // .sty 끝에 줄을 덧붙인다. 생성된 .sty는 마지막 줄이 \endinput이라 그 뒤에 붙이면 LaTeX가 무시하므로 그 앞에 넣는다.
 function appendBeforeEndinput(sty, text) {
   if (/\\endinput\s*$/.test(sty)) return sty.replace(/\\endinput\s*$/, `${text}\n\\endinput\n`);
@@ -4826,6 +4848,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         `% ── 제목/소제목↔본문 간격 ───────────────────────────────────────`,
         `\\newlength{\\imprintbodygap}`,
         `\\setlength{\\imprintbodygap}{${bodyGapPt}pt}`,
+        // 제목/소제목 위쪽 여백 (headingSpaceBefore) — 0이면 main.tex에 \vspace가 붙지 않는다
+        `\\newlength{\\imprintheadspace}`,
+        `\\setlength{\\imprintheadspace}{0pt}`,
         ``,
         `% ── 각주 ──────────────────────────────────────────────────────`,
         `% 크기: ${p.footnote || '-'} / 정렬: ${p.align_note || '-'}`,
@@ -6246,6 +6271,12 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 본문↔각주 사이 간격 (\skip\footins, pt) — 위치 이동은 이 값으로 한다
     const finsM = latexStr.match(/\\setlength\{\\skip\\footins\}\{(-?[\d.]+)pt/);
     if (finsM) map.footinsSkip = finsM[1];
+    // 제목 위쪽 여백(pt) — sty의 \imprintheadspace 값
+    const hsM = latexStr.match(/\\setlength\{\\imprintheadspace\}\{(-?[\d.]+)pt\}/);
+    if (hsM) map.headingSpaceBefore = hsM[1];
+    // 제목 앞 여유 줄 수 — 본문의 \Needspace{N\baselineskip} (제목 앞)
+    const nsM = latexStr.match(/\\Needspace\{(\d+)\\baselineskip\}\n\{(?:\\noindent)?\\htwo/) || latexStr.match(/\\Needspace\{(\d+)\\baselineskip\}/);
+    if (nsM) map.headingKeepLines = nsM[1];
     // 제목 굵기 — \hone/\htwo/\hthree는 항상 같은 hFont 접두어를 공유하므로 \hone만 검사
     const h1Prefix = latexStr.match(/\\newcommand\{\\hone\}\{((?:\\[a-zA-Z]+)*)\\fontsize/);
     const weightOf = fam => /\\ImpHeadBlack/.test(fam) ? 'black' : /\\bfseries/.test(fam) ? 'bold' : 'normal';
@@ -6942,6 +6973,8 @@ ${customTexts.join('\n')}`;
       (cmdMap.bodyWeight !== undefined) && `본문 굵기(\\bodyf): ${cmdMap.bodyWeight === 'bold' ? '굵게' : '보통'}`,
       `단어 사이 간격 보정(wordSpace): ${cmdMap.wordSpace}em (0=기본, 음수=좁힘, 양수=넓힘)`,
       (cmdMap.footinsSkip !== undefined) && `본문↔각주 간격(\\skip\\footins): ${cmdMap.footinsSkip}pt`,
+      (cmdMap.headingSpaceBefore !== undefined) && `제목·소제목 위 여백(\\imprintheadspace): ${cmdMap.headingSpaceBefore}pt`,
+      (cmdMap.headingKeepLines !== undefined) && `제목 앞 여유 줄 수(\\Needspace): ${cmdMap.headingKeepLines}줄`,
       (cmdMap.headingAlign !== undefined) && `제목 정렬: ${{center:'가운데',right:'오른쪽',left:'왼쪽',default:'기본'}[cmdMap.headingAlign]}`,
       (cmdMap.footnoteMarker !== undefined) && `각주 표시 형식: ${cmdMap.footnoteMarker === 'bracket' ? '대괄호 [1]' : '점 1.'}`,
       (cmdMap.footnoteRule !== undefined) && `각주 구분선(각주 위 가로줄): ${cmdMap.footnoteRule === 'on' ? '있음' : '없음'}`,
@@ -6977,9 +7010,11 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
+  (제목·소제목 위쪽 여백을 늘리거나 줄이라는 요청 → headingSpaceBefore=pt 값(0이면 원래대로). 소제목만 따로 할 수는 없고 모든 제목에 같이 적용됨 — 그 사실을 답에 밝힐 것)
+  (제목·소제목이 쪽이나 단 맨 아래에 혼자 남지 않게 해달라는 요청 → headingKeepLines=줄 수 (기본 4, 더 확실하게는 6). 제목 뒤 본문이 최소 몇 줄 들어갈 공간을 남기는 값이며, 완전히 보장하지는 않으므로 PDF 확인을 권할 것)
   (sty_patch 수치 값에는 단위를 붙이지 말 것: parSkip=6 (O), parSkip=6pt (X — 컴파일이 깨짐). 굵기 값은 bold/normal/black 중 하나만.)
   (쪽번호·면주 위치 값: 상단/하단 × 외측/내측/좌측/우측/중앙. "오른쪽 아래", "왼쪽 위"처럼 말하면 좌측·우측으로 명시할 것. 값이 없는 말을 쓰지 말고 현재 위치를 그대로 두는 것보다 실제로 바꿀 것)
   (위아래 여백을 같게 해달라는 요청 → marginTop과 marginBottom을 현재 두 값의 평균으로 같은 값으로 맞출 것, 답에 그 값을 명시할 것. 쪽번호나 면주의 위치를 여백과 맞춰달라는 요청이면 어느 거리를 기준으로 할지 되묻고 바꾸지 말 것)
@@ -7243,7 +7278,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
           parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
-          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingAlign:'제목 정렬',
+          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
           bodyWidth:'사이드노트 본문 칸 폭', noteWidth:'사이드노트 각주 칸 폭',
           rhText:'면주 텍스트',
@@ -7251,8 +7286,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
+        let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
         const clampLeading = (size, lead) => {
           const s = Number(size), l = Number(lead);
@@ -7354,6 +7390,21 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             } else {
               patchedSty = appendBeforeEndinput(patchedSty, `\\setlength{\\skip\\footins}{${fv}pt plus 4pt minus 2pt}`);
             }
+          } else if (key === 'headingSpaceBefore') {
+            // sty에 길이 값을 두고(없는 구버전은 정의를 추가), main.tex의 각 제목 앞에 \vspace를 넣거나 뺀다
+            const hs = Math.max(0, Math.min(60, Number(val) || 0));
+            if (/\\setlength\{\\imprintheadspace\}\{/.test(patchedSty)) {
+              patchedSty = patchedSty.replace(/(\\setlength\{\\imprintheadspace\}\{)-?[\d.]+pt/, `$1${hs}pt`);
+            } else {
+              patchedSty = appendBeforeEndinput(patchedSty, `\\newlength{\\imprintheadspace}\n\\setlength{\\imprintheadspace}{${hs}pt}`);
+            }
+            finalLatex = applyHeadingSpaceBefore(finalLatex, hs);
+            mainTexPatched = true;
+          } else if (key === 'headingKeepLines') {
+            // 제목 앞 \Needspace 여유 줄 수 — 쪽·단 끝에서 제목이 혼자 남는 것을 막는다
+            const kl = Math.max(1, Math.min(20, Math.round(Number(val) || 4)));
+            finalLatex = applyHeadingKeepLines(finalLatex, kl);
+            mainTexPatched = true;
           } else if (key === 'wordSpace') {
             // 기존 블록이 있으면 값만 교체, 없으면(구버전 sty) 블록을 sty 끝에 추가
             const ws = Math.max(-0.15, Math.min(0.15, Number(val) || 0));
@@ -7584,8 +7635,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           codeChanged = true;
           setTab('sty');
         }
-        if (rhTextPatched) {
-          // finalLatex는 이미 위 루프에서 rhText 케이스가 직접 갱신함 — 저장/재컴파일 트리거만 세팅.
+        if (rhTextPatched || mainTexPatched) {
+          // finalLatex는 이미 위 루프에서 rhText/headingSpaceBefore/headingKeepLines 케이스가 직접 갱신함 — 저장/재컴파일 트리거만 세팅.
           codeChanged = true;
         }
       }
