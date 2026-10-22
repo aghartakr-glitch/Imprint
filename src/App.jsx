@@ -564,6 +564,20 @@ function applyHeadingKeepLines(mainTex, lines) {
     (m, head) => `\\Needspace{${n}\\baselineskip}\n${head}`);
 }
 
+// 여러 키를 한꺼번에 적용해 컴파일이 깨졌을 때, 키를 앞에서부터 누적한 상태들(steps) 중 컴파일되는 가장 긴 것을 찾는다.
+// steps[i] = 키 0..i까지 적용한 결과. 앞쪽이 되면 그 앞은 된다고 보고 이진 탐색한다 (마지막 단계는 이미 실패가 확인됨).
+// 탐색용 호출은 버전 스냅샷과 수정 기록을 남기지 않는다. 반환: 성공한 가장 긴 인덱스, 없으면 -1.
+async function findLongestCompilingStep(folder, steps) {
+  let lo = 0, hi = steps.length - 2, best = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const probe = await updateAndCompileOnServer(folder, steps[mid].latex, steps[mid].sty, null, null);
+    if (probe?.compileOk) { best = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return best;
+}
+
 // .sty 끝에 줄을 덧붙인다. 생성된 .sty는 마지막 줄이 \endinput이라 그 뒤에 붙이면 LaTeX가 무시하므로 그 앞에 넣는다.
 function appendBeforeEndinput(sty, text) {
   if (/\\endinput\s*$/.test(sty)) return sty.replace(/\\endinput\s*$/, `${text}\n\\endinput\n`);
@@ -7220,6 +7234,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       const chatContentClean = chatContent.replace(/<interpretation>[\s\S]*?<\/interpretation>/i, '').trim();
 
       let directDiffs = [];
+      // sty_patch 키를 앞에서부터 하나씩 적용한 중간 상태들 — 컴파일이 깨졌을 때 어느 키가 원인인지 찾는 데 쓴다
+      const patchSteps = [];
       let finalLatex = latex;
       let finalSty = styCode;
       let codeChanged = false;
@@ -7658,6 +7674,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               ? `- (적용 안 됨) ${label}: 현재 문서에 이 항목이 없음 — 재생성 필요할 수 있음`
               : `- (적용 안 됨) ${label}: ${before}${unit} → ${val}${unit} — 적용할 위치를 찾지 못함`);
           }
+          // 이 키까지 적용한 상태를 남긴다 (컴파일 실패 시 원인 키 탐색용)
+          patchSteps.push({ key, sty: patchedSty, latex: finalLatex });
         }
         if (patchedSty !== styCode) {
           setStyCode(patchedSty);
@@ -7667,7 +7685,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           setTab('sty');
         }
         if (rhTextPatched || mainTexPatched) {
-          // finalLatex는 이미 위 루프에서 rhText/headingSpaceBefore/headingKeepLines 케이스가 직접 갱신함 — 저장/재컴파일 트리거만 세팅.
+          // finalLatex는 이미 위 루프에서 rhText/headingSpaceBefore/headingKeepLines 케이스가 직접 갱신함.
+          // 화면 상태(latex)에도 반영해야 다음 턴이 이 변경을 기준으로 시작한다 — 안 하면 다음 저장에서 사라짐.
+          setLatex(finalLatex);
           codeChanged = true;
         }
       }
@@ -7730,7 +7750,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           finalSty,
           { user_request: userMsg, changes: changesSummary, intent },
           nextVersion
-        ).then(result => {
+        ).then(async result => {
           if (result) {
             setServerCompileResult(result);
             if (result.compileOk) {
@@ -7740,6 +7760,36 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               // 같이 되돌리지 않으면 화면엔 깨진 내용이 남고 서버 파일만 복구된 상태로 어긋남
               setLatex(latex);
               setStyCode(styCode);
+              // 여러 키 중 하나가 컴파일을 깬 것이면, 컴파일되는 가장 긴 상태를 찾아 그 상태만 적용한다
+              if (patchSteps.length >= 2) {
+                const best = await findLongestCompilingStep(serverCompileResult.folder, patchSteps);
+                if (best >= 0) {
+                  const kept = patchSteps[best];
+                  const culprit = patchSteps[best + 1].key;
+                  const deferred = patchSteps.slice(best + 2).map(s => s.key);
+                  const applied = await updateAndCompileOnServer(
+                    serverCompileResult.folder, kept.latex, kept.sty,
+                    { user_request: userMsg, changes: `컴파일 실패 항목 제외: ${culprit}`, intent },
+                    nextVersion);
+                  if (applied?.compileOk) {
+                    setLatex(kept.latex);
+                    setStyCode(kept.sty);
+                    setServerCompileResult(applied);
+                    setStyleVersion(nextVersion);
+                    setRevisionLog(prev => prev.map(r => r.id === revId
+                      ? { ...r, userDecision: 'partial', compileErrors: result.compileErrors || [], excludedKeys: [culprit, ...deferred] }
+                      : r));
+                    setRefineHistory(h => [...h, {
+                      role: 'assistant', isError: true, codeChanged: false, content: '', changes: '',
+                      chatContent: `⚠ 일부 항목을 제외하고 적용했어요. 컴파일을 깬 항목: ${culprit}` +
+                        (deferred.length ? `\n함께 미뤄진 항목: ${deferred.join(', ')} — 다시 요청해 주세요.` : ''),
+                    }]);
+                    return;
+                  }
+                  // 최종 적용도 실패했으면 탐색 중에 남은 서버 파일을 원래 상태로 되돌린다
+                  await updateAndCompileOnServer(serverCompileResult.folder, latex, styCode, null, null);
+                }
+              }
               const firstError = result.compileErrors?.[0];
               // 실패 기록: 적용 안 됨 표시 + xelatex 오류 줄 저장 (이전엔 'accepted'로만 남았음)
               setRevisionLog(prev => prev.map(r => r.id === revId
