@@ -474,6 +474,60 @@ function wordSpaceBlockLines(em = 0) {
 // black 서체 정의는 .sty에 없을 때만 \hone 앞에 넣는다 (fonts/ 폴더에 Pretendard-Black.otf가 있어야 컴파일됨).
 const HEAD_BLACK_DEF = '\\newfontfamily\\ImpHeadBlack[Path=./fonts/,Extension=.otf]{Pretendard-Black}';
 const WEIGHT_LABEL = { bold: '굵게', black: '가장 굵게(Black)', normal: '보통' };
+// sty_patch 값 정리 — 모델이 단위를 붙여 내도(6pt, 10mm, 50%) 핸들러가 다시 단위를 붙이면 6ptpt가 되어
+// 컴파일이 깨진다(preamble에 "pt" 글자가 남아 "Missing \begin{document}"). 숫자만 남기고, 숫자가 아니면 버린다.
+const NUMERIC_PATCH_KEYS = new Set([
+  'bodySize','bodyLeading','parIndent','parSkip','colGap','h1Size','h1Leading','h2Size','h2Leading',
+  'h3Size','h3Leading','noteSize','noteLeading','footnoteSep','headingGap','bodyGap','pnSize','pnLeading',
+  'pnXShift','pnYShift','rhSize','rhLeading','rhXShift','rhYShift','letterSpace','marginTop','marginBottom',
+  'marginInner','marginOuter','bodyWidth','noteWidth','footinsSkip','wordSpace','footnoteSize','footnoteLeading',
+]);
+const WEIGHT_KEYS = new Set(['headingWeight','h1Weight','h2Weight','h3Weight','bodyWeight']);
+function normalizeStyPatchValue(key, raw) {
+  const v = String(raw).trim();
+  if (NUMERIC_PATCH_KEYS.has(key)) {
+    const num = v.replace(/\s*(pt|mm|em|cm|px|%|baselineskip)$/i, '').trim();
+    return /^-?\d+(\.\d+)?$/.test(num) ? { ok: true, value: num } : { ok: false, value: v };
+  }
+  if (key === 'pnPos') return { ok: true, value: normalizeSlotPos(v) };
+  if (key === 'rhPos') return { ok: true, value: /수직/.test(v) ? v.replace(/\s/g, '') : normalizeSlotPos(v) };
+  if (WEIGHT_KEYS.has(key)) {
+    const w = v.toLowerCase();
+    const map = { bold:'bold', 굵게:'bold', 진하게:'bold', normal:'normal', 보통:'normal', black:'black', 블랙:'black' };
+    return map[w] ? { ok: true, value: map[w] } : { ok: false, value: v };
+  }
+  return { ok: true, value: v };
+}
+
+// 쪽번호/면주 슬롯 문자열 정규화 — 외측·내측 외에 좌측·우측·중앙(가운데)도 인식한다.
+// 예전에는 "우측"처럼 모르는 말이 오면 조용히 가운데로 배치되면서 주석에는 "우측"이 남았다.
+function normalizeSlotPos(pos = '') {
+  const p = String(pos).replace(/\s/g, '');
+  if (p === '' || p === '없음' || p === '-') return p === '' ? '' : '없음';
+  const top = p.includes('상단') ? '상단' : '하단';
+  let side = '외측';
+  if (/내측/.test(p)) side = '내측';
+  else if (/외측/.test(p)) side = '외측';
+  else if (/우측|오른쪽/.test(p)) side = '우측';
+  else if (/좌측|왼쪽/.test(p)) side = '좌측';
+  else if (/중앙|가운데/.test(p)) side = '중앙';
+  return `${top}-${side}`;
+}
+
+// 슬롯 배치: {odd: [L,C,R], even: [L,C,R], top} — buildMemoirPageStyle과 sty_patch가 함께 쓴다.
+function placementSlotsFor(innerContent, posStr) {
+  const mt = '{}';
+  const isTop = posStr.includes('상단');
+  const cmdL = `{\\makebox[0pt][l]{${innerContent}}}`;
+  const cmdC = `{\\makebox[0pt]{${innerContent}}}`;
+  const cmdR = `{\\makebox[0pt][r]{${innerContent}}}`;
+  if (posStr.includes('외측')) return { odd: [mt, mt, cmdR], even: [cmdL, mt, mt], top: isTop };
+  if (posStr.includes('내측')) return { odd: [cmdL, mt, mt], even: [mt, mt, cmdR], top: isTop };
+  if (posStr.includes('우측')) return { odd: [mt, mt, cmdR], even: [mt, mt, cmdR], top: isTop };
+  if (posStr.includes('좌측')) return { odd: [cmdL, mt, mt], even: [cmdL, mt, mt], top: isTop };
+  return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
+}
+
 // .sty 끝에 줄을 덧붙인다. 생성된 .sty는 마지막 줄이 \endinput이라 그 뒤에 붙이면 LaTeX가 무시하므로 그 앞에 넣는다.
 function appendBeforeEndinput(sty, text) {
   if (/\\endinput\s*$/.test(sty)) return sty.replace(/\\endinput\s*$/, `${text}\n\\endinput\n`);
@@ -2603,8 +2657,9 @@ function wrapVariableLayout({
 // pnPos: 쪽번호 위치 "상단-외측"|"하단-내측"|"하단-중앙"|"없음" 등
 // rhPos: 면주 위치 "상단-외측"|...|"하단-중앙"|"외측-수직"|"내측-수직" (pnPos와 독립)
 function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPos }) {
-  const pPos = (pnPos || '하단-외측').replace(/\s/g, '');
-  const rPos = (rhPos  || '상단-외측').replace(/\s/g, '');
+  const pPos = normalizeSlotPos(pnPos || '하단-외측');
+  // 수직 면주('외측-수직' 등)는 회전 방식이라 슬롯 정규화 대상이 아니다
+  const rPos = /수직/.test(rhPos || '') ? rhPos.replace(/\s/g, '') : normalizeSlotPos(rhPos || '상단-외측');
   const pnNone = pPos === '없음' || pPos === '-' || pPos === '';
 
   // \imprintpnxshift(좌우, +값=오른쪽) / \imprintpnyshift(상하, +값=위쪽)로 mm 단위 미세 이동 지원.
@@ -2626,15 +2681,7 @@ function buildMemoirPageStyle({ pnPos, pnSizePt, hasRunningHead, rhPos, rhVertPo
   // 밖으로 흘러나가지 않는다(2026-08-05 실측: 긴 면주 텍스트가 우측 슬롯에서
   // 페이지 오른쪽 밖으로 절반 잘려 나가는 문제 확인 후 수정).
   function placementSlots(innerContent, posStr) {
-    const isTop   = posStr.includes('상단');
-    const isOuter = posStr.includes('외측');
-    const isInner = posStr.includes('내측');
-    const cmdL = `{\\makebox[0pt][l]{${innerContent}}}`;
-    const cmdC = `{\\makebox[0pt]{${innerContent}}}`;
-    const cmdR = `{\\makebox[0pt][r]{${innerContent}}}`;
-    if (isOuter)      return { odd: [mt, mt, cmdR], even: [cmdL, mt, mt], top: isTop };
-    else if (isInner) return { odd: [cmdL, mt, mt], even: [mt, mt, cmdR], top: isTop };
-    else              return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
+    return placementSlotsFor(innerContent, posStr);
   }
 
   let headSlots = { odd: [mt,mt,mt], even: [mt,mt,mt] };
@@ -6932,6 +6979,9 @@ ${customTexts.join('\n')}`;
   사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
+  (sty_patch 수치 값에는 단위를 붙이지 말 것: parSkip=6 (O), parSkip=6pt (X — 컴파일이 깨짐). 굵기 값은 bold/normal/black 중 하나만.)
+  (쪽번호·면주 위치 값: 상단/하단 × 외측/내측/좌측/우측/중앙. "오른쪽 아래", "왼쪽 위"처럼 말하면 좌측·우측으로 명시할 것. 값이 없는 말을 쓰지 말고 현재 위치를 그대로 두는 것보다 실제로 바꿀 것)
+  (위아래 여백을 같게 해달라는 요청 → marginTop과 marginBottom을 현재 두 값의 평균으로 같은 값으로 맞출 것, 답에 그 값을 명시할 것. 쪽번호나 면주의 위치를 여백과 맞춰달라는 요청이면 어느 거리를 기준으로 할지 되묻고 바꾸지 말 것)
   (제목을 "아주 굵게", "블랙", "Black", "제일 진하게"처럼 기존 굵게보다 더 강하게 해달라는 요청 → headingWeight=black (또는 h1Weight/h2Weight/h3Weight=black). bold로는 부족한 요청이 이것이다. 값이 black이면 Pretendard Black 서체가 쓰임)
   (본문과 각주 사이 여백을 넓히거나 좁혀 각주를 위·아래로 옮기는 요청 → footinsSkip=pt 값. 음수면 본문에 더 붙고 양수면 떨어짐. 각주 항목 사이 간격은 footnoteSep이므로 혼동하지 말 것)
   (변화량 해석 기준: "조금/살짝"은 현재값의 약 5%, "많이/확실히"는 약 15%, "아주/훨씬"은 약 25%. 이 기준보다 작게 바꾸면 "많이"라는 말의 의미가 깨지므로 기준을 따를 것)
@@ -7165,10 +7215,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       const styPatchMatch = fullText.match(/<sty_patch>([\s\S]+?)<\/sty_patch>/i);
       if (styPatchMatch && styCode) {
         const patches = {};
+        const rejectedPatches = [];
         styPatchMatch[1].trim().split(',').forEach(part => {
-          const [k, v] = part.trim().split('=');
-          if (k && v) patches[k.trim()] = v.trim();
+          // '=' 뒤 값에 다시 '='이 들어가도(rhText 등) 첫 '='만 기준으로 자른다
+          const eq = part.indexOf('=');
+          if (eq < 0) return;
+          const k = part.slice(0, eq).trim();
+          const raw = part.slice(eq + 1).trim();
+          if (!k || !raw) return;
+          const norm = normalizeStyPatchValue(k, raw);
+          if (norm.ok) patches[k] = norm.value;
+          else rejectedPatches.push(`${k}=${raw}`);
         });
+        rejectedPatches.forEach(r => directDiffs.push(`- (적용 안 됨) ${r}: 값 형식이 맞지 않음`));
         const cmLabel = {
           bodySize:'본문 크기', bodyLeading:'본문 행간', bodyFontFamily:'본문 서체 계열',
           noteSize:'주석 크기', noteLeading:'주석 행간',
@@ -7436,17 +7495,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             // makebox[0pt]는 인자 없으면 가운데 정렬(폭 넘치면 좌우로 반씩 삐져나감) —
             // 좌/우 슬롯에서는 [l]/[r]로 정렬 방향을 명시해야 긴 텍스트가 페이지 밖으로
             // 흘러나가지 않는다(buildMemoirPageStyle()의 동일 주석 참고, 2026-08-05 실측 수정).
-            const placementSlots = (innerContent, posStr) => {
-              const isTop = posStr.includes('상단');
-              const isOuter = posStr.includes('외측');
-              const isInner = posStr.includes('내측');
-              const cmdL = `{\\makebox[0pt][l]{${innerContent}}}`;
-              const cmdC = `{\\makebox[0pt]{${innerContent}}}`;
-              const cmdR = `{\\makebox[0pt][r]{${innerContent}}}`;
-              if (isOuter) return { odd: [mt, mt, cmdR], even: [cmdL, mt, mt], top: isTop };
-              if (isInner) return { odd: [cmdL, mt, mt], even: [mt, mt, cmdR], top: isTop };
-              return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
-            };
+            const placementSlots = placementSlotsFor;
             const curPnPos = patches.pnPos || cmdMap.pnPos;
             const curRhPos = patches.rhPos || cmdMap.rhPos;
             if (curPnPos && (cmdMap.pnPos !== undefined)) {
