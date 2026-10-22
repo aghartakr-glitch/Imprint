@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { T, FS, GLOBAL_CSS } from "./theme.js";
+import { buildKnobHintSuffix } from "./nlKnobAliases.js";
 
 // 로컬 개발: Vite 프록시(/compile-api → localhost:8789)를 그대로 씀.
 // 배포(Vercel): 컴파일 서버가 별도 호스팅(Railway 등)에 있으므로 VITE_COMPILE_SERVER_URL로 절대 주소 지정.
@@ -7058,7 +7059,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           ? m.content
           : (m.chatContent || '').trim() || '(이전 수정 완료)',
       })).filter(m => m.content),
-      { role: 'user', content: userMsg },
+      // 표현 매핑 힌트는 모델에만 보낸다 — 화면 히스토리(refineHistory)에는 원문 그대로 남는다
+      { role: 'user', content: userMsg + buildKnobHintSuffix(userMsg) },
     ];
 
     const controller = new AbortController();
