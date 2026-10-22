@@ -482,6 +482,7 @@ const NUMERIC_PATCH_KEYS = new Set([
   'h3Size','h3Leading','noteSize','noteLeading','footnoteSep','headingGap','bodyGap','pnSize','pnLeading',
   'pnXShift','pnYShift','rhSize','rhLeading','rhXShift','rhYShift','letterSpace','marginTop','marginBottom',
   'marginInner','marginOuter','bodyWidth','noteWidth','footinsSkip','wordSpace','footnoteSize','footnoteLeading',
+  'hangulTrack',
 ]);
 const WEIGHT_KEYS = new Set(['headingWeight','h1Weight','h2Weight','h3Weight','bodyWeight']);
 function normalizeStyPatchValue(key, raw) {
@@ -540,6 +541,16 @@ function placementSlotsFor(innerContent, posStr) {
   if (posStr.includes('우측')) return { odd: [mt, mt, cmdR], even: [mt, mt, cmdR], top: isTop };
   if (posStr.includes('좌측')) return { odd: [cmdL, mt, mt], even: [cmdL, mt, mt], top: isTop };
   return { odd: [mt, cmdC, mt], even: [mt, cmdC, mt], top: isTop };
+}
+
+// 한글 음절 사이 신축(hangulTrack) — v는 1/100 em 단위. 신축은 v, 축소는 v/2로 둔다.
+// v=0이면 음절 사이가 늘지도 줄지도 않아서 줄마다 자간이 같고, 양끝맞춤의 여백은 어절 사이가 흡수한다.
+function hangulTrackLine(v) {
+  return `\\ifdefined\\xetexkostretchshrink \\xetexkostretchshrink{plus${(v / 100).toFixed(2)}em minus${(v / 200).toFixed(2)}em}\\fi % hangulTrack`;
+}
+function applyHangulTrack(sty, v) {
+  const line = hangulTrackLine(v);
+  return /% hangulTrack/.test(sty) ? sty.replace(/^.*% hangulTrack.*$/m, line) : appendBeforeEndinput(sty, line);
 }
 
 // 제목 위쪽 여백 — main.tex의 각 제목(\hone/\htwo/\hthree) 앞에 \vspace{\imprintheadspace}를 둔다.
@@ -4789,6 +4800,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         ...wordSpaceBlockLines(0),
         // 본문↔각주 사이 간격 (\skip\footins) — LaTeX 기본값과 같으므로 생성 직후에는 변화 없음 (footinsSkip)
         `\\setlength{\\skip\\footins}{10pt plus 4pt minus 2pt}`,
+        // 한글 음절 사이 신축/축소 (hangulTrack, 1/100 em) — 0이면 양끝맞춤에서 자간이 줄마다 변하지 않고 어절 사이가 여백을 흡수한다.
+        // 기본값은 xetexko의 기본 plus.08em minus.04em과 같다. xetexko가 없는 환경에서는 건너뛴다.
+        `\\ifdefined\\xetexkostretchshrink \\xetexkostretchshrink{plus0.08em minus0.04em}\\fi % hangulTrack`,
         `\\AtBeginDocument{\\mdseries\\selectfont} % 본문 굵기 (bodyWeight)`,
         `\\widowpenalty=10000`,
         `\\clubpenalty=10000`,
@@ -6298,6 +6312,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 본문↔각주 사이 간격 (\skip\footins, pt) — 위치 이동은 이 값으로 한다
     const finsM = latexStr.match(/\\setlength\{\\skip\\footins\}\{(-?[\d.]+)pt/);
     if (finsM) map.footinsSkip = finsM[1];
+    // 한글 음절 사이 신축(1/100 em) — hangulTrack 줄에서 읽는다
+    const htM = latexStr.match(/\\xetexkostretchshrink\{plus([\d.]+)em/);
+    if (htM) map.hangulTrack = String(Math.round(Number(htM[1]) * 100));
     // 제목 위쪽 여백(pt) — sty의 \imprintheadspace 값
     const hsM = latexStr.match(/\\setlength\{\\imprintheadspace\}\{(-?[\d.]+)pt\}/);
     if (hsM) map.headingSpaceBefore = hsM[1];
@@ -7000,6 +7017,7 @@ ${customTexts.join('\n')}`;
       (cmdMap.bodyWeight !== undefined) && `본문 굵기(\\bodyf): ${cmdMap.bodyWeight === 'bold' ? '굵게' : '보통'}`,
       `단어 사이 간격 보정(wordSpace): ${cmdMap.wordSpace}em (0=기본, 음수=좁힘, 양수=넓힘)`,
       (cmdMap.footinsSkip !== undefined) && `본문↔각주 간격(\\skip\\footins): ${cmdMap.footinsSkip}pt`,
+      (cmdMap.hangulTrack !== undefined) && `한글 음절 사이 신축(hangulTrack): ${cmdMap.hangulTrack} (0=양끝맞춤에서 자간 균일, 8=기본)`,
       (cmdMap.headingSpaceBefore !== undefined) && `제목·소제목 위 여백(\\imprintheadspace): ${cmdMap.headingSpaceBefore}pt`,
       (cmdMap.headingKeepLines !== undefined) && `제목 앞 여유 줄 수(\\Needspace): ${cmdMap.headingKeepLines}줄`,
       (cmdMap.headingAlign !== undefined) && `제목 정렬: ${{center:'가운데',right:'오른쪽',left:'왼쪽',default:'기본'}[cmdMap.headingAlign]}`,
@@ -7037,9 +7055,10 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
+  (양끝맞춤(justified)에서 자간이 줄마다 들쭉날쭉하다, 자간을 균일하게 해달라는 요청 → hangulTrack=0. 기본은 8이며 값이 클수록 줄마다 자간 차이가 커진다. 본문 정렬이 왼쪽(ragged)이면 효과가 없으므로 그 사실을 답할 것. 어절 사이 간격이 더 벌어지는 부작용이 생길 수 있음을 함께 밝힐 것)
   (제목·소제목 위쪽 여백을 늘리거나 줄이라는 요청 → headingSpaceBefore=pt 값(0이면 원래대로). 소제목만 따로 할 수는 없고 모든 제목에 같이 적용됨 — 그 사실을 답에 밝힐 것)
   (제목·소제목이 쪽이나 단 맨 아래에 혼자 남지 않게 해달라는 요청 → headingKeepLines=줄 수 (기본 4, 더 확실하게는 6). 제목 뒤 본문이 최소 몇 줄 들어갈 공간을 남기는 값이며, 완전히 보장하지는 않으므로 PDF 확인을 권할 것)
   (sty_patch 수치 값에는 단위를 붙이지 말 것: parSkip=6 (O), parSkip=6pt (X — 컴파일이 깨짐). 굵기 값은 bold/normal/black 중 하나만.)
@@ -7308,7 +7327,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
           parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
-          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', headingAlign:'제목 정렬',
+          bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', hangulTrack:'양끝맞춤 자간 균일도', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
           bodyWidth:'사이드노트 본문 칸 폭', noteWidth:'사이드노트 각주 칸 폭',
           rhText:'면주 텍스트',
@@ -7316,7 +7335,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
@@ -7412,6 +7431,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 /(\\AtBeginDocument\{\\fontsize\{[\d.]+pt\}\{[\d.]+pt\}\\selectfont\})/,
                 `$1\n\\AtBeginDocument{${wClass}\\selectfont}`);
             }
+          } else if (key === 'hangulTrack') {
+            // 양끝맞춤 자간 균일 조정 — 0이면 줄마다 자간이 달라지지 않는다. 기본값 8. 가운데/왼쪽 정렬에서는 효과가 없다
+            const hv = Math.max(0, Math.min(20, Math.round(Number(val) || 0)));
+            patchedSty = applyHangulTrack(patchedSty, hv);
           } else if (key === 'footinsSkip') {
             // 본문과 각주 사이 간격. 값만 바꾸고 stretch/shrink(plus/minus)는 그대로 둔다. 줄이 없던 구버전 sty는 끝에 추가
             const fv = Math.max(-40, Math.min(60, Number(val) || 0));
