@@ -7,7 +7,26 @@ const check = (cond, label) => {
   if (!cond) { failed++; console.log('FAIL', label); }
 };
 
-check(KNOB_ALIASES.length === 100, `표현 개수 100 기대, 실제 ${KNOB_ALIASES.length}`);
+// 처음 100개는 설계한 표현이고, 그 뒤는 실제 참여자 발화에서 빠진 것을 채운 항목이다
+check(KNOB_ALIASES.length >= 100, `표현 개수 100 이상 기대, 실제 ${KNOB_ALIASES.length}`);
+
+// 05 로그의 실제 발화 중 이전에 힌트가 전혀 안 붙던 문장들 (회귀 방지)
+const REAL_GAP_UTTERANCES = [
+  '본문을 좀 더 널널하게 해줘',
+  '좀 더 전체적으로 카탈로그처럼 바꿔줘',
+  '위의 답변의 결과물로 수정해줘',
+  '본문',
+  '제목 부제목 폰트 크기를 같은 비례로 조금만 축소해줘',
+  '좀 더',
+  '글자 크기 좀 더 줄이고 행간도 비례에 맞게 해줘',
+  '아에 사전처럼 여백 거의 없애주세요',
+  '동화처럼 글자가 커지면 좋겠어요',
+  '하단을 넓혀주세요',
+  '주석 행간 줄여줘.',
+];
+for (const s of REAL_GAP_UTTERANCES) {
+  check(detectKnobHints(s).length > 0, `실제 발화 힌트 없음: "${s}"`);
+}
 
 KNOB_ALIASES.forEach((entry, i) => {
   const hits = detectKnobHints(entry.sample);

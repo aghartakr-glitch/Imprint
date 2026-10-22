@@ -490,6 +490,19 @@ function normalizeStyPatchValue(key, raw) {
     const num = v.replace(/\s*(pt|mm|em|cm|px|%|baselineskip)$/i, '').trim();
     return /^-?\d+(\.\d+)?$/.test(num) ? { ok: true, value: num } : { ok: false, value: v };
   }
+  // 열거형 키 — 한국어 표현도 정식 값으로 바꾼다. 모르는 값은 버려서 변화 요약에 "적용 안 됨"으로 남긴다
+  const ENUM_PATCH = {
+    headingAlign: { center:'center', 가운데:'center', 중앙:'center', left:'left', 왼쪽:'left', 좌측:'left', right:'right', 오른쪽:'right', 우측:'right', default:'default', 기본:'default', 기본값:'default' },
+    footnoteMarker: { bracket:'bracket', 대괄호:'bracket', '[1]':'bracket', dot:'dot', 점:'dot', '1.':'dot' },
+    footnoteRule: { on:'on', 있음:'on', 켜기:'on', off:'off', 없음:'off', 끄기:'off' },
+    bodyAlign: { justified:'justified', 양쪽:'justified', 양끝:'justified', ragged:'ragged', 왼쪽:'ragged', 좌측:'ragged' },
+    hyphenation: { on:'on', 켜기:'on', 있음:'on', off:'off', 끄기:'off', 없음:'off' },
+    bodyFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+  };
+  if (ENUM_PATCH[key]) {
+    const hit = ENUM_PATCH[key][v.toLowerCase()] ?? ENUM_PATCH[key][v];
+    return hit ? { ok: true, value: hit } : { ok: false, value: v };
+  }
   if (key === 'pnPos') return { ok: true, value: normalizeSlotPos(v) };
   if (key === 'rhPos') return { ok: true, value: /수직/.test(v) ? v.replace(/\s/g, '') : normalizeSlotPos(v) };
   if (WEIGHT_KEYS.has(key)) {
@@ -7253,7 +7266,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       if (styPatchMatch && styCode) {
         const patches = {};
         const rejectedPatches = [];
-        styPatchMatch[1].trim().split(',').forEach(part => {
+        // 키=값 쌍은 "key=" 앞의 쉼표에서만 나눈다 — 면주 문구처럼 값 안의 쉼표(골목, 재생)가 키로 잘리지 않게
+        styPatchMatch[1].trim().split(/,(?=\s*[A-Za-z][A-Za-z0-9]*\s*=)/).forEach(part => {
           // '=' 뒤 값에 다시 '='이 들어가도(rhText 등) 첫 '='만 기준으로 자른다
           const eq = part.indexOf('=');
           if (eq < 0) return;
@@ -7347,9 +7361,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         for (const [key, val] of Object.entries(patches)) {
           const before = cmdMap[key];
           const unit = cmUnit[key] || 'pt';
-          if (before !== undefined && before !== val) {
-            directDiffs.push(`- ${cmLabel[key] || key}: ${before}${unit} → ${val}${unit}`);
-          }
+          // 변화 요약은 실제로 파일이 바뀐 뒤에만 쓴다 (아래 끝부분) — 조용히 실패한 키가 "변경됨"으로 보이지 않게
+          const sBefore = patchedSty;
+          const lBefore = finalLatex;
           if (key === 'bodySize' || key === 'bodyLeading') {
             const bSize = patches.bodySize || cmdMap.bodySize;
             const bLead = clampLeading(bSize, patches.bodyLeading || cmdMap.bodyLeading);
@@ -7512,6 +7526,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             if (/\\renewcommand\{\\imprintrunninghead\}\{[^}]*\}/.test(finalLatex)) {
               finalLatex = finalLatex.replace(/\\renewcommand\{\\imprintrunninghead\}\{[^}]*\}/, newRhLine);
               rhTextPatched = true;
+            } else {
+              // 면주가 꺼져 있으면 정의 줄이 없어서 조용히 아무것도 안 바뀌던 문제 — 이유를 변화 요약에 남긴다
+              directDiffs.push(`- (적용 안 됨) 면주 문구: 면주가 꺼져 있음 — 먼저 면주를 켜야 함`);
             }
           } else if (key === 'colGap') {
             patchedSty = patchedSty.replace(
@@ -7551,6 +7568,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const placementSlots = placementSlotsFor;
             const curPnPos = patches.pnPos || cmdMap.pnPos;
             const curRhPos = patches.rhPos || cmdMap.rhPos;
+            if (curPnPos && cmdMap.pnPos === undefined) {
+              // 쪽번호 위치 주석(% pn-position)이 없는 구버전 문서 — 슬롯을 바꿀 기준이 없어서 적용을 건너뛴다
+              directDiffs.push(`- (적용 안 됨) 쪽번호/면주 위치: 구버전 문서라 슬롯 변경 미지원 — 재생성 필요`);
+            }
             if (curPnPos && (cmdMap.pnPos !== undefined)) {
               // makebox[0pt]로 감싸는 이유는 buildMemoirPageStyle()의 동일 주석 참고 —
               // 오른쪽/가운데 정렬 슬롯에서 \hfil이 앞의 \hspace를 흡수해버리는 문제 방지
@@ -7626,6 +7647,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const propMap = { marginTop:'top', marginBottom:'bottom', marginInner:'inner', marginOuter:'outer' };
             patchedSty = patchedSty.replace(
               new RegExp(`(${propMap[key]}\\s*=\\s*)([\\d.]+)mm`), `$1${val}mm`);
+          }
+          // 적용 결과 기록 — 파일이 실제로 바뀌었을 때만 변경으로 남기고, 아니면 이유와 함께 "적용 안 됨"으로 남긴다
+          const applied = patchedSty !== sBefore || finalLatex !== lBefore;
+          const label = cmLabel[key] || key;
+          if (applied) {
+            if (before !== undefined && before !== val) directDiffs.push(`- ${label}: ${before}${unit} → ${val}${unit}`);
+          } else if (!['rhText', 'pnPos', 'rhPos'].includes(key) && (before === undefined || String(before) !== String(val))) { // 이 셋은 위에서 이유를 따로 남긴다, 이미 같은 값이면 실패가 아님
+            directDiffs.push(before === undefined
+              ? `- (적용 안 됨) ${label}: 현재 문서에 이 항목이 없음 — 재생성 필요할 수 있음`
+              : `- (적용 안 됨) ${label}: ${before}${unit} → ${val}${unit} — 적용할 위치를 찾지 못함`);
           }
         }
         if (patchedSty !== styCode) {
