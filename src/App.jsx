@@ -5884,7 +5884,10 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         // main.tex + sty + PDF까지 자동 저장 (백그라운드, 실패해도 생성 흐름은 계속됨)
         saveAndCompileOnServer(finalMainTex, finalStyContent, fields.제목, {
           experiment_id: null, satisfaction_score: null, note: 'initial_generation',
-        }).then(result => { if (result) setServerCompileResult(result); });
+        }).then(result => {
+          // 컴파일 서버에 연결하지 못하면 null — 예전에는 조용히 무시되어 PDF 탭이 비어 보였다. 이유를 탭에 남긴다.
+          setServerCompileResult(result ?? { compileOk: false, serverDown: true, folder: null });
+        });
         // ── Revision Trajectory: rev_000 초기 생성 기록 ──────────────────
         const _cmdMap0 = extractLatexCommandMap(finalMainTex || '');
         setRevisionLog([{
@@ -7787,6 +7790,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           { user_request: userMsg, changes: changesSummary, intent },
           nextVersion
         ).then(async result => {
+          if (!result) {
+            // 컴파일 서버 연결 실패 — 화면 수정은 반영되었지만 PDF는 만들어지지 않았음을 탭에 알린다
+            setServerCompileResult({ compileOk: false, serverDown: true, folder: serverCompileResult?.folder ?? null });
+          }
           if (result) {
             setServerCompileResult(result);
             if (result.compileOk) {
@@ -9136,8 +9143,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     {serverCompileResult && !serverCompileResult.compileOk && (
                       <div style={{ padding:"10px 12px", marginBottom:12, borderRadius:12, fontSize:12, lineHeight:1.6,
                         background:'#FDE9E0', border:`1px solid ${T.accent}` }}>
-                        ⚠ 이번 수정은 PDF 컴파일에 실패해서 적용되지 않았어요 ({serverCompileResult.compileReason || '원인 미상'}).
-                        아래는 마지막으로 성공한 버전입니다.
+                        {serverCompileResult.serverDown
+                          ? '⚠ 컴파일 서버에 연결하지 못해서 PDF를 만들지 못했어요. 터미널에서 npm run server를 실행한 뒤 다시 조판 스타일을 생성하거나 수정을 요청해 주세요.'
+                          : `⚠ 이번 수정은 PDF 컴파일에 실패해서 적용되지 않았어요 (${serverCompileResult.compileReason || '원인 미상'}). 아래는 마지막으로 성공한 버전입니다.`}
                       </div>
                     )}
                     {pdfPreview ? (
