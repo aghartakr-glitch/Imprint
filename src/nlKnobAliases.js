@@ -6,7 +6,7 @@
 export const KNOB_ALIASES = [
   // ── 본문 크기·행간·문단 (1~18) ─────────────────────────────────
   { key: 'bodySize', re: /본문.*(키워|키우|크게|커지|크기\s*(를)?\s*(올|늘려|키))/, sample: '본문 글씨 좀 키워줘' },
-  { key: 'bodySize', re: /본문.*(작게|줄여|줄이|작아)/, sample: '본문 글씨 작게 해줘' },
+  { key: 'bodySize', re: /^(?!.*(?:폭|너비|분량)).*본문.*(작게|줄여|줄이|작아)/, sample: '본문 글씨 작게 해줘' },
   { key: 'bodySize', re: /(글씨|글자).*(너무\s*)?작아\s*보/, sample: '글씨가 너무 작아 보여' },
   { key: 'bodyLeading', re: /행간.*(넓|늘|띄|여유|숨)/, sample: '행간 좀 넓혀줘' },
   { key: 'bodyLeading', re: /행간.*(좁|줄이|빽빽|촘촘)/, sample: '행간 좀 좁혀줘' },
@@ -34,7 +34,7 @@ export const KNOB_ALIASES = [
   { key: 'wordSpace', re: /공백.*(벌|넓|유난|크|커)/, sample: '공백이 너무 커' },
   { key: 'wordSpace', re: /어절\s*사이/, sample: '어절 사이 좁혀줘' },
   { key: 'hyphenation', re: /하이픈|하이폰|분철/, sample: '하이픈 빼줘' },
-  { key: 'hyphenation', re: /단어.*(나뉘|쪼개|끊)/, sample: '단어가 어색하게 쪼개져' },
+  { key: 'hyphenation', re: /단어.*(나뉘|쪼개|끊|잘려|잘리)/, sample: '단어가 어색하게 쪼개져' },
   { key: 'bodyAlign', re: /왼쪽\s*정렬|좌측\s*정렬|라그드|ragged/i, sample: '왼쪽 정렬로 바꿔줘' },
   { key: 'bodyAlign', re: /양쪽\s*정렬|균등\s*정렬/, sample: '양쪽 정렬로 가지런하게 해줘' },
   { key: 'bodyFontFamily', re: /고딕|산세리프|sans/i, sample: '본문 서체를 고딕으로 바꿔줘' },
@@ -71,8 +71,8 @@ export const KNOB_ALIASES = [
   { key: 'noteSize', re: /각주.*(키워|크게|커)/, sample: '각주 글씨 조금 키워줘' },
   { key: 'noteSize', re: /각주.*(작게|줄여|작아)/, sample: '각주 글씨 작게 해줘' },
   { key: 'noteLeading', re: /각주.*(행간|줄간격)/, sample: '각주 행간 줄여줘' },
-  { key: 'footnoteSep', re: /(각주\s*(항목|끼리|사이)|각주끼리|각주.*(항목|사이)).*(간격|띄|좁|붙|떨어)/, sample: '각주끼리 너무 떨어져 있어' },
-  { key: 'footinsSkip', re: /(본문|글).*각주.*(간격|여백|띄)/, sample: '본문이랑 각주 사이 띄워줘' },
+  { key: 'footnoteSep', re: /^(?!.*(?:본문|글자|글씨)).*(각주\s*(항목|끼리)|각주끼리|각주\s*사이|각주.*항목).*(간격|띄|좁|붙|떨어)/, sample: '각주끼리 너무 떨어져 있어' },
+  { key: 'footinsSkip', re: /(본문|글).*각주.*(간격|여백|띄|사이|붙|떨어)/, sample: '본문이랑 각주 사이 띄워줘' },
   { key: 'footinsSkip', re: /각주.*(위|아래).*(옮|내려|올려|붙)/, sample: '각주 좀 아래로 내려줘' },
   { key: 'footnoteMarker', re: /각주.*번호.*(대괄호|괄호|\[1\])/, sample: '각주 번호를 대괄호로 바꿔줘' },
   { key: 'footnoteMarker', re: /각주.*번호.*(점|1\.)/, sample: '각주 번호를 점 형식으로 바꿔줘' },
@@ -95,7 +95,7 @@ export const KNOB_ALIASES = [
   { key: 'pnYShift', re: /쪽\s*번호.*(세로|높이|위아래).*(옮|이동|올|내)/, sample: '쪽번호 세로로 조금 올려줘' },
   { key: 'rhPos', re: /면주.*(없애|빼|지워|끄)/, sample: '면주 없애줘' },
   { key: 'rhPos', re: /면주.*(켜|넣어|살려|보이게)/, sample: '면주 다시 넣어줘' },
-  { key: 'rhText', re: /면주.*(문구|내용|텍스트|글귀)\s*(바꿔|변경|넣어)/, sample: '면주 문구 바꿔줘' },
+  { key: 'rhText', re: /면주.*(문구|내용|텍스트|글귀).*(바꿔|변경|넣어)/, sample: '면주 문구 바꿔줘' },
   { key: 'rhSize', re: /면주.*(작게|줄여|작아)/, sample: '면주 작게 해줘' },
   { key: 'rhSize', re: /면주.*(크게|키워)/, sample: '면주 크게 해줘' },
   { key: 'rhSize', re: /면주.*(눈에\s*띄|튀|강해)/, sample: '면주가 너무 눈에 띄어' },
@@ -104,11 +104,11 @@ export const KNOB_ALIASES = [
 
   // ── 여백·단 (85~92) ────────────────────────────────────────────
   { key: 'marginTop', re: /(위|상)\s*(쪽\s*)?(여백|마진)|상단\s*여백/, sample: '위쪽 여백 좀 늘려줘' },
-  { key: 'marginBottom', re: /(아래|하)\s*(쪽\s*)?(여백|마진)|하단\s*여백/, sample: '아래 여백 넓혀줘' },
+  { key: 'marginBottom', re: /(?<!(?:제목|소제목)\s*)(아래|하)\s*(쪽\s*)?(여백|마진)|하단\s*여백/, sample: '아래 여백 넓혀줘' },
   { key: 'marginInner', re: /(안쪽|안|내측)\s*여백|제본.*(여백|안쪽)/, sample: '제본 때문에 안쪽 여백을 늘려줘' },
   { key: 'marginOuter', re: /(바깥|밖|외측)\s*여백/, sample: '바깥 여백 줄여줘' },
   { key: 'marginTop', re: /위아래\s*여백.*같/, sample: '위아래 여백을 같게 해줘' },
-  { key: 'colGap', re: /단\s*(간격|사이)|칼럼\s*간격/, sample: '단 사이를 넓혀줘' },
+  { key: 'colGap', re: /(?<!문)단\s*(간격|사이)|칼럼\s*간격/, sample: '단 사이를 넓혀줘' },
   { key: null, reason: '단 수(1단·2단 전환)를 바꾸는 키가 없음 (재생성 필요)', re: /(1|한|일)\s*단|단\s*수|두\s*단.*(바꿔|없애)/, sample: '1단으로 바꿔줘' },
 
   // ── 미지원·주의 항목 (93~100) ──────────────────────────────────
@@ -120,6 +120,37 @@ export const KNOB_ALIASES = [
   { key: null, reason: '중간 굵기 단계는 없음 (굵게/보통 두 단계)', re: /조금.*(진하|굵)/, sample: '조금만 더 진하게 해줘' },
   { key: 'marginInner', re: /(글|본문).*묻히/, sample: '글이 안쪽으로 묻히지 않게 해줘' },
 
+  // ── 실패 코퍼스(test_nl_corpus.js) 보완 ──────────────────────────
+  { key: 'bodySize', re: /^(?!.*(?:제목|소제목|부제|각주|주석|면주|쪽번호|쪽수)).*(글자|글씨).*(키워|키우|크게|커지)/, sample: '글자 좀 더 키워줘' },
+  { key: 'bodyLeading', re: /줄\s*간격.*(벌려|벌리|넓)/, sample: '줄 간격을 조금 더 벌려주세요' },
+  { key: 'bodyLeading', re: /줄\s*사이.*(촘촘|좁)/, sample: '본문 줄 사이를 좀 촘촘하게' },
+  { key: 'bodyLeading', re: /행간.*(배|맞춰|조정)/, sample: '행간을 1.2배로 맞춰줘' },
+  { key: 'bodyFontFamily', re: /^(?!.*(?:각주|면주|쪽번호|주석)).*서체.*(바꿔|변경|바꾸)/, sample: '본문 서체 좀 부드럽게 바꿔줘' },
+  { key: 'letterSpace', re: /글자\s*사이.*(빽빽|좁|촘촘|붙)/, sample: '글자 사이가 너무 빽빽해' },
+  { key: 'letterSpace', re: /글자\s*끼리.*(붙|겹)/, sample: '글자끼리 너무 붙어 보여' },
+  { key: 'wordSpace', re: /띄어쓰기.*(들쭉|불규칙|고르|일정)/, sample: '띄어쓰기 간격이 들쭉날쭉해' },
+  { key: 'bodyAlign', re: /양끝\s*(정렬|으로|로)/, sample: '양끝 정렬로 맞춰줘' },
+  { key: 'parIndent', re: /들여쓰기.*(줄여|줄이|작게|좁)/, sample: '들여쓰기 한 칸만 줄여줘' },
+  { key: 'parSkip', re: /문단이?\s*(너무\s*)?붙/, sample: '문단이 너무 붙어 있어' },
+  { key: 'h1Size', re: /^(?!.*(?:아래|위|여백|간격|부제|소제목)).*제목.*(너무\s*커|튀)/, sample: '제목이 너무 커서 튀어' },
+  { key: 'bodyGap', re: /(제목|소제목)\s*(아래|밑).*(여백|간격)/, sample: '제목 아래 여백이 너무 커' },
+  { key: 'parSkip', re: /문단.*사이.*(없애|없게|지워|없|안)/, sample: '문단 사이를 아예 없애고 싶어' },
+  { key: 'h2Size', re: /소제목.*구분.*(안\s*가|안\s*돼|안\s*보)/, sample: '소제목이 본문이랑 구분이 안 가' },
+  { key: 'headingSpaceBefore', re: /(제목|소제목)\s*위쪽.*(띄|여백|간격)/, sample: '소제목 위쪽을 좀 띄워줘' },
+  { key: 'noteSize', re: /각주.*(크기|글씨).*(비슷|맞춰|같게)/, sample: '각주 크기를 본문이랑 비슷하게' },
+  { key: 'noteLeading', re: /각주.*(빽빽|촘촘|답답)/, sample: '각주가 너무 빽빽해' },
+  { key: 'footinsSkip', re: /각주.*(내려|올려)/, sample: '각주를 쪽번호 쪽으로 더 내려줘' },
+  { key: 'pnSize', re: /쪽\s*번호.*너무\s*(커|크)/, sample: '쪽번호가 너무 커' },
+  { key: 'pnSize', re: /쪽\s*수.*(작게|줄여|작아|크게|키워)/, sample: '쪽수 표시 좀 작게' },
+  { key: 'pnPos', re: /(쪽|페이지)\s*번호.*(안\s*나|안\s*보|없게|없애|지워|빼|끄)/, sample: '페이지 번호를 안 나오게 해줘' },
+  { key: 'marginInner', re: /한\s*줄.*(길|짧)|본문\s*(폭|너비|가로).*(좁|줄이|줄여|넓)/, sample: '본문 폭을 좁혀서 한 줄 길이를 줄여줘' },
+  { key: null, reason: '책 두께(쪽수·제본 두께)를 조절하는 키가 없음', re: /책\s*두께|판\s*두께|책\s*부피/, sample: '책 두께를 줄여줘' },
+  { key: null, reason: '본문 단 개수를 바꾸는 키가 없음 (재생성 필요)', re: /(세|네|다섯)\s*개로?.*(단|나눠)|단.*(세|네|다섯)\s*개/, sample: '본문 단을 세 개로 나눠줘' },
+  { key: null, reason: '쪽 마지막 줄의 과부·고아 방지는 이미 penalty로 막혀 있음 — 실제 PDF 확인 필요', re: /마지막\s*줄.*(혼자|남지)|(혼자|외로운)\s*(줄|행)/, sample: '각 쪽 마지막 줄이 혼자 남지 않게' },
+  { key: null, reason: '목차 생성은 조판 설정 키로 제공되지 않음', re: /목차|차례/, sample: '목차를 넣어줘' },
+  { key: null, reason: '표지·속표지·판권 디자인은 조판 설정 키로 제공되지 않음', re: /표지|속표지|판권/, sample: '표지 디자인을 바꿔줘' },
+  { key: null, reason: '분량(글 양)을 직접 조절하는 키가 없음', re: /(글|본문)\s*(양|분량)/, sample: '본문 분량을 줄여' },
+
   // ── 각주·면주·쪽번호 서체 (본문과 독립) ─────────────────────────
   { key: 'footnoteFontFamily', re: /각주.*(명조|고딕|세리프|산세리프|바탕|서체|글꼴|폰트|글씨체)/, sample: '각주만 명조체로 바꿔줘' },
   { key: 'rhFontFamily', re: /면주.*(명조|고딕|세리프|산세리프|바탕|서체|글꼴|폰트|글씨체)/, sample: '면주 명조체로 바꿔줘' },
@@ -128,7 +159,7 @@ export const KNOB_ALIASES = [
   { key: 'parSkip', re: /(문단|단락).*(간격|사이).*(줄여|좁혀|줄이|좁게|붙)/, sample: '단락 간격 줄여줘' },
 
   // ── 양끝맞춤 자간 균일 (hangulTrack) ──────────────────────────
-  { key: 'hangulTrack', re: /자간.*(균일|고르|일정|들쭉|들쑥|불규칙)/, sample: '양끝맞춤에서 자간을 균일하게 해줘' },
+  { key: 'hangulTrack', re: /자간.*(균일|고르|일정|들쭉|들쑥|불규칙|달라|다르|차이)/, sample: '양끝맞춤에서 자간을 균일하게 해줘' },
   { key: 'hangulTrack', re: /(글자|글씨)\s*(사이|간격).*(고르|균일|일정)/, sample: '글자 사이 간격을 고르게 해줘' },
   { key: 'hangulTrack', re: /(줄|행)마다.*(글자|자간).*(차이|다르|들쭉)|(글자|자간).*들쭉날쭉/, sample: '줄마다 글자 간격이 들쭉날쭉해' },
 
