@@ -9107,7 +9107,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               </div>
             </div>
           ) : isDone && (
-            <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+            <div style={{ flex:1, display:"flex", flexDirection:"column",
+              overflowY: tab === "pdf" ? "auto" : "hidden", overflowX:"hidden" }}>
 
               {/* ── 선택된 패키지 카드 ── */}
               <div style={{ padding:"20px 24px 16px", borderBottom:`1px solid ${T.border}`,
@@ -9163,7 +9164,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
               {/* ── 출력 탭 ── */}
               <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`,
-                padding:"0 24px", background:T.surface, flexShrink:0 }}>
+                padding:"0 24px", background:T.surface, flexShrink:0,
+                position:"sticky", top:0, zIndex:2 }}>
                 {[
                   ["pdf",L("PDF 미리보기","PDF Preview")],
                   ["intent",L("작업 의도","Intent")],
@@ -9183,7 +9185,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               </div>
 
               {/* 탭 콘텐츠 */}
-              <div style={{ flex:1, overflowY:"auto" }}>
+              <div style={tab === "pdf" ? { flex:"none" } : { flex:1, overflowY:"auto" }}>
 
                 {/* 작업 의도 */}
                 {/* ── PDF 미리보기 (중앙): 수정할 때마다 컴파일된 결과를 바로 본다 ── */}
@@ -9203,7 +9205,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           {styleVersion > 0 ? `v${styleVersion}` : '초기 생성'} · {pdfPreview.folder}
                         </div>
                         <iframe title="PDF 미리보기" src={`${pdfPreview.url}?t=${pdfPreview.nonce}`}
-                          style={{ width:"100%", height:"78vh", minHeight:560, border:`1px solid ${T.border}`,
+                          style={{ width:"100%", height:"calc(100vh - 200px)", minHeight:480, border:`1px solid ${T.border}`,
                             borderRadius:12, background:"#fff" }} />
                       </>
                     ) : (
