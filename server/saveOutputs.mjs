@@ -60,6 +60,11 @@ export function overwriteGenerationFiles(runDir, { mainTex, styContent }) {
   if (!existsSync(runDir)) throw new Error(`대상 폴더 없음: ${runDir}`)
   const texPath = join(runDir, 'main.tex');
   const styPath = join(runDir, 'imprint-style.sty');
+  // 첫 수정 직전의 초기 생성본을 v0으로 한 번만 남겨 둔다 — 그래야 "초기 ↔ v1"도 비교할 수 있다
+  for (const [src, dest] of [['main.pdf', 'main_v0.pdf'], ['main.tex', 'main_v0.tex'], ['imprint-style.sty', 'imprint-style_v0.sty']]) {
+    const sp = join(runDir, src), dp = join(runDir, dest);
+    if (existsSync(sp) && !existsSync(dp) && !existsSync(join(runDir, 'main_v1.pdf'))) copyFileSync(sp, dp);
+  }
   const previous = {
     mainTex: existsSync(texPath) ? readFileSync(texPath, 'utf-8') : null,
     styContent: existsSync(styPath) ? readFileSync(styPath, 'utf-8') : null,

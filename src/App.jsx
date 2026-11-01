@@ -1,12 +1,30 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { T, FS, GLOBAL_CSS } from "./theme.js";
-import { buildKnobHintSuffix } from "./nlKnobAliases.js";
+import { buildKnobHintSuffix, planNaturalEdit } from "./nlKnobAliases.js";
+import { scalePatches, LEVEL_NAMES } from "./nlIntensity.js";
+import { applyTracking, readTracking } from "./styTracking.js";
+import { planFontLike, patchText } from "./nlFonts.js";
+import { readRule, applyRule } from "./styRule.js";
+import { applyNoteMarker, readNoteMarker } from "./styNoteMarker.js";
+import { ensureFootskip } from "./styGeometry.js";
+import { planMargins } from "./nlMargin.js";
+import { applyColor, readColor, COLOR_KEYS, elementByKey } from "./styColor.js";
+import { applyHighlight, readHighlight, isHlMode } from "./styHighlight.js";
+import { applyFont, applyFontLike, ensureSansFont, readFonts, fontEnumMap, fontChoicesText, mainIsSans, FONT_TABLES } from "./styFonts.js";
 
 // 로컬 개발: Vite 프록시(/compile-api → localhost:8789)를 그대로 씀.
 // 배포(Vercel): 컴파일 서버가 별도 호스팅(Railway 등)에 있으므로 VITE_COMPILE_SERVER_URL로 절대 주소 지정.
 const COMPILE_SERVER_URL = import.meta.env.VITE_COMPILE_SERVER_URL || "";
 const COMPILE_API = COMPILE_SERVER_URL ? `${COMPILE_SERVER_URL}/api` : "/compile-api";
 const COMPILE_OUTPUTS = COMPILE_SERVER_URL ? `${COMPILE_SERVER_URL}/outputs` : "/compile-outputs";
+// 응답이 비었거나 JSON이 아닐 때 "Unexpected end of JSON input" 대신 어느 주소가 어떤 상태로 답했는지 알려 준다
+async function readJsonSafe(res) {
+  const text = await res.text();
+  const where = String(res.url || '').replace(/^https?:\/\/[^/]+/, '');
+  if (!text.trim()) throw new Error(`서버 응답이 비어 있음 (HTTP ${res.status}, ${where}) — 서버가 꺼졌거나 요청 도중 끊겼을 수 있어요`);
+  try { return JSON.parse(text); }
+  catch { throw new Error(`서버 응답이 JSON이 아님 (HTTP ${res.status}, ${where}): ${text.slice(0, 80)}`); }
+}
 
 // Imprint 1.0.0
 // 편집 디자인 타이포그래피 스타일 패키지 선택기
@@ -494,14 +512,20 @@ function normalizeStyPatchValue(key, raw) {
   // 열거형 키 — 한국어 표현도 정식 값으로 바꾼다. 모르는 값은 버려서 변화 요약에 "적용 안 됨"으로 남긴다
   const ENUM_PATCH = {
     headingAlign: { center:'center', 가운데:'center', 중앙:'center', left:'left', 왼쪽:'left', 좌측:'left', right:'right', 오른쪽:'right', 우측:'right', default:'default', 기본:'default', 기본값:'default' },
-    footnoteMarker: { bracket:'bracket', 대괄호:'bracket', '[1]':'bracket', dot:'dot', 점:'dot', '1.':'dot' },
+    footnoteMarker: { bracket:'bracket', 대괄호:'bracket', '[1]':'bracket', dot:'dot', 점:'dot', '1.':'dot', paren:'paren', 소괄호:'paren', '1)':'paren', circle:'circle', 동그라미:'circle', 원숫자:'circle', 원문자:'circle', 원:'circle' },
     footnoteRule: { on:'on', 있음:'on', 켜기:'on', off:'off', 없음:'off', 끄기:'off' },
     bodyAlign: { justified:'justified', 양쪽:'justified', 양끝:'justified', ragged:'ragged', 왼쪽:'ragged', 좌측:'ragged' },
     hyphenation: { on:'on', 켜기:'on', 있음:'on', off:'off', 끄기:'off', 없음:'off' },
     bodyFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
     footnoteFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    footnoteMarkFont: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
     rhFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
     pnFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    headingFontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    h1FontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    h2FontFamily: { serif:'serif', 명조:'serif', 바탕:'serif', sans:'sans', 고딕:'sans', 산세리프:'sans' },
+    serifFont: fontEnumMap('serif'),
+    sansFont: fontEnumMap('sans'),
   };
   if (ENUM_PATCH[key]) {
     const hit = ENUM_PATCH[key][v.toLowerCase()] ?? ENUM_PATCH[key][v];
@@ -976,7 +1000,7 @@ async function saveAndCompileOnServer(mainTex, styContent, bookTitle, log) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mainTex, styContent, bookTitle, log }),
     });
-    const data = await res.json();
+    const data = await readJsonSafe(res);
     if (!data.ok) {
       console.warn('[saveAndCompileOnServer] 실패:', data.error);
       return null;
@@ -1000,7 +1024,7 @@ async function updateAndCompileOnServer(folder, mainTex, styContent, logEntry, v
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ folder, mainTex, styContent, logEntry, version }),
     });
-    const data = await res.json();
+    const data = await readJsonSafe(res);
     if (!data.ok) {
       console.warn('[updateAndCompileOnServer] 실패:', data.error);
       return null;
@@ -2071,7 +2095,7 @@ async function generateRationale(p) {
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    const data = await res.json();
+    const data = await readJsonSafe(res);
     return (data.content || []).map(x => x.text || '').join('').trim();
   } catch (e) { return ''; }
 }
@@ -3040,9 +3064,11 @@ function validateLatexExport({ mainTex, sty, layoutConfig = null }) {
   }
 
   // [G2] sty에 \setmainhangulfont / \setsanshangulfont → kotex 이중 바인딩 오류
-  if (/\\setmainhangulfont/.test(styCode))
+  // 자간·서체 선택이 넣은 줄(% imprintTrack / % imprintFonts / % imprintSansHangul)은 \ifdefined 보호가 걸려 있고 컴파일로 확인된 것이라 제외
+  const styCodeG2 = styCode.replace(/^.*% imprint(?:Track|Fonts|SansHangul).*$/gm, '');
+  if (/\\setmainhangulfont/.test(styCodeG2))
     errors.push('imprint-style.sty: \\setmainhangulfont 사용 — kotex와 이중 바인딩으로 한글 깨짐 발생. 제거하세요');
-  if (/\\setsanshangulfont/.test(styCode))
+  if (/\\setsanshangulfont/.test(styCodeG2))
     errors.push('imprint-style.sty: \\setsanshangulfont 사용 — kotex와 이중 바인딩으로 한글 깨짐 발생. 제거하세요');
 
   // [G3] wrapping quote 잔존 — {\\bodyf ... \noindent "전체내용"\par } 패턴만 감지
@@ -3416,6 +3442,17 @@ export default function App() {
   const [tab, setTab] = useState("intent");
   // 중앙 PDF 미리보기 — 컴파일이 성공할 때마다 그 결과 PDF를 보여준다 (실패하면 마지막 성공 버전 유지)
   const [pdfPreview, setPdfPreview] = useState(null); // { url, nonce, folder }
+  // PDF 비교 — mode: off | side(나란히) | flip(한 칸에서 전환). base: 비교할 이전 버전 번호(main_v{n}.pdf). showBase: flip에서 지금 보이는 쪽
+  const [pdfCmp, setPdfCmp] = useState({ mode: 'off', base: null, showBase: false });
+  // 왼쪽 입력 패널 접기 — PDF를 넓게 보려고. 다음에 열어도 마지막 상태를 기억한다
+  // PDF 보기 확대: page=한 쪽이 통째로 보이게, width=너비 맞춤, 100=원래 크기. 기억해 둔다
+  const [pdfFit, setPdfFit] = useState(() => { try { return localStorage.getItem('imprint.pdfFit') || 'page'; } catch { return 'page'; } });
+  const changePdfFit = v => { setPdfFit(v); try { localStorage.setItem('imprint.pdfFit', v); } catch { /* 저장소를 못 쓰는 환경 */ } };
+  const [leftOpen, setLeftOpen] = useState(() => { try { return localStorage.getItem('imprint.leftOpen') !== '0'; } catch { return true; } });
+  // 가운데 위쪽 요약 카드(제목·판형·본문 크기 등) 접기 — 접으면 제목 한 줄만 남아 PDF 면이 넓어진다
+  const [headOpen, setHeadOpen] = useState(() => { try { return localStorage.getItem('imprint.headOpen') !== '0'; } catch { return true; } });
+  const toggleHead = () => setHeadOpen(o => { const n = !o; try { localStorage.setItem('imprint.headOpen', n ? '1' : '0'); } catch { /* 저장소를 못 쓰는 환경 */ } return n; });
+  const toggleLeft = () => setLeftOpen(o => { const n = !o; try { localStorage.setItem('imprint.leftOpen', n ? '1' : '0'); } catch { /* 저장소를 못 쓰는 환경 */ } return n; });
   useEffect(() => {
     if (serverCompileResult && !serverCompileResult.compileOk) {
       setTab('pdf'); // 실패도 중앙에서 바로 보이게 — 마지막 성공 PDF와 실패 안내를 함께 보여준다
@@ -3536,7 +3573,7 @@ export default function App() {
           messages: [{ role: 'user', content: '텍스트 분석→JSON: ' + schema + '\n텍스트:' + text.slice(0, 200) }]
         })
       });
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       const raw = (data.content||[]).map(x=>x.text||'').join('');
       const parsed = JSON.parse(raw.replace(/^[^{]*/,'').replace(/[^}]*$/,''));
       setAiCache('analyzeText', cacheKey, parsed);
@@ -3637,7 +3674,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       });
       clearTimeout(tid);
       if (!res.ok) return null;
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       const raw = (data.content || []).map(x => x.text || '').join('');
       const parsed = JSON.parse(raw.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
 
@@ -3783,7 +3820,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         })
       });
       clearTimeout(tid);
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       const raw = (data.content||[]).map(x=>x.text||'').join('');
       const parsed = JSON.parse(raw.replace(/^[^{]*/,'').replace(/[^}]*$/,''));
       const idx = parseInt(parsed.i);
@@ -4283,7 +4320,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
         fontspecCmd('setmainfont', mainFont) + '\n' +
         (mainFont !== sansFont
           ? fontspecCmd('setsansfont', sansFont) + '\n'
-          : `% sans = main (단일 서체군)\n`) +
+          : `% sans = main (단일 서체군) — \\sffamily도 같은 글꼴이 되게 \\setsansfont를 한 번 더 지정\n` + fontspecCmd('setsansfont', sansFont) + '\n') +
         (isMixedLayout
           ? `% 혼합 레이아웃: 본문=\\rmfamily, 제목/소제목=\\sffamily\n`
           : '') +
@@ -5282,7 +5319,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
           }),
         });
         clearTimeout(tid);
-        const data = await res.json();
+        const data = await readJsonSafe(res);
         const raw = (data.content || []).map(x => x.text || '').join('');
         let bodyRaw = raw.replace(/```latex\n?/g, '').replace(/```/g, '').trim();
         // Claude 출력에서 \begin{document}...\end{document} 사이 본문만 추출
@@ -6331,8 +6368,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     const geo = latexStr.match(/top=([\d.]+)mm.*?bottom=([\d.]+)mm.*?inner=([\d.]+)mm.*?outer=([\d.]+)mm/s);
     if (geo) { map.marginTop=geo[1]; map.marginBottom=geo[2]; map.marginInner=geo[3]; map.marginOuter=geo[4]; }
     // LetterSpace (자간)
-    const ls = latexStr.match(/LetterSpace=([-\d.]+)/);
-    if (ls) map.letterSpace = ls[1];
+    // 한글 줄(% imprintTrack)이 있으면 그 값(em의 %)을, 없으면 영문 LetterSpace 값을 읽는다
+    const ls = readTracking(latexStr);
+    if (ls !== undefined) map.letterSpace = ls;
     // \footnotemark / \footnotesize (일반 각주)
     const fnSize = latexStr.match(/\\renewcommand\{\\footnotesize\}\{\\fontsize\{([\d.]+)pt\}\{([\d.]+)pt\}/);
     if (fnSize) { map.footnoteSize = fnSize[1]; map.footnoteLeading = fnSize[2]; }
@@ -6359,6 +6397,28 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       const m = latexStr.match(new RegExp(`\\\\newcommand\\{\\\\${famCmd}\\}\\{(\\\\rmfamily|\\\\sffamily)`));
       if (m) map[mapKey] = m[1] === '\\sffamily' ? 'sans' : 'serif';
     });
+    // 본문 속 각주 번호(위첨자) 서체 — footnoteMarkFont가 넣은 % imprintFnMark 줄에서 읽는다
+    const fmM = latexStr.match(/^.*\\(rmfamily|sffamily).*% imprintFnMark/m);
+    if (fmM) map.footnoteMarkFont = fmM[1] === 'sffamily' ? 'sans' : 'serif';
+    // 제목·소제목 글자 수(한글=1, 영문·숫자·공백≈0.55) — "소제목을 제목 가로 폭에 맞춰서"처럼 폭을 어림할 때 쓴다
+    { const vlen = t => [...String(t)].reduce((n, c) => n + (/[가-힣ㄱ-ㅎ]/.test(c) ? 1 : /[\s\w.,'’‘“”"!?·:;()-]/.test(c) ? 0.55 : 1), 0);
+      const t1 = latexStr.match(/\\hone\s+([^\\{}]+?)\s*\\par/); const t2 = latexStr.match(/\\htwo\s+([^\\{}]+?)\s*\\par/);
+      if (t1) map.h1Chars = String(Math.round(vlen(t1[1].trim()) * 10) / 10);
+      if (t2) map.h2Chars = String(Math.round(vlen(t2[1].trim()) * 10) / 10); }
+    // 제목(\hone/\htwo/\hthree) 서체 계열 — 제목 3종이 같은 계열일 때만 값을 둔다
+    // 서체 표시가 없는 정의(\bfseries만 있는 제목)는 본문 주서체를 그대로 따라가므로 주서체가 고딕인지로 계열을 정한다
+    { const inherit = mainIsSans(latexStr) ? '\\sffamily' : '\\rmfamily';
+      const hf = ['hone', 'htwo', 'hthree'].map(c => {
+        const m = latexStr.match(new RegExp('\\\\newcommand\\{\\\\' + c + '\\}\\{(\\\\rmfamily|\\\\sffamily|\\\\normalfont)?'));
+        return m ? (m[1] && m[1] !== '\\normalfont' ? m[1] : inherit) : null;
+      }).filter(Boolean);
+      if (hf.length && hf.every(x => x === hf[0])) map.headingFontFamily = hf[0] === '\\sffamily' ? 'sans' : 'serif';
+      if (hf[0]) map.h1FontFamily = hf[0] === '\\sffamily' ? 'sans' : 'serif';
+      if (hf[1]) map.h2FontFamily = hf[1] === '\\sffamily' ? 'sans' : 'serif'; }
+    // 명조·고딕 실제 서체 — % imprintFonts 줄에서 읽는다(없으면 기본)
+    map.quoteHighlight = readHighlight(latexStr);
+    COLOR_KEYS.forEach(k => { const c = readColor(latexStr, elementByKey(k)); if (c !== undefined) map[k] = c; });
+    { const fonts = readFonts(latexStr); map.serifFont = fonts.serif; map.sansFont = fonts.sans; }
     // 한글 음절 사이 신축(1/100 em) — hangulTrack 줄에서 읽는다
     const htM = latexStr.match(/\\xetexkostretchshrink\{plus([\d.]+)em/);
     if (htM) map.hangulTrack = String(Math.round(Number(htM[1]) * 100));
@@ -6386,9 +6446,9 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 각주 표시 형식 — [1] 대괄호 vs 1. 점
     const noteLabelM = latexStr.match(/\\newcommand\{\\ImpNoteLabel\}\[1\]\{(\[#1\]\\ |#1\.\\ )\}/);
     if (noteLabelM) map.footnoteMarker = noteLabelM[1].startsWith('[') ? 'bracket' : 'dot';
+    { const nm = readNoteMarker(latexStr); if (nm) map.footnoteMarker = nm; }
     // 각주 구분선(각주 위 가로줄) 표시 여부
-    const footRuleM = latexStr.match(/\\renewcommand\{\\footnoterule\}\{([^}]*)\}/);
-    if (footRuleM) map.footnoteRule = footRuleM[1].trim() === '' ? 'off' : 'on';
+    { const rr = readRule(latexStr); if (rr) { map.footnoteRule = rr.on ? 'on' : 'off'; map.footnoteRuleWidth = String(rr.width); map.footnoteRuleThickness = String(rr.thickness); map.footnoteRuleColor = String(rr.darkness); } }
     // 사이드노트 레이아웃 본문/각주 칸 폭 (mm) — 사이드노트가 아닌 레이아웃엔 없음
     const bWidthM = latexStr.match(/\\setlength\{\\imprintbodywidth\}\{([\d.]+)mm\}/);
     if (bWidthM) map.bodyWidth = bWidthM[1];
@@ -6455,7 +6515,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
       });
       clearTimeout(tid);
       if (!res.ok) { setEvidenceMap([]); return; }
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       const raw = (data.content || []).map(x => x.text || '').join('');
       const parsed = JSON.parse(raw.replace(/^[^\[]*/, '').replace(/[^\]]*$/, ''));
       const result = Array.isArray(parsed) ? parsed : [];
@@ -6492,7 +6552,7 @@ ${customTexts.join('\n')}`;
           messages: [{ role: 'user', content: prompt }]
         })
       });
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       const text = data?.content?.[0]?.text || '[]';
       const match = text.match(/\[[\s\S]*\]/);
       if (!match) return [];
@@ -7073,7 +7133,7 @@ ${customTexts.join('\n')}`;
       (cmdMap.bodyWidth !== undefined) && `사이드노트 본문 칸 폭: ${cmdMap.bodyWidth}mm / 각주 칸 폭: ${cmdMap.noteWidth}mm`,
       (cmdMap.rhText !== undefined) && `면주(러닝헤드) 텍스트: "${cmdMap.rhText}"`,
       cmdMap.footnoteSize && `하단각주: ${cmdMap.footnoteSize}pt / 행간 ${cmdMap.footnoteLeading}pt`,
-      cmdMap.letterSpace  && `자간: ${cmdMap.letterSpace}`,
+      `자간(letterSpace): ${cmdMap.letterSpace ?? 0} (em의 %, 0=기본, 양수=넓힘, 음수=좁힘 — 한글·영문 모두 적용)`,
       (cmdMap.parIndent !== undefined) && `문단 들여쓰기: ${cmdMap.parIndent}em`,
       (cmdMap.colGap !== undefined) && `단 간격(\\columnsep): ${cmdMap.colGap}mm`,
       cmdMap.marginTop    && `여백: 상${cmdMap.marginTop} 하${cmdMap.marginBottom} 내${cmdMap.marginInner} 외${cmdMap.marginOuter}mm`,
@@ -7102,10 +7162,19 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily rhFontFamily pnFontFamily headingAlign noteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: h1FontFamily h2FontFamily rhColor pnColor noteColor h1Color h2Color bodyColor footnoteRuleWidth footnoteRuleThickness footnoteRuleColor quoteHighlight headingFontFamily serifFont sansFont bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily footnoteMarkFont rhFontFamily pnFontFamily headingAlignnoteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
   (각주만 명조/고딕으로 바꿔달라는 요청 → footnoteFontFamily=serif 또는 sans. 면주 서체는 rhFontFamily, 쪽번호 서체는 pnFontFamily. 이 셋은 본문 서체(bodyFontFamily)와 독립이다 — "본문과 같은 계열이라 따로 바꿀 수 없다"고 답하지 말고 값을 설정할 것)
+  (글자 색 — rhColor(면주) pnColor(쪽번호) noteColor(각주) h1Color(제목) h2Color(부제목) bodyColor(본문) = 검정의 진하기 %, 100=검정, 낮을수록 연한 회색(최소 5). "연하게/흐리게"는 값을 낮추고 "진하게/검정으로"는 올린다. 현재: 면주 ${cmdMap.rhColor ?? 100} / 쪽번호 ${cmdMap.pnColor ?? 100} / 각주 ${cmdMap.noteColor ?? 100} / 제목 ${cmdMap.h1Color ?? 100} / 본문 ${cmdMap.bodyColor ?? 100}. 면주 색상은 "지원 불가"라고 답하지 말 것.)
+  (각주 구분선 — footnoteRule=on|off, footnoteRuleWidth(판면 폭 대비 %, 10~100; "여백에 맞게/꽉 차게"=100), footnoteRuleThickness(pt, 0.1~3), footnoteRuleColor(검정 진하기 %, 낮을수록 연함). 현재: ${cmdMap.footnoteRule ?? '알 수 없음'} / 길이 ${cmdMap.footnoteRuleWidth ?? '-'}% / 두께 ${cmdMap.footnoteRuleThickness ?? '-'}pt / 진하기 ${cmdMap.footnoteRuleColor ?? '-'}%. 구분선 말에 든 "여백"은 페이지 여백이 아니다. footnoterule을 main.tex에 직접 쓰라고 답하지 말 것.)
+  (따옴표(‘ ’ “ ”) 안의 낱말·구절에 형광펜/배경색 → quoteHighlight=bold|italic(따옴표 안만 굵게·기울임), yellow|green|pink|blue|orange|gray(배경 형광펜), text:red|text:blue|text:green|text:orange|text:pink|text:gray(글자색), 끄기는 off (현재: ${cmdMap.quoteHighlight ?? 'off'}). "main.tex를 직접 고쳐라"고 답하지 말 것 — 시스템이 main.tex를 자동으로 감싼다.)
+  (제목만 h1FontFamily, 부제목·소제목만 h2FontFamily, 둘 다 headingFontFamily = serif 또는 sans (제목 현재: ${cmdMap.h1FontFamily ?? '?'} / 부제목 현재: ${cmdMap.h2FontFamily ?? '?'}) — 또는 headingFontFamily=serif 또는 sans (현재: ${cmdMap.headingFontFamily ?? '알 수 없음'}). "제목 서체는 못 바꾼다"고 답하지 말 것.)
+  (서체 종류 바꾸기 — serifFont(명조 계열 전체의 실제 서체)·sansFont(고딕 계열 전체)는 아래 id 중 하나를 값으로 쓴다. "다른 명조/나눔명조로/본명조/신문명조/궁서체/필기체/돋움/프리텐다드" 같은 요청은 새 폰트 로드 없이 바로 적용 가능하니 "재생성 필요"라고 답하지 말 것. 본문이 고딕인데 명조 서체를 요청하면 serifFont와 함께 bodyFontFamily=serif도 같이 낼 것(반대도 마찬가지). 각주·면주·쪽번호만 다른 서체를 원하면 해당 FontFamily 키(serif/sans)로 계열을 고른 뒤 serifFont/sansFont로 서체를 정함. 현재 값: 명조=${cmdMap.serifFont ?? 'batang'} / 고딕=${cmdMap.sansFont ?? 'pretendard'}
+   명조 id: ${fontChoicesText('serif')}
+   고딕 id: ${fontChoicesText('sans')}
+   목록에 없는 서체(예: 특정 상용 폰트)는 가장 가까운 id로 대체하되 대체했다고 답할 것.)
+  (본문 속 각주 번호(위첨자 숫자)의 서체를 바꿔달라는 요청 → footnoteMarkFont=serif 또는 sans. 각주 문장 서체(footnoteFontFamily)와 별개이며 "적용 불가"로 답하지 말 것)
   (양끝맞춤(justified)에서 자간이 줄마다 들쭉날쭉하다, 자간을 균일하게 해달라는 요청 → hangulTrack=0. 기본은 8이며 값이 클수록 줄마다 자간 차이가 커진다. 본문 정렬이 왼쪽(ragged)이면 효과가 없으므로 그 사실을 답할 것. 어절 사이 간격이 더 벌어지는 부작용이 생길 수 있음을 함께 밝힐 것)
   (제목·소제목 위쪽 여백을 늘리거나 줄이라는 요청 → headingSpaceBefore=pt 값(0이면 원래대로). 소제목만 따로 할 수는 없고 모든 제목에 같이 적용됨 — 그 사실을 답에 밝힐 것)
   (제목·소제목이 쪽이나 단 맨 아래에 혼자 남지 않게 해달라는 요청 → headingKeepLines=줄 수 (기본 4, 더 확실하게는 6). 제목 뒤 본문이 최소 몇 줄 들어갈 공간을 남기는 값이며, 완전히 보장하지는 않으므로 PDF 확인을 권할 것)
@@ -7121,7 +7190,7 @@ ${customTexts.join('\n')}`;
   (문단/단락 사이 간격을 좁혀/넓혀 달라는 요청 → parSkip, pt 단위. 현재 cmdMap.parSkip 값이 문단 사이 전체 간격이다(본문 문단 뒤 간격 포함). 좁히라면 현재 값보다 작은 값(0pt까지 가능), 넓히라면 현재 값보다 큰 값으로 설정할 것. "이미 최소"라고 답하지 말 것 — 0pt는 간격이 없는 상태이므로 실제로 설정할 수 있다)
   (제목을 굵게/얇게 해달라는 요청 → headingWeight=bold 또는 normal. \hone \htwo \hthree 전부에 함께 적용됨 — 특정 레벨만 다르게 해달라는 요청은 적용 불가로 답할 것)
   (제목을 가운데/왼쪽/오른쪽으로 옮겨달라는 요청 → headingAlign=center/left/right, 원래대로 되돌리려면 default. 이것도 \hone \htwo \hthree 전부에 함께 적용됨)
-  (각주 번호를 대괄호[1]/점1. 형식으로 바꿔달라는 요청 → footnoteMarker=bracket 또는 dot)
+  (각주 번호 모양 → footnoteMarker=dot(1.) | bracket([1]) | paren(1)) | circle(동그라미 안 숫자). "동그라미는 지원하지 않는다"고 답하지 말 것 — circle로 지원함)
   (각주 위에 구분선을 넣거나 빼달라는 요청 → footnoteRule=on 또는 off)
   (cmdMap에 bodyWidth/noteWidth가 있을 때만 — 사이드노트 레이아웃에서 본문 칸과 각주 칸 폭 비율을 바꿔달라는 요청 → bodyWidth/noteWidth, mm 단위. 없으면(undefined) 사이드노트 레이아웃이 아니므로 "적용 불가: 사이드노트 레이아웃 아님"으로 답할 것)
   (면주에 다른 문구를 넣어달라는 요청 → rhText=새 문구. cmdMap에 rhText가 없으면(undefined) 면주 자체가 꺼져있는 상태이므로 "적용 불가: 면주가 꺼져있음, rhPos로 먼저 켤 것"으로 답할 것)
@@ -7168,9 +7237,9 @@ ${cmdMapStr || '(없음)'}
 레퍼런스 디자이너 근거 (이 조판이 왜 이렇게 설계됐는지 — 수정 판단 시 참고할 것):
 ${refCtx}
 
-강도 판단 기준 (현재값 기준, 범위 내에서 자유롭게 판단):
-아주 조금/살짝 < 조금/약간 < 적당히/좀 < 많이/크게 < 아주 많이/훨씬
-작은 변화는 독자가 알아채기 어려울 만큼, 큰 변화는 레이아웃이 눈에 띄게 달라질 만큼.
+강도 단계 (5단계): 아주 조금/살짝 < 조금/약간 < 적당히/좀 < 많이/대폭 < 아주 많이/훨씬/겁나
+수치 크기는 시스템이 사용자 말의 강도 단계에 맞춰 최종 계산한다(단계마다 변화량이 확실히 달라지게 고정). 너는 대상 키와 방향(늘림/줄임)을 정확히 고르는 데 집중하고, 값은 방향이 맞는 대략적인 값으로 써도 된다. 단, 사용자가 양을 직접 말하면(1.2배, 2mm, 한 포인트 등) 그 값을 정확히 써야 한다.
+자간(letterSpace)은 em의 % 단위이며 한글·영문 모두에 적용된다(0=기본, 양수=넓힘, 음수=좁힘).
 위 레퍼런스 근거(서체/여백/자간 선택 이유)와 상충하지 않는 범위에서 조정할 것.
 수치는 소수점 2자리까지 사용. 정수(9, 10 등) 출력 금지 — 반드시 소수점 포함(예: 9.24, 8.73).
 
@@ -7179,6 +7248,12 @@ ${outputRules}
 현재 main.tex:
 ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${compressedLatex}`;
 
+    // 직전에 실제로 바뀐 키들 — "더 줄여줘"처럼 대상 없이 말하면 이 키들에 이어서 적용한다
+    // 새로고침으로 대화 기록이 비어도 "조금만 더/반대로"가 직전 수정을 이어받도록 마지막 수정(키·방향)을 브라우저에도 남겨 둔다
+    const _lastPatch = (() => { try { return JSON.parse(localStorage.getItem('imprint.lastPatch') || 'null'); } catch { return null; } })();
+    const _histPatch = [...refineHistory].reverse().find(m => m.role === 'assistant' && m.patchKeys?.length);
+    const prevPatchKeys = _histPatch?.patchKeys || _lastPatch?.keys || [];
+    const prevPatchDirs = _histPatch?.patchDirs || _lastPatch?.dirs || {};
     // ── 멀티턴 대화 히스토리 구성 (최근 6턴만 유지하여 비용 절감) ──────────
     // assistant 메시지는 chatContent(자연어 부분)만 전달 — LaTeX 코드 제외
     const messages = [
@@ -7189,7 +7264,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           : (m.chatContent || '').trim() || '(이전 수정 완료)',
       })).filter(m => m.content),
       // 표현 매핑 힌트는 모델에만 보낸다 — 화면 히스토리(refineHistory)에는 원문 그대로 남는다
-      { role: 'user', content: userMsg + buildKnobHintSuffix(userMsg) },
+      { role: 'user', content: userMsg + buildKnobHintSuffix(userMsg, prevPatchKeys) },
     ];
 
     const controller = new AbortController();
@@ -7216,7 +7291,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       if (!res.ok) {
         let errMsg = res.statusText;
         try {
-          const errData = await res.json();
+          const errData = await readJsonSafe(res);
           errMsg = errData.error?.message || errMsg;
         } catch {
           try { errMsg = await res.text(); } catch { /* 무시 */ }
@@ -7345,7 +7420,29 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
       // ── sty_patch 처리 (수치만 패치, sty 전문 불필요) ────────────
       let styChanged = false;
-      const styPatchMatch = fullText.match(/<sty_patch>([\s\S]+?)<\/sty_patch>/i);
+      let appliedPatchDirs = {}; // 키별 증감 방향(+1/-1) — 방향 없는 후속 발화용
+      let appliedPatchKeys = []; // 이번 턴에 sty_patch로 바꾼 키 — 다음 턴의 "더 줄여줘"가 이어받는다
+      let styPatchMatch = fullText.match(/<sty_patch>([\s\S]+?)<\/sty_patch>/i);
+      // 모델이 수정값을 하나도 안 냈는데(거부하거나 말로만 답함) 문장에서 대상·방향이 분명하면 단계표로 직접 계산해 적용한다
+      let synthNote = '';
+      if (!styPatchMatch && !latexMatch && !styMatch && intent !== 'question' && styCode) {
+        const plan = planNaturalEdit(userMsg, cmdMap, prevPatchKeys, prevPatchDirs);
+        if (plan.synth) {
+          styPatchMatch = [null, plan.synth.text];
+          const fontLabel = plan.font ? (FONT_TABLES[plan.font.role]?.[plan.font.id]?.label || (plan.font.kind === 'same' ? '같은 서체' : plan.font.id === 'sans' ? '고딕' : '명조')) : '';
+          synthNote = plan.fontOnly
+            ? `"${userMsg}" 요청을 '${fontLabel}' 서체로 적용했어요.`
+            : `${plan.inherited ? '직전에 바꾼 항목에 이어서 ' : ''}"${userMsg}" 요청을 '${LEVEL_NAMES[plan.level]}' 단계로 적용했어요.${plan.font ? ` 서체는 '${fontLabel}'.` : ''}`;
+        }
+      }
+      // "각주 서체를 부제랑 같게"처럼 다른 요소의 서체를 기준으로 삼는 요청은 모델이 값을 못 정하니(같은 고딕이라며 변화 없음으로 끝남) 코드가 직접 맞춘다
+      if (styCode && !latexMatch && !styMatch && intent !== 'question') {
+        const like = planFontLike(userMsg);
+        if (like) {
+          styPatchMatch = [null, patchText(like.patches)];
+          synthNote = `"${userMsg}" 요청을 적용했어요. (${like.familyKey === like.id ? '' : '대상의 서체 계열·굵기를 기준 요소와 맞춤'})`;
+        }
+      }
       if (styPatchMatch && styCode) {
         const patches = {};
         const rejectedPatches = [];
@@ -7362,8 +7459,19 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           else rejectedPatches.push(`${k}=${raw}`);
         });
         rejectedPatches.forEach(r => directDiffs.push(`- (적용 안 됨) ${r}: 값 형식이 맞지 않음`));
+        // 강도 단계(아주 조금~아주 많이)에 맞춰 값 크기를 다시 계산한다 — 모델이 "많이"라고 해도 조금만 바꾸던 문제를 막는다.
+        // 방향과 대상 키는 모델 값을 따르고, 사용자가 양을 직접 말했거나 값 사이 관계를 말한 요청은 건드리지 않는다.
+        if (!synthNote) Object.assign(patches, scalePatches(patches, cmdMap, userMsg).patches);
+        // 여백 4면을 면마다 따로 말한 요청("안쪽은 늘리고 바깥쪽은 줄여")은 모델이 면 방향을 뒤바꾸는 일이 있어, 코드가 읽은 면별 값으로 모델의 여백 값을 대체한다
+        { const mp = planMargins(userMsg, cmdMap);
+          if (mp?.patches) { ['marginTop', 'marginBottom', 'marginInner', 'marginOuter'].forEach(k => { delete patches[k]; }); Object.assign(patches, mp.patches); } }
+        appliedPatchKeys = Object.keys(patches);
+        // 다음 턴의 "조금만 더/반대로"가 방향을 이어받도록 숫자 키의 증감 방향을 기억한다
+        appliedPatchDirs = {};
+        for (const k of appliedPatchKeys) { const a = Number(patches[k]), b = Number(cmdMap[k]); if (Number.isFinite(a) && Number.isFinite(b) && a !== b) appliedPatchDirs[k] = Math.sign(a - b); }
         const cmLabel = {
           bodySize:'본문 크기', bodyLeading:'본문 행간', bodyFontFamily:'본문 서체 계열',
+          h1Size:'제목 크기', h1Leading:'제목 행간', h2Size:'소제목 크기', h2Leading:'소제목 행간', h3Size:'소소제목 크기', h3Leading:'소소제목 행간',
           noteSize:'주석 크기', noteLeading:'주석 행간',
           footnoteSize:'각주 크기', footnoteLeading:'각주 행간',
           footnoteSep:'각주 항목 간 간격',
@@ -7373,7 +7481,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
-          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
+          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', footnoteMarkFont:'각주 번호 서체 계열', rhColor:'면주 진하기', pnColor:'쪽번호 진하기', noteColor:'각주 진하기', h1Color:'제목 진하기', h2Color:'부제목 진하기', bodyColor:'본문 진하기', footnoteRuleWidth:'구분선 길이', footnoteRuleThickness:'구분선 두께', footnoteRuleColor:'구분선 진하기', serifFont:'명조 서체', sansFont:'고딕 서체', fontSameAs:'서체 맞춤', quoteHighlight:'따옴표 형광펜', headingFontFamily:'제목 서체 계열', h1FontFamily:'제목 서체 계열', h2FontFamily:'부제목 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
           bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', hangulTrack:'양끝맞춤 자간 균일도', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
@@ -7383,7 +7491,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', footnoteMarkFont:'', bodyFontFamily:'', rhColor:'%', pnColor:'%', noteColor:'%', h1Color:'%', h2Color:'%', bodyColor:'%', footnoteRuleWidth:'%', footnoteRuleThickness:'pt', footnoteRuleColor:'%', serifFont:'', sansFont:'', fontSameAs:'', quoteHighlight:'', headingFontFamily:'', h1FontFamily:'', h2FontFamily:'', letterSpace:'%', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
@@ -7400,6 +7508,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           `$1${sizeVal}pt$2${leadVal}pt`
         );
         let patchedSty = styCode;
+        // 서체 계열을 만지는 패치면 단일 서체군 문서의 \sffamily가 기본 고딕으로 빠지지 않게 먼저 고딕을 주서체와 맞춘다
+        if (/(?:FontFamily|fontSameAs|Font)\s*=/.test(styPatchMatch[1])) patchedSty = ensureSansFont(patchedSty);
         // 구버전 문서 자동 리트로핏: pn/rh mm 이동 관련 요청이 하나라도 있으면, 아직
         // \makebox[0pt] 래핑이 없는 옛날 구조(2026-08-03 이전 생성분)를 먼저 새 구조로
         // 업그레이드한다. 안 그러면 \imprintpnxshift/\imprintrhxshift 값을 아무리 바꿔도
@@ -7443,7 +7553,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         }
         for (const [key, val] of Object.entries(patches)) {
           const before = cmdMap[key];
-          const unit = cmUnit[key] || 'pt';
+          const unit = (Number.isFinite(Number(val)) && (before === undefined || Number.isFinite(Number(before)))) ? (cmUnit[key] ?? 'pt') : '';
           // 변화 요약은 실제로 파일이 바뀐 뒤에만 쓴다 (아래 끝부분) — 조용히 실패한 키가 "변경됨"으로 보이지 않게
           const sBefore = patchedSty;
           const lBefore = finalLatex;
@@ -7464,6 +7574,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             patchedSty = patchedSty.replace(
               /(\\newcommand\{\\bodyf\}\{)(?:\\normalfont|\\rmfamily|\\sffamily)((?:\\bfseries|\\mdseries)?\\fontsize)/,
               `$1${fam}$2`);
+            // 본문 폰트가 \setmainfont 고딕(예: Pretendard)뿐인 문서 — \rmfamily도 고딕이라 토큰만 바꿔서는 변화가 없다
+            // 명조로 바꾸려면 \setmainfont를 명조로 교체하고, 다른 요소(제목·각주·면주·쪽번호)는 원래 모습 그대로 고딕을 유지한다
+            if (val !== 'sans' && mainIsSans(patchedSty)) {
+              ['hone', 'htwo', 'hthree', 'notef', 'runningheadf', 'foliof'].forEach(c => {
+                patchedSty = patchedSty.replace(new RegExp('(\\\\newcommand\\{\\\\' + c + '\\}\\{)(?!\\\\sffamily)(?:\\\\rmfamily|\\\\normalfont)?'), (m, pre) => pre + '\\sffamily');
+              });
+              patchedSty = applyFont(patchedSty, 'serif', readFonts(patchedSty).serif);
+              patchedSty = applyTracking(patchedSty, readTracking(patchedSty) ?? 0);
+            }
           } else if (key === 'bodyWeight') {
             // \bodyf(제목 뒤 본문 복귀)와 \AtBeginDocument(문서 첫 문단) 두 곳을 같이 바꿔야 전체 본문이 굵어진다
             const wClass = val === 'bold' ? '\\bfseries' : '\\mdseries';
@@ -7486,6 +7605,37 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             patchedSty = patchedSty.replace(
               new RegExp(`(\\\\newcommand\\{\\\\${famCmd}\\}\\{)(?:\\\\rmfamily|\\\\sffamily)`),
               (m, pre) => `${pre}${famTok}`);
+          } else if (COLOR_KEYS.includes(key)) {
+            // 요소별 글자 색(검정의 진하기 %) — 100이면 원래 검정으로 되돌린다
+            patchedSty = applyColor(patchedSty, elementByKey(key), val);
+          } else if (key === 'quoteHighlight') {
+            // 따옴표 안 구절 형광펜 — .sty의 \imprintHL 정의와 main.tex의 감싸기를 함께 바꾼다
+            const r = applyHighlight(patchedSty, finalLatex, isHlMode(val) ? val : 'off');
+            patchedSty = r.sty;
+            finalLatex = r.tex;
+            mainTexPatched = true;
+          } else if (key === 'fontSameAs') {
+            // "각주 서체를 부제랑 같게" — 대상 요소의 서체 계열·굵기를 기준 요소와 맞춘다
+            const [tEl, sEl] = String(val).split(':');
+            patchedSty = applyFontLike(ensureSansFont(patchedSty), tEl, sEl);
+          } else if (key === 'headingFontFamily' || key === 'h1FontFamily' || key === 'h2FontFamily') {
+            // 제목·부제목·소제목 서체 계열(명조↔고딕) — \hone/\htwo/\hthree 정의의 계열 토큰만 바꾼다
+            const hTok = val === 'sans' ? '\\sffamily' : '\\rmfamily';
+            (key === 'h1FontFamily' ? ['hone'] : key === 'h2FontFamily' ? ['htwo', 'hthree'] : ['hone', 'htwo', 'hthree']).forEach(c => {
+              // 서체 표시가 없는 정의(\bfseries만 있는 제목)에도 계열을 앞에 넣는다
+              patchedSty = patchedSty.replace(new RegExp('(\\\\newcommand\\{\\\\' + c + '\\}\\{)(?:\\\\rmfamily|\\\\sffamily|\\\\normalfont)?'), (m, pre) => pre + hTok);
+            });
+          } else if (key === 'serifFont' || key === 'sansFont') {
+            // 명조/고딕 계열의 실제 서체 교체 — 라틴 블록 + 한글 폰트 줄을 바꾸고 자간 줄(한글 명조 포함)은 다시 만든다
+            patchedSty = applyFont(patchedSty, key === 'serifFont' ? 'serif' : 'sans', val);
+            patchedSty = applyTracking(patchedSty, readTracking(patchedSty) ?? 0);
+          } else if (key === 'footnoteMarkFont') {
+            // 본문 속 각주 번호(위첨자) 서체 — 각주 문장(\notef)과 별개라 \@makefnmark를 직접 다시 정의한다
+            const famTok = val === 'sans' ? '\\sffamily' : '\\rmfamily';
+            const fnLine = `\\makeatletter\\renewcommand\\@makefnmark{\\hbox{\\@textsuperscript{\\normalfont${famTok}\\@thefnmark}}}\\makeatother % imprintFnMark`;
+            patchedSty = /% imprintFnMark/.test(patchedSty)
+              ? patchedSty.replace(/^.*% imprintFnMark.*$/m, () => fnLine)
+              : appendBeforeEndinput(patchedSty, fnLine);
           } else if (key === 'hangulTrack') {
             // 양끝맞춤 자간 균일 조정 — 0이면 줄마다 자간이 달라지지 않는다. 기본값 8. 가운데/왼쪽 정렬에서는 효과가 없다
             const hv = Math.max(0, Math.min(20, Math.round(Number(val) || 0)));
@@ -7605,17 +7755,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 `$1${alignCmd}$2`);
             });
           } else if (key === 'footnoteMarker') {
-            const wantBracket = val === 'bracket';
-            patchedSty = patchedSty.replace(
-              /(\\newcommand\{\\ImpNoteLabel\}\[1\]\{)(?:\[#1\]\\ |#1\.\\ )(\})/,
-              `$1${wantBracket ? '[#1]\\ ' : '#1.\\ '}$2`);
-          } else if (key === 'footnoteRule') {
-            const wantOn = val === 'on';
-            patchedSty = patchedSty.replace(
-              /\\renewcommand\{\\footnoterule\}\{[^}]*\}/,
-              wantOn
-                ? '\\renewcommand{\\footnoterule}{\\vspace*{-3pt}\\hrule width .4\\linewidth\\vspace*{2.6pt}}'
-                : '\\renewcommand{\\footnoterule}{}');
+            // 각주 번호 모양(점·대괄호·소괄호·동그라미) — 목록 번호와 본문 위첨자를 함께 바꾼다
+            patchedSty = applyNoteMarker(patchedSty, val);
+          } else if (key === 'footnoteRule' || key === 'footnoteRuleWidth' || key === 'footnoteRuleThickness' || key === 'footnoteRuleColor') {
+            // 각주 구분선 — 켜기/끄기·길이(판면 폭 %)·두께(pt)·진하기(%)를 한 줄(% imprintRule)로 다시 만든다
+            const rp = key === 'footnoteRule' ? { on: val === 'on' }
+              : key === 'footnoteRuleWidth' ? { width: val }
+              : key === 'footnoteRuleThickness' ? { thickness: val }
+              : { darkness: val };
+            if (key !== 'footnoteRule' && cmdMap.footnoteRule === 'on') rp.on = true;
+            patchedSty = applyRule(patchedSty, rp);
           } else if (key === 'bodyWidth') {
             patchedSty = patchedSty.replace(
               /(\\setlength\{\\imprintbodywidth\}\{)[\d.]+mm(\})/,
@@ -7715,6 +7864,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeevenhead{imprint}', join3(headSlots.even));
               patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeoddfoot{imprint}', join3(footSlots.odd));
               patchedSty = replaceMacroThreeArgs(patchedSty, '\\makeevenfoot{imprint}', join3(footSlots.even));
+              // 푸터를 쓰게 되면 본문 하단~푸터 거리를 확보해 각주와 면주·쪽번호가 겹치지 않게 한다
+              if ([...footSlots.odd, ...footSlots.even].some(x => x !== mt)) patchedSty = ensureFootskip(patchedSty, 10);
               patchedSty = patchedSty
                 .replace(/% pn-position: \S+/, `% pn-position: ${curPnPos}`)
                 .replace(/% rh-position: \S+/, `% rh-position: ${rhEnabled ? curRhPos : '없음'}`);
@@ -7740,20 +7891,18 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const hLead = clampLeading(hSize, patches[level + 'Leading'] || cur?.leading);
             if (hSize && hLead) patchedSty = patchFontSizeLeading(patchedSty, cmd, hSize, hLead);
           } else if (key === 'letterSpace') {
-            // 문서 생성 시 LetterSpace 옵션 자체를 안 넣기 때문에(fontspecCmd 참고),
-            // 기존 값 치환만으로는 첫 자간 요청이 항상 무반응이었다 — 없으면 새로 삽입.
-            if (/LetterSpace=/.test(patchedSty)) {
-              patchedSty = patchedSty.replace(/(LetterSpace=)[-\d.]+/g, `$1${val}`);
-            } else {
-              patchedSty = patchedSty.replace(/(Path=\.\/fonts\/,)/g, `$1\n  LetterSpace=${val},`);
-            }
+            // 단위는 em의 %. fontspec LetterSpace는 영문에만 먹고 한글에는 효과가 없어서(xelatex 실측),
+            // 한글은 InterHangul 폰트 옵션 + selectfont 훅으로 같은 크기를 준다 (src/styTracking.js)
+            patchedSty = applyTracking(patchedSty, val);
           } else if (['marginTop','marginBottom','marginInner','marginOuter'].includes(key)) {
             const propMap = { marginTop:'top', marginBottom:'bottom', marginInner:'inner', marginOuter:'outer' };
             patchedSty = patchedSty.replace(
               new RegExp(`(${propMap[key]}\\s*=\\s*)([\\d.]+)mm`), `$1${val}mm`);
           }
           // 적용 결과 기록 — 파일이 실제로 바뀌었을 때만 변경으로 남기고, 아니면 이유와 함께 "적용 안 됨"으로 남긴다
-          const applied = patchedSty !== sBefore || finalLatex !== lBefore;
+          // 크기와 행간을 한 번에 쓰는 항목(주석·제목·쪽번호 등)은 앞선 크기 키가 행간까지 같이 적용하므로, 행간 키만 따로 '변화 없음'이 되어도 적용된 것으로 본다
+          const pairDone = /Leading$/.test(key) && patches[key.replace(/Leading$/, 'Size')] !== undefined;
+          const applied = patchedSty !== sBefore || finalLatex !== lBefore || pairDone;
           const label = cmLabel[key] || key;
           if (applied) {
             if (before !== undefined && before !== val) directDiffs.push(`- ${label}: ${before}${unit} → ${val}${unit}`);
@@ -7817,12 +7966,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         changesSummary = '';
       }
 
+      if (codeChanged && appliedPatchKeys.length) { try { localStorage.setItem('imprint.lastPatch', JSON.stringify({ keys: appliedPatchKeys, dirs: appliedPatchDirs })); } catch { /* 저장소를 못 쓰는 환경 */ } }
       setRefineHistory(h => [...h, {
         role: 'assistant',
-        chatContent: chatContentClean,   // 자연어 응답 (다음 턴 히스토리에도 사용)
-        content: chatContentClean,
+        chatContent: synthNote && codeChanged ? synthNote : chatContentClean,   // 자연어 응답 (다음 턴 히스토리에도 사용)
+        content: synthNote && codeChanged ? synthNote : chatContentClean,
         changes: changesSummary, // 수치 변경 요약
         codeChanged,
+        patchKeys: codeChanged ? appliedPatchKeys : [],
+        patchDirs: codeChanged ? appliedPatchDirs : {},
         intent,                  // question | modify | ambiguous
       }]);
 
@@ -8130,13 +8282,33 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       </header>
 
       {/* ══ 3칼럼 본문 ════════════════════════════════════════════════ */}
-      <div style={{ flex:1, display:"grid", gridTemplateColumns:"clamp(260px,25vw,380px) 1fr clamp(220px,22vw,320px)",
+      <div style={{ flex:1, display:"grid", gridTemplateColumns: leftOpen ? "clamp(260px,25vw,380px) 1fr clamp(220px,22vw,320px)" : "44px 1fr clamp(220px,22vw,320px)",
         gap:12, padding:12, overflow:"hidden", minHeight:0, minWidth:0 }}>
 
+        {/* ── 좌: 접힌 상태의 얇은 막대 — 눌러서 다시 펼친다 ───────────── */}
+        {!leftOpen && (
+          <div style={{ borderRadius:12, border:`1px solid ${T.border}`, background:"rgba(255,255,255,0.8)",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:10, padding:"12px 0" }}>
+            <button onClick={toggleLeft} title={L("입력 패널 펼치기","Open input panel")}
+              style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink, display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:16, lineHeight:1 }}>▶</span>
+              <span style={{ writingMode:"vertical-rl", fontSize:12, letterSpacing:"0.12em" }}>{L("입력 패널 펼치기","Open input")}</span>
+            </button>
+            {/* 접어도 생성은 할 수 있게 — 패널 안의 생성 버튼과 같은 동작(클릭해야만 실행, API 키·입력 텍스트가 있어야 활성) */}
+            <button onClick={run} disabled={isRunning || !matchText || !apiKey}
+              title={!apiKey ? L("API 키를 먼저 입력하세요","Enter API key first") : !matchText ? L("텍스트를 먼저 입력하세요","Enter text first") : L("조판 스타일 생성하기","Generate Typeset Style")}
+              style={{ marginTop:"auto", width:32, padding:"10px 0", fontSize:12, fontWeight:700, border:"none", borderRadius:8,
+                background: (isRunning || !matchText || !apiKey) ? T.border : T.accent,
+                color: (isRunning || !matchText || !apiKey) ? T.muted : "#fff",
+                cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer", writingMode:"vertical-rl", letterSpacing:"0.1em" }}>
+              {isRunning ? L("생성 중…","Running…") : L("생성","Generate")}
+            </button>
+          </div>
+        )}
         {/* ── 좌: 텍스트 입력 ──────────────────────────────────────── */}
-        <div style={{ borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
+        <div style={{ display: leftOpen ? "flex" : "none", borderRadius:12, boxShadow:"0 8px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
           border:"1px solid rgba(255,255,255,0.5)",
-          display:"flex", flexDirection:"column", background:"rgba(255,255,255,0.8)",
+          flexDirection:"column", background:"rgba(255,255,255,0.8)",
           backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", overflow:"hidden" }}>
 
           {/* 입력 탭 */}
@@ -8152,6 +8324,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 {label}
               </button>
             ))}
+            <button onClick={toggleLeft} title={L("입력 패널 접기 (PDF를 넓게 보기)","Collapse input panel")}
+              style={{ marginLeft:"auto", alignSelf:"center", fontSize:12, padding:"4px 10px", borderRadius:999, cursor:"pointer",
+                border:`1px solid ${T.border}`, background:"transparent", color:T.muted }}>
+              {L("◀ 접기","◀ Hide")}
+            </button>
           </div>
 
           <div style={{ flex:1, overflowY:"auto", padding:"20px 20px", display:"flex", flexDirection:"column", gap:12 }}>
@@ -9111,7 +9288,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               overflowY: tab === "pdf" ? "auto" : "hidden", overflowX:"hidden" }}>
 
               {/* ── 선택된 패키지 카드 ── */}
-              <div style={{ padding:"20px 24px 16px", borderBottom:`1px solid ${T.border}`,
+              <div style={{ padding: headOpen ? "20px 24px 16px" : "10px 24px", borderBottom:`1px solid ${T.border}`,
                 background:T.surface, flexShrink:0 }}>
 
                 {/* 패키지명 + 복사 버튼 */}
@@ -9126,10 +9303,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         <span style={{ color:T.ink }}> · {pkg.designer}</span>}
                     </div>
                   </div>
+                  <button onClick={toggleHead} title={headOpen ? L("요약 접기 (PDF를 넓게 보기)","Collapse summary") : L("요약 펼치기","Expand summary")}
+                    style={{ flexShrink:0, fontSize:12, padding:"4px 10px", borderRadius:999, cursor:"pointer",
+                      border:`1px solid ${T.border}`, background:"transparent", color:T.muted }}>
+                    {headOpen ? L("▲ 접기","▲ Hide") : L("▼ 펼치기","▼ Show")}
+                  </button>
                 </div>
 
                 {/* 스펙 — 라벨/값 2열 리스트 */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", rowGap:6, columnGap:16,
+                <div style={{ display: headOpen ? "grid" : "none", gridTemplateColumns:"1fr 1fr", rowGap:6, columnGap:16,
                   marginTop:8, padding:"12px 12px", background:T.bg, borderRadius:8,
                   border:`1px solid ${T.border}` }}>
                   {[
@@ -9199,16 +9381,66 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           : `⚠ 이번 수정은 PDF 컴파일에 실패해서 적용되지 않았어요 (${serverCompileResult.compileReason || '원인 미상'}). 아래는 마지막으로 성공한 버전입니다.`}
                       </div>
                     )}
-                    {pdfPreview ? (
-                      <>
-                        <div style={{ fontSize:12, color:T.muted, marginBottom:8 }}>
-                          {styleVersion > 0 ? `v${styleVersion}` : '초기 생성'} · {pdfPreview.folder}
-                        </div>
-                        <iframe title="PDF 미리보기" src={`${pdfPreview.url}?t=${pdfPreview.nonce}`}
-                          style={{ width:"100%", height:"calc(100vh - 200px)", minHeight:480, border:`1px solid ${T.border}`,
-                            borderRadius:12, background:"#fff" }} />
-                      </>
-                    ) : (
+                    {pdfPreview ? (() => {
+                      // 버전별 PDF(main_v{n}.pdf) 주소 — 지금 보는 파일이 버전 PDF일 때만 이전 버전을 같은 폴더에서 찾는다
+                      const verUrl = n => pdfPreview.url.replace(/main(?:_v\d+)?\.pdf/, `main_v${n}.pdf`);
+                      const canCompare = styleVersion >= 1 && /main_v\d+\.pdf/.test(pdfPreview.url);
+                      // 비교 기준은 항상 바로 이전 버전이 기본이다. 드롭다운으로 직접 고른 값은 그 버전을 보는 동안만 유지하고, 새 수정이 생기면 다시 바로 이전으로 돌아간다
+                      const baseV = pdfCmp.base != null && pdfCmp.baseFor === styleVersion && pdfCmp.base >= 0 && pdfCmp.base < styleVersion ? pdfCmp.base : styleVersion - 1;
+                      const vl = n => (n === 0 ? '초기' : `v${n}`);
+                      const mode = canCompare ? pdfCmp.mode : 'off';
+                      const frameStyle = { width:"100%", height:"calc(100vh - 250px)", minHeight:420, border:`1px solid ${T.border}`, borderRadius:12, background:"#fff" };
+                      const btn = on => ({ fontSize:12, padding:"4px 10px", borderRadius:999, cursor:"pointer", border:`1px solid ${on ? T.text : T.border}`,
+                        background:on ? T.text : "transparent", color:on ? "#fff" : T.text });
+                      // 브라우저 PDF 보기의 맞춤 옵션(#zoom=...) — page-fit이면 한 쪽이 잘리지 않고 통째로 보인다
+                      const fitHash = pdfFit === 'width' ? '#zoom=page-width' : pdfFit === '100' ? '#zoom=100' : '#zoom=page-fit&view=Fit';
+                      const curSrc = `${pdfPreview.url}?t=${pdfPreview.nonce}${fitHash}`;
+                      const baseSrc = canCompare ? `${verUrl(baseV)}?t=${pdfPreview.nonce}${fitHash}` : '';
+                      return (
+                        <>
+                          <div style={{ fontSize:12, color:T.muted, marginBottom:8, display:"flex", flexWrap:"wrap", alignItems:"center", gap:8 }}>
+                            <span>{styleVersion > 0 ? `v${styleVersion}` : '초기 생성'} · {pdfPreview.folder}</span>
+                            <span style={{ marginLeft:"auto", display:"flex", gap:6, alignItems:"center" }}>
+                              <select value={pdfFit} onChange={e => changePdfFit(e.target.value)} title="PDF 보기 크기"
+                                style={{ fontSize:12, padding:"3px 6px", borderRadius:8, border:`1px solid ${T.border}`, background:"transparent", color:T.text }}>
+                                <option value="page">한 쪽 전체</option>
+                                <option value="width">너비 맞춤</option>
+                                <option value="100">100%</option>
+                              </select>
+                              <button style={btn(mode === 'off')} onClick={() => setPdfCmp(c => ({ ...c, mode:'off' }))}>현재만</button>
+                              <button style={{ ...btn(mode === 'side'), opacity:canCompare ? 1 : 0.4 }} disabled={!canCompare}
+                                title={canCompare ? '이전 버전과 나란히 보기' : '수정을 한 번 이상 해야 비교할 수 있어요'}
+                                onClick={() => setPdfCmp(c => ({ ...c, mode:'side' }))}>나란히</button>
+                              <button style={{ ...btn(mode === 'flip'), opacity:canCompare ? 1 : 0.4 }} disabled={!canCompare}
+                                title={canCompare ? '한 칸에서 이전/현재를 번갈아 보기(차이가 깜빡이며 보여요)' : '수정을 한 번 이상 해야 비교할 수 있어요'}
+                                onClick={() => setPdfCmp(c => ({ ...c, mode:'flip', showBase:false }))}>전환</button>
+                              {mode !== 'off' && (
+                                <select value={baseV} onChange={e => setPdfCmp(c => ({ ...c, base:Number(e.target.value), baseFor:styleVersion }))}
+                                  style={{ fontSize:12, padding:"3px 6px", borderRadius:8, border:`1px solid ${T.border}`, background:"transparent", color:T.text }}>
+                                  {Array.from({ length: styleVersion }, (_, i) => i).map(n => <option key={n} value={n}>비교 기준 {vl(n)}</option>)}
+                                </select>
+                              )}
+                            </span>
+                          </div>
+                          {mode === 'off' && <iframe key={`cur-${pdfFit}`} title="PDF 미리보기" src={curSrc} style={frameStyle} />}
+                          {mode === 'side' && (
+                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                              <div><div style={{ fontSize:12, fontWeight:700, marginBottom:4 }}>이전 · {vl(baseV)}</div><iframe key={`base-${baseV}-${pdfFit}`} title={`PDF ${vl(baseV)}`} src={baseSrc} style={frameStyle} /></div>
+                              <div><div style={{ fontSize:12, fontWeight:700, marginBottom:4, color:T.accent }}>현재 · v{styleVersion}</div><iframe key={`cur2-${pdfFit}`} title="PDF 현재" src={curSrc} style={frameStyle} /></div>
+                            </div>
+                          )}
+                          {mode === 'flip' && (
+                            <div>
+                              <button onClick={() => setPdfCmp(c => ({ ...c, showBase:!c.showBase }))}
+                                style={{ ...btn(false), marginBottom:6, width:"100%", padding:"8px 10px", fontWeight:700 }}>
+                                {pdfCmp.showBase ? `이전 · ${vl(baseV)}  (눌러서 현재 v${styleVersion}로)` : `현재 · v${styleVersion}  (눌러서 이전 ${vl(baseV)}로)`}
+                              </button>
+                              <iframe key={`flip-${pdfCmp.showBase}-${baseV}-${pdfFit}`} title="PDF 전환 비교" src={pdfCmp.showBase ? baseSrc : curSrc} style={frameStyle} />
+                            </div>
+                          )}
+                        </>
+                      );
+                    })() : (
                       <div style={{ fontSize:13, color:T.muted }}>
                         아직 컴파일된 PDF가 없어요. 수정을 요청하면 결과가 여기에 보입니다.
                       </div>
