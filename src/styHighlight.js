@@ -65,7 +65,8 @@ export function applyHighlight(sty, tex, rawMode) {
   const head = at < 0 ? '' : outTex.slice(0, at);
   let body = at < 0 ? outTex : outTex.slice(at);
   // 이미 감싼 것은 한 번 벗기고 다시 감싼다 — 같은 구절이 두 번 감싸지지 않게
-  body = body.replace(/\\imprintHL\{([^{}]*)\}/g, '$1').replace(QUOTE_RE, m => `\\imprintHL{${m}}`);
+  // 특수문자 서체·색 감싸기(\imprintSym)도 한 번 벗겨야 따옴표 구절이 인식된다 — 호출한 쪽에서 다시 적용한다
+  body = body.replace(/\\imprintSym\{([^{}]*)\}/g, '$1').replace(/\\imprintHL\{([^{}]*)\}/g, '$1').replace(QUOTE_RE, m => `\\imprintHL{${m}}`);
   return { sty: outSty, tex: head + body };
 }
 

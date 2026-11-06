@@ -6,7 +6,7 @@ import { synthesizePatches, detectIntensity, hasExplicitAmount } from './nlInten
 
 const KEYS = { top: 'marginTop', bottom: 'marginBottom', inner: 'marginInner', outer: 'marginOuter' };
 const OTHER_ELEMENT = /(쪽\s*번호|면주|각주|주석|제목|부제|본문|글자|글씨|행간|자간|문단|단어|구분선|표|그림)/;
-const CLAUSE_SPLIT = /\s*[,，]\s*|\s*그리고\s*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+/;
+const CLAUSE_SPLIT = /[ \t]*(?:\r?\n+|;)[ \t]*|\s*[,，]\s*|\s*그리고\s*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+/;
 const EXCLUDE = /([가-힣]+(?:\s*여백)?)\s*(?:은|는|도)?\s*(?:그대로|유지|놔두고|냅두고|건드리지\s*말고|손\s*대지\s*말고)(?:\s*(?:두고|놔두고|하고|유지하고))?/g;
 const INC = /(늘|넓|키우|키워|크게|여유|더\s*줘|많이\s*줘|확보)/;
 const DEC = /(줄|좁|작게|적게|없애|얇게)/;

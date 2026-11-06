@@ -38,7 +38,7 @@ export function planAlign(msg = '') {
 
 // ── 쪽번호·면주 위치 ──────────────────────────────────────────────────────
 const SIDE_RE = [[/(내측|안쪽|안\s*쪽|책등)/, '내측'], [/(외측|바깥|바깥쪽)/, '외측'], [/(가운데|중앙|한가운데)/, '중앙'], [/(우측|오른쪽)/, '우측'], [/(좌측|왼쪽)/, '좌측']];
-const CLAUSE_SPLIT = /\s*[,，]\s*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+|\s*그리고\s*/;
+const CLAUSE_SPLIT = /[ \t]*(?:\r?\n+|;)[ \t]*|\s*[,，]\s*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+|\s*그리고\s*/;
 export function planSlotPos(msg = '', cmdMap = {}) {
   const parts = String(msg).split(CLAUSE_SPLIT).map(x => x && x.trim()).filter(Boolean);
   const patches = {};

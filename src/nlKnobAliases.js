@@ -12,6 +12,7 @@ import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse } from 
 import { planMore, planSizeRelation, planWidthFit } from './nlRelation.js';
 import { planMargins } from './nlMargin.js';
 import { planDropCap } from './styDropCap.js';
+import { planSymbol } from './stySymbol.js';
 import { planColorEdit } from './nlColor.js';
 import { detectIntensity, detectDirection, hasExplicitAmount, isFollowUp, synthesizePatches, normalizeMsg, LEVEL_NAMES } from './nlIntensity.js';
 
@@ -66,6 +67,7 @@ export const KNOB_ALIASES = [
   { key: 'footinsSkip', re: /(각\s*주|주\s*석)\s*(위|앞)(?:에|쪽에|의)?\s*(?:있는\s*)?(공백|여백|간격|띄)/, sample: '주석 위에 공백을 많이 넣어줘' },
   { key: null, reason: '각주 시작점을 본문 줄(라인)에 맞추는 키가 없음 — 각주 위치·줄 맞춤은 지원하지 않는다고 알리고, 가능한 것(본문↔각주 간격, 각주 크기·행간)을 제안할 것', re: /(각주|주석).*(시작점|시작s*위치).*(본문).*(라인|줄|행).*(맞춰|맞게|맞추)|(각주|주석).*본문s*(라인|줄)에s*맞/, sample: '주석 시작점을 본문 라인에 맞춰서 나오게 해줘' },
   { key: null, reason: '각주 내용 자체를 지우는 건 지원하지 않음(본문의 각주 표시를 지워야 함) — 각주 칸만 숨기려면 글자 색을 아주 연하게 하거나 크기를 줄이는 방법을 제안할 것', re: /^(?!.*(?:구분선|번호|숫자|표시|서체|색|크기|행간|간격|위치)).*(각주|주석)\s*(?:은|는|을|를)?\s*(지워|없애|삭제|제거)/, sample: '하단 주석은 지워줘' },
+  { key: 'symbolStyle', re: /(특수\s*문자|특수\s*기호|문장\s*부호|기호).*(서체|폰트|글꼴|고딕|명조|색|빨|파란|파랑|초록|주황|분홍|회색|연하|진하)/, sample: '특수문자만 고딕으로 바꿔줘' },
   { key: 'footnoteRuleWidth', re: /(구분선|가로줄).*(가로|길이|너비|폭|여백에\s*맞|꽉|길게|짧게|끝까지)/, sample: '구분선 가로 여백에 맞게 늘려줘' },
   { key: 'footnoteRuleThickness', re: /(구분선|가로줄|각주\s*위\s*(?:의\s*)?선).*(얇|가늘|두껍|굵|두텁)/, sample: '각주 구분선 더 얇게 해줘' },
   { key: 'footnoteRuleColor', re: /(구분선|가로줄).*(연하|흐리|옅|진하|짙|희미|엷|색)/, sample: '각주 구분선 더 연하게 해줘' },
@@ -214,10 +216,10 @@ export const KNOB_ALIASES = [
 
   // ── 실제 참여자 발화(05 로그)에서 빠져서 추가한 항목 ───────────
   { key: 'bodyLeading', re: /널널|여유롭|느슨|시원하게|숨통/, sample: '본문을 좀 더 널널하게 해줘' },
-  { key: 'bodySize', re: /(글자|글씨)\s*(크기)?.*(커지|커졌|키우)/, sample: '동화처럼 글자가 커지면 좋겠어요' },
+  { key: 'bodySize', re: /^(?!.*(?:제목|부제|각주|주석|면주|쪽\s*번호|쪽\s*수|머리말)).*(글자|글씨)\s*(크기)?.*(커지|커졌|키우)/, sample: '동화처럼 글자가 커지면 좋겠어요' },
   { key: 'bodySize', re: /^(?!.*(?:제목|부제|각주|주석|면주|쪽\s*번호|쪽\s*수|간격|사이|행간|자간)).*(글자|글씨)\s*(크기)?.*(줄여|줄이|작게|축소)/, sample: '글씨 크기 살짝 줄여줘' },
   { key: 'bodySize', re: /^(?!.*(?:제목|부제|각주|주석|면주|쪽\s*번호|쪽\s*수|간격|사이)).*(글자|글씨)\s*(크기)?.*(늘려|늘리)/, sample: '글자크기 동화책처럼 늘려줘' },
-  { key: 'bodySize', re: /글자\s*크기.*(줄이|줄여|작게|축소)/, sample: '글자 크기 좀 더 줄여줘' },
+  { key: 'bodySize', re: /^(?!.*(?:제목|부제|각주|주석|면주|쪽\s*번호|쪽\s*수|머리말)).*글자\s*크기.*(줄이|줄여|작게|축소)/, sample: '글자 크기 좀 더 줄여줘' },
   { key: 'bodyLeading', re: /행간.*비례|비례.*행간/, sample: '행간도 비례에 맞게 해줘' },
   { key: 'h1Size', re: /(?<![소부])제목.*(크기|폰트).*(축소|줄여|작게)/, sample: '제목 폰트 크기를 조금만 축소해줘' },
   { key: 'h2Size', re: /(부제목|소제목).*(크기|폰트).*(축소|줄여|작게)/, sample: '부제목 폰트 크기를 조금 줄여줘' },
@@ -385,6 +387,9 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
     fontOnly = !synth;
     synth = synth ? { ...synth, text: synth.text + ',' + patchText(hl.patches), patches: { ...synth.patches, ...hl.patches } } : { text: patchText(hl.patches), keys: Object.keys(hl.patches), patches: { ...hl.patches }, font: true };
   }
+  // 특수문자(기호·문장부호·원문자)만 서체·색 — 다른 계획(본문 서체·색 등)보다 우선한다. 기본은 전부, "N번 빼고"처럼 말한 항목은 뺀다
+  const symPlan = planSymbol(msg, cmdMap);
+  if (symPlan) { unsupported = []; synth = { text: patchText(symPlan.patches), keys: Object.keys(symPlan.patches), patches: { ...symPlan.patches }, font: true }; fontOnly = true; }
   return { keys: targets, inherited, unsupported, level, word, dir, explicit: hasExplicitAmount(msg), synth, font: font || (hl ? { kind: 'highlight', role: 'hl', id: hl.patches.quoteHighlight, patches: hl.patches } : null), fontOnly, highlight: hl };
 }
 
@@ -392,7 +397,7 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
 // "각주가 너무 크고 행간이 너무 넓어", "본문은 키우고 각주는 줄여줘" — 절마다 대상·방향이 다르니 따로 계산해 합친다.
 // 요소 이름이 빠진 절("행간이 너무 넓어")은 앞 절의 요소(각주)를 이어받는다. 절마다 직접 계산이 되지 않으면 문장 전체를 한 덩어리로 본다.
 const ELEMENT_WORD = /(각주|주석|부제목|소제목|부제|제목|면주|머리말|쪽\s*번호|본문)/;
-const CLAUSE_SPLIT = /\s*(?:,|，|그리고)\s*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+/;
+const CLAUSE_SPLIT = /[ \t]*(?:\r?\n+|;|,|，|그리고)[ \t]*|(?<=[가-힣](?:고|며|면서|는데|인데|지만))\s+/;
 
 export function splitClauses(msg) {
   const parts = String(msg).split(CLAUSE_SPLIT).map(x => x && x.trim()).filter(Boolean);
@@ -419,7 +424,8 @@ export function planNaturalEdit(msg = '', cmdMap = {}, prevKeys = [], prevDirs =
   const whole = planSingle(msg, cmdMap, prevKeys);
   const parts = splitClauses(msg);
   // 절마다 자기 항목이 있어야 쪼갠다 — "더 얇고 연하게"처럼 뒷절이 앞절의 대상을 그대로 쓰는 말은 한 덩어리로 본다
-  if (!parts || !parts.every(p => detectKnobHints(p).length > 0)) return whole;
+  // 절마다 자기 항목이 있거나(별칭) 그 절만으로 값이 계산돼야 쪼갠다. "굵게"·"서체를 명조로"처럼 별칭이 없어도 계획이 서는 절을 빠뜨리지 않는다
+  if (!parts || !parts.every(p => detectKnobHints(p).length > 0 || planSingle(p, cmdMap, []).synth)) return whole;
   let carry = '';
   const subs = [];
   for (const part of parts) {
@@ -433,7 +439,7 @@ export function planNaturalEdit(msg = '', cmdMap = {}, prevKeys = [], prevDirs =
   // 절마다 직접 말한 키가 우선이고, 짝으로 따라붙은 키(글자 크기에 딸린 행간 등)는 다른 절이 이미 정한 값을 덮어쓰지 않는다
   const patches = {};
   for (const p of subs) for (const [k, v] of Object.entries(p.synth.patches)) if (p.keys.includes(k) || !(k in patches)) patches[k] = v;
-  const keys = [...new Set(subs.flatMap(p => p.keys))];
+  const keys = [...new Set([...subs.flatMap(p => p.keys), ...Object.keys(patches)])];
   const text = Object.entries(patches).map(([k, v]) => k + '=' + v).join(',');
   return { ...whole, keys, synth: { text, keys: Object.keys(patches), patches, multi: true }, multi: true, unsupported: [] };
 }
