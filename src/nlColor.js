@@ -36,6 +36,29 @@ export function elementsIn(msg) {
 
 // 반환: null | { patches: {rhColor: 70}, elements: ['rh'] }
 export function planColorEdit(msg = '', cmdMap = {}) {
+  const mk = String(msg);
+  // "본문에 있는 각주 숫자를 연하게" — 각주 문장이 아니라 본문 속 위첨자 숫자의 색이다("밑에 각주는 건들지 말고"는 각주 문장을 그대로 둔다)
+  if (/각주\s*(?:숫자|번호|표시)/.test(mk) && /(연하|흐리|옅|진하|짙|회색|그레이|검정|까맣|색)/.test(mk)
+      && !/(밑|아래|목록)\s*(?:에\s*있는\s*)?각주\s*(?:숫자|번호)/.test(mk)) {
+    const cur = Number(cmdMap.footnoteMarkColor ?? 100);
+    const { level } = detectIntensity(mk);
+    const L = Math.max(1, Math.min(5, level)) - 1;
+    if (/(연하|흐리|옅|희미)/.test(mk)) return { patches: { footnoteMarkColor: String(Math.max(10, cur - STEPS[L])) }, elements: ['mark'], level };
+    if (/(검정|까맣|검게)/.test(mk)) return { patches: { footnoteMarkColor: '100' }, elements: ['mark'], level };
+    if (/(진하|짙)/.test(mk)) return { patches: { footnoteMarkColor: String(Math.min(100, cur + STEPS[L])) }, elements: ['mark'], level };
+    if (/(회색|그레이)/.test(mk)) return { patches: { footnoteMarkColor: '55' }, elements: ['mark'], level };
+  }
+  // "각주 진하게" — 이미 연하게 만든 요소를 다시 진하게 하는 말은 굵기가 아니라 색이다
+  if (/(진하게|짙게)/.test(mk) && !COLORWORD.test(mk) && !/(굵|두껍|볼드)/.test(mk)) {
+    const lighter = elementsIn(mk).filter(el => Number(cmdMap[COLOR_ELEMENTS[el].key] ?? 100) < 100);
+    if (lighter.length) {
+      const { level } = detectIntensity(mk);
+      const L = Math.max(1, Math.min(5, level)) - 1;
+      const patches = {};
+      for (const el of lighter) patches[COLOR_ELEMENTS[el].key] = String(Math.min(100, Number(cmdMap[COLOR_ELEMENTS[el].key]) + STEPS[L]));
+      return { patches, elements: lighter, level };
+    }
+  }
   if (!hasColorRequest(msg)) return null;
   const els = elementsIn(msg);
   if (!els.length) return null;

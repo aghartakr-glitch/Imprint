@@ -18,7 +18,13 @@ export const TEXT_COLORS = {
   gray:   { label: '회색', expr: 'black!55' },
 };
 export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}' }; // 굵게·기울임
-export const isHlMode = v => !!FACE_MODES[v] || !!HL_COLORS[v] || (/^text:/.test(String(v)) && !!TEXT_COLORS[String(v).slice(5)]);
+// 'text:red+bold'처럼 글자색·형광펜에 굵게/기울임을 더할 수 있다(모델이 'text:red|bold'로 내도 같은 뜻으로 읽는다)
+const splitMode = mode => String(mode).split(/[+|,]/).map(x => x.trim()).filter(Boolean);
+const baseOk = v => !!HL_COLORS[v] || (/^text:/.test(v) && !!TEXT_COLORS[v.slice(5)]);
+export const isHlMode = v => {
+  const t = splitMode(v);
+  return t.length > 0 && t.length <= 2 && t.every(x => FACE_MODES[x] || baseOk(x)) && t.filter(x => !FACE_MODES[x]).length <= 1 && t.filter(x => FACE_MODES[x]).length <= 1;
+};
 
 const MARK = '% imprintHL';
 const QUOTE_RE = /(‘[^‘’\\\n{}]{1,40}’|“[^“”\\\n{}]{1,40}”)/g;
@@ -29,24 +35,30 @@ function appendBeforeEndinput(sty, text) {
 }
 
 export function readHighlight(sty) {
-  const m = String(sty).match(/% imprintHL ([\w:]+)/);
+  const m = String(sty).match(/% imprintHL ([\w:+]+)/);
   return m ? m[1] : 'off';
 }
 
 // mode: 'off' | HL_COLORS 키(배경) | 'text:색'(글자색). { sty, tex }를 돌려준다.
-export function applyHighlight(sty, tex, mode) {
-  const isText = /^text:/.test(String(mode));
-  const face = FACE_MODES[mode];
-  const color = face ? { expr: '' } : isText ? TEXT_COLORS[String(mode).slice(5)] : HL_COLORS[mode];
+export function applyHighlight(sty, tex, rawMode) {
+  const parts = splitMode(rawMode);
+  const faceTok = parts.find(x => FACE_MODES[x]);
+  const baseTok = parts.find(x => !FACE_MODES[x]);
+  const mode = parts.length ? parts.join('+') : 'off';
+  const isText = /^text:/.test(String(baseTok || ''));
+  const face = faceTok && !baseTok ? FACE_MODES[faceTok] : null;
+  const color = face ? { expr: '' } : baseTok ? (isText ? TEXT_COLORS[baseTok.slice(5)] : HL_COLORS[baseTok]) : null;
   let outSty = String(sty).replace(/^.*% imprintHL.*\r?\n?/gm, '');
   let outTex = String(tex);
   if (!color) {
     outTex = outTex.replace(/\\imprintHL\{([^{}]*)\}/g, '$1');
     return { sty: outSty, tex: outTex };
   }
-  const macro = face ? face : isText
+  let macro = face ? face : isText
     ? `\\textcolor{${color.expr}}{#1}`
     : `{\\setlength{\\fboxsep}{0.5pt}\\colorbox{${color.expr}}{#1}}`;
+  // 색(또는 형광펜) + 굵게/기울임: 안쪽에 색 매크로, 바깥에 서체 매크로
+  if (faceTok && baseTok) macro = FACE_MODES[faceTok].replace('#1', () => macro);
   outSty = appendBeforeEndinput(outSty,
     `\\RequirePackage{xcolor}\\providecommand{\\imprintHL}[1]{${macro}}\\renewcommand{\\imprintHL}[1]{${macro}} ${MARK} ${mode}`);
   const at = outTex.indexOf('\\begin{document}');
@@ -70,6 +82,11 @@ export function planHighlight(msg = '') {
   const m = String(msg);
   const quoted = HAS_QUOTE.test(m);
   const off = OFF.test(m);
+  // 색 + 굵게 한 문장 — "따옴표 안에 빨강색 굵게" → 빨강 글자색에 굵게를 더한다
+  if (quoted && !off && /(볼드|굵게|굵은|두껍게|bold)/i.test(m) && !/(형광펜|하이라이트|배경)/.test(m)) {
+    const t0 = TEXT_WORDS.find(([re]) => re.test(m));
+    if (t0 && /(색|빨강|빨간|파랑|파란|초록|주황|분홍|회색)/.test(m)) return { patches: { quoteHighlight: 'text:' + t0[1] + '+bold' } };
+  }
   // 굵게·기울임 — "따옴표 안에 있는 것만 볼드 처리해줘"
   if (quoted && !off) {
     if (/(볼드|굵게|굵은|두껍게|bold)/i.test(m)) return { patches: { quoteHighlight: 'bold' } };

@@ -73,13 +73,16 @@ const SAME_RE = /(같게|같은|동일|똑같|맞춰|맞추|비슷하게|비슷�
 
 export function planSizeRelation(msg = '', cmdMap = {}) {
   const m = String(msg);
-  if (/(행간|줄\s*간격|간격|여백|서체|글꼴|색|굵|정렬|위치|가로\s*폭|폭|너비)/.test(m)) return null; // 크기가 아닌 속성 얘기
+  if (/(행간|줄\s*간격|간격|여백|서체|글꼴|색|굵|정렬|위치|시작점|라인|가로\s*폭|폭|너비)/.test(m)) return null; // 크기가 아닌 속성 얘기
   const found = EL.map(([id, re, sk, lk]) => { const x = m.match(re); return x ? { id, at: x.index, len: x[0].length, sk, lk } : null; }).filter(Boolean);
   if (found.length < 2) return null;
   let target, ref, ratio;
   const than = m.match(/(각주|주석|본문|제목|소제목|부제목|부제|쪽\s*번호|면주|머리말)\s*(?:의\s*)?(?:글자\s*)?(?:크기)?\s*보다/);
-  if (than) {
-    ref = found.find(f => than.index <= f.at && f.at <= than.index + than[0].length);
+  // "소제목 크기를 제목과 차이가 나도록 줄여줘" — "~와 차이 나게"도 "~보다" 비교와 같게 읽는다(기준은 와/과 앞의 요소)
+  const diffM = m.match(/(각주|주석|본문|제목|소제목|부제목|부제|쪽\s*번호|면주|머리말)\s*(?:와|과|랑|이랑|하고)\s*(?:글자\s*)?(?:크기\s*)?차이\s*(?:가\s*)?나(?:게|도록)/);
+  const rel = than || diffM;
+  if (rel) {
+    ref = found.find(f => rel.index <= f.at && f.at <= rel.index + rel[0].length);
     target = found.find(f => f !== ref);
     if (!ref || !target) return null;
     const { level } = detectIntensity(normalizeMsg(m).replace(/(차이\s*나게|차이가\s*나게|확실히|뚜렷하게)/, ''));
@@ -98,7 +101,7 @@ export function planSizeRelation(msg = '', cmdMap = {}) {
   if (!Number.isFinite(refSize)) return null;
   let size = refSize * ratio;
   // "보다 작게"인데 기준이 이미 작아 지금보다 커지는 경우는 만들지 않는다(반대도 마찬가지)
-  if (Number.isFinite(curSize) && than) {
+  if (Number.isFinite(curSize) && rel) {
     if (ratio < 1 && size > curSize) size = curSize * ratio;
     if (ratio > 1 && size < curSize) size = curSize * ratio;
   }

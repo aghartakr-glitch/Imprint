@@ -8,9 +8,10 @@ import { planHighlight } from './styHighlight.js';
 import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
-import { planWeight, planAlign, planSlotPos, planFamilyAll } from './nlMisc.js';
+import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse } from './nlMisc.js';
 import { planMore, planSizeRelation, planWidthFit } from './nlRelation.js';
 import { planMargins } from './nlMargin.js';
+import { planDropCap } from './styDropCap.js';
 import { planColorEdit } from './nlColor.js';
 import { detectIntensity, detectDirection, hasExplicitAmount, isFollowUp, synthesizePatches, normalizeMsg, LEVEL_NAMES } from './nlIntensity.js';
 
@@ -60,10 +61,15 @@ export const KNOB_ALIASES = [
   { key: 'marginOuter', re: /(상하좌우|사방).*(마진|여백)|(마진|여백).*(상하좌우|사방)/, sample: '상하좌우 마진을 많이 줘' },
   { key: 'parSkip', re: /문단.*줄\s*바꿈/, sample: '문단 줄바꿈 없애줘' },
   { key: 'footnoteSep', re: /(각주|주석).*(상하|위아래)\s*간격/, sample: '주석 상하 간격 줄여줘' },
+  { key: 'headingGap', re: /(?<![소부])제목.*(부제|소제목).*(붙|좁|가깝|떨어|벌어)|(부제|소제목).*(?<![소부])제목.*(붙|좁|가깝|떨어|벌어)/, sample: '제목이랑 부제목 붙여줘' },
+  { key: 'dropCap', re: /(문단|단락|본문)?\s*(시작|첫)\s*(글자|글씨|문자)|드롭\s*캡/, sample: '문단 시작 첫 글자만 크게 해줘' },
+  { key: 'footinsSkip', re: /(각\s*주|주\s*석)\s*(위|앞)(?:에|쪽에|의)?\s*(?:있는\s*)?(공백|여백|간격|띄)/, sample: '주석 위에 공백을 많이 넣어줘' },
+  { key: null, reason: '각주 시작점을 본문 줄(라인)에 맞추는 키가 없음 — 각주 위치·줄 맞춤은 지원하지 않는다고 알리고, 가능한 것(본문↔각주 간격, 각주 크기·행간)을 제안할 것', re: /(각주|주석).*(시작점|시작s*위치).*(본문).*(라인|줄|행).*(맞춰|맞게|맞추)|(각주|주석).*본문s*(라인|줄)에s*맞/, sample: '주석 시작점을 본문 라인에 맞춰서 나오게 해줘' },
+  { key: null, reason: '각주 내용 자체를 지우는 건 지원하지 않음(본문의 각주 표시를 지워야 함) — 각주 칸만 숨기려면 글자 색을 아주 연하게 하거나 크기를 줄이는 방법을 제안할 것', re: /^(?!.*(?:구분선|번호|숫자|표시|서체|색|크기|행간|간격|위치)).*(각주|주석)\s*(?:은|는|을|를)?\s*(지워|없애|삭제|제거)/, sample: '하단 주석은 지워줘' },
   { key: 'footnoteRuleWidth', re: /(구분선|가로줄).*(가로|길이|너비|폭|여백에\s*맞|꽉|길게|짧게|끝까지)/, sample: '구분선 가로 여백에 맞게 늘려줘' },
   { key: 'footnoteRuleThickness', re: /(구분선|가로줄|각주\s*위\s*(?:의\s*)?선).*(얇|가늘|두껍|굵|두텁)/, sample: '각주 구분선 더 얇게 해줘' },
   { key: 'footnoteRuleColor', re: /(구분선|가로줄).*(연하|흐리|옅|진하|짙|희미|엷|색)/, sample: '각주 구분선 더 연하게 해줘' },
-  { key: 'quoteHighlight', re: /(따옴표|인용).*(형광펜|하이라이트|칠해|칠하|배경)|(형광펜|하이라이트).*(따옴표|인용|지워|없애)/, sample: '따옴표 안의 단어들 형광펜 칠해줘' },
+  { key: 'quoteHighlight', re: /(따옴표|인용).*(형광펜|하이라이트|칠해|칠하|배경|굵|볼드|기울|이탤릭|빨강|빨간|파랑|파란|초록|주황|분홍|회색|색)|(형광펜|하이라이트).*(따옴표|인용|지워|없애)/, sample: '따옴표 안의 단어들 형광펜 칠해줘' },
   { key: null, reason: '요청이 아니라 상황 설명으로 읽힘("~이야", "~인데") — 값을 바꾸지 말고 이해했다고 짧게 답하고, 무엇을 바꿀지 되물을 것', re: /^(?!.*(?:줘|해줘|바꿔|늘려|줄여|키워|넓혀|좁혀|올려|내려|해주세요|주세요|싶|하자|했으면|면\s*좋겠|말고|보다|맞춰|같게|\?)).*(?:여백|행간|자간|글자|본문|제목|각주|쪽번호|면주|내측|외측|1페이지|기준).*(?:이야|이에요|예요|인데|거든|이라고|인데요|이잖아|잖아)[\s.!~]*$/, sample: '1페이지 기준 우측이 내측 여백이야' },
   { key: null, reason: '대상·방향이 없는 말("알아서", "다", "대충") — 무엇을 어떻게 바꿀지 되물을 것', re: /^\s*(?:알아서|다|전부|아무거나|대충|적당히|그냥|좋게)\s*(?:해줘|해|좀|해주세요)?\s*[.!?~]*\s*$/, sample: '알아서' },
   { key: 'marginInner', re: /^(?=.*여백).*좌우/, sample: '위아래 여백은 줄이고 좌우는 늘려줘' },
@@ -264,7 +270,7 @@ const KEY_BLOCKERS = {
   bodySize: /(사이|간격)/,
   bodyLeading: /(각주|주석|제목|부제|면주|쪽\s*번호|쪽\s*수)\s*(의\s*)?(행간|줄\s*간격|줄\s*사이)/,
   // 구분선 말에 든 "여백/가로/길이"는 구분선 얘기다
-  marginTop: /(구분선|가로줄)/, marginBottom: /(구분선|가로줄)/, marginInner: /(구분선|가로줄)/, marginOuter: /(구분선|가로줄)/,
+  marginTop: /(구분선|가로줄|(각주|주석)\s*(위|앞))/, marginBottom: /(구분선|가로줄|(각주|주석)\s*(위|앞))/, marginInner: /(구분선|가로줄|(각주|주석)\s*(위|앞))/, marginOuter: /(구분선|가로줄|(각주|주석)\s*(위|앞))/,
 };
 
 // 사용자 문장에 걸리는 항목을 모두 모은다. 같은 키·같은 사유는 한 번만.
@@ -316,7 +322,7 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   let unsupported = hits.filter(h => h.unsupported).map(h => h.unsupported);
   let targets = keys;
   let inherited = false;
-  if (hits.length === 0 && prevKeys.length > 0 && isFollowUp(msg, 0)) { targets = prevKeys; inherited = true; }
+  if (hits.length === 0 && prevKeys.length > 0 && isFollowUp(msg, 0) && !ELEMENT_WORD.test(msg) && !/(굵|볼드|두껍|얇|가늘|기울)/.test(msg)) { targets = prevKeys; inherited = true; }
   const { level, word } = detectIntensity(msg);
   const dir = detectDirection(msg);
   let synth = (unsupported.length === 0 || (targets.length > 0 && unsupported.every(u => /전체 인상/.test(u)))) ? synthesizePatches(msg, targets, cmdMap) : null;
@@ -354,14 +360,18 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   const lay = unsupported.length === 0 || impressionOnly ? planLayout(msg, cmdMap) : null;
   if (lay) { unsupported = []; synth = { text: patchText(lay.patches), keys: Object.keys(lay.patches), patches: { ...lay.patches }, font: true }; fontOnly = true; }
   // 전체 로그 점검에서 나온 것: 굵기·정렬·쪽번호/면주 위치·전체 서체 계열
+  // 문단 첫 글자만 키우기 — 본문 전체 크기로 읽히지 않게 이 요청이면 첫 글자 배율만 낸다
+  const drop = planDropCap(msg, level);
+  if (drop) { unsupported = []; synth = { text: patchText(drop.patches), keys: Object.keys(drop.patches), patches: { ...drop.patches }, font: true }; fontOnly = true; }
   // 여백 4면 — 면마다 방향을 따로 읽는다(안쪽/바깥쪽·위/아래·좌우·사방). 왼쪽/오른쪽은 되묻는다
   const marg = planMargins(msg, cmdMap);
   if (marg?.ask) { unsupported = [marg.ask]; synth = null; }
   else if (marg) { unsupported = []; synth = { text: patchText(marg.patches), keys: Object.keys(marg.patches), patches: { ...marg.patches }, font: true }; fontOnly = true; }
-  for (const plan of marg ? [] : [planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
+  for (const plan of marg ? [] : [planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
     if (!plan) continue;
     unsupported = [];
-    const merged = { ...(synth?.patches || {}), ...plan.patches };
+    // 이 계획들은 문장에서 대상과 값을 직접 정한 것이라 앞서 모델/별칭이 잡은 값에 섞지 않고 그대로 쓴다(섞이면 직전 수정 키나 다른 항목이 같이 바뀐다)
+    const merged = { ...plan.patches };
     synth = { text: patchText(merged), keys: Object.keys(merged), patches: merged, font: true };
     fontOnly = true;
   }
@@ -390,6 +400,15 @@ export function splitClauses(msg) {
 }
 
 export function planNaturalEdit(msg = '', cmdMap = {}, prevKeys = [], prevDirs = {}) {
+  // 방금 따옴표 안 글자를 바꿨는데 "굵게"만 말하면 그 따옴표 안 글자에 굵게를 더한다("text:red" → "text:red+bold")
+  const faceOnly = String(msg).trim().match(/^(굵게|볼드(?:로)?|두껍게|기울여|기울임|이탤릭)(?:\s*해\s*줘|\s*해줘|\s*줘)?[\s.!?~]*$/);
+  if (faceOnly && prevKeys.includes('quoteHighlight') && cmdMap.quoteHighlight && cmdMap.quoteHighlight !== 'off') {
+    const face = /(굵|볼드|두껍)/.test(faceOnly[1]) ? 'bold' : 'italic';
+    const base = String(cmdMap.quoteHighlight).split(/[+|,]/).filter(x => x && x !== 'bold' && x !== 'italic');
+    const value = (base.length ? base[0] + '+' : '') + face;
+    const base0 = planSingle(msg, cmdMap, []);
+    return { ...base0, keys: ['quoteHighlight'], inherited: true, unsupported: [], synth: { text: 'quoteHighlight=' + value, keys: ['quoteHighlight'], patches: { quoteHighlight: value }, font: true } };
+  }
   // "조금만 더", "더더더더", "반대로" — 직전에 바꾼 항목과 방향을 이어받는다
   const more = planMore(msg, cmdMap, prevKeys, prevDirs);
   if (more) {

@@ -10,7 +10,7 @@ const BOLD_RE = /(굵게|굵은|볼드|두껍게|두꺼운|bold|강조\s*(?:되|
 const NORMAL_RE = /(얇게|가늘게|보통\s*굵기|일반\s*굵기|굵기\s*(?:빼|없애|해제)|볼드\s*(?:빼|없애|해제|취소)|굵지\s*않게|normal)/i;
 export function planWeight(msg = "") {
   const m = String(msg);
-  if (/(따옴표|인용|구분선|형광펜)/.test(m) || hasColorRequest(m)) return null;
+  if (/(따옴표|인용|구분선|형광펜|가로줄|각\s*주\s*위\s*(?:에|의)?\s*(?:줄|선))/.test(m) || hasColorRequest(m)) return null;
   const normal = NORMAL_RE.test(m);
   const bold = !normal && BOLD_RE.test(m); // "볼드 빼줘"는 '볼드'가 들어 있어도 굵기 해제다
   if (bold === normal) return null;
@@ -21,6 +21,7 @@ export function planWeight(msg = "") {
   if (hasSub && hasMain) patches.headingWeight = value;
   else if (hasSub) patches.h2Weight = value;
   else if (hasMain) patches.h1Weight = value;
+  else if (/(각주|주석)/.test(m)) patches.footnoteWeight = value; // 각주 글자 굵기 (로그: "각주 폰트 굵기도 얇게")
   else if (/본문/.test(m)) patches.bodyWeight = value;
   else return null;
   return { patches };
@@ -71,4 +72,22 @@ export function planFamilyAll(msg = '', cmdMap = {}) {
   const patches = {};
   for (const k of ['bodyFontFamily', 'headingFontFamily', 'footnoteFontFamily', 'rhFontFamily', 'pnFontFamily']) if (cmdMap[k] !== want) patches[k] = want;
   return Object.keys(patches).length ? { patches } : null;
+}
+
+// ── 완전히 붙이기 ─────────────────────────────────────────────────────────
+// "제목이랑 부제목 완전 붙어야대", "제목 부제목 딱 붙여줘", "문단 사이 아예 붙게" — 강하게 말하면 단계표가 아니라 간격을 0으로 만든다.
+// (모델이 "붙어야"를 늘리라는 뜻으로 읽거나 "제어 키가 없다"며 거절한 로그 대응)
+const STICK_RE = /(붙(?:여|어|게|이|도록|어야)|딱\s*붙|맞닿|닿게|밀착)/;
+const STRONG_RE = /(완전(?:히)?|딱|아예|꽉|전혀|바짝|밀착|붙어야|붙게|붙도록|0\s*(?:으로|pt)|제로|없게)/;
+export function planCollapse(msg = '') {
+  const m = String(msg);
+  const zero = /(0s*(?:pt|포인트)?s*(?:으로|로)|제로|없애|없게|없이)/.test(m) && /(간격|사이)/.test(m);
+  if (!((STICK_RE.test(m) && STRONG_RE.test(m)) || zero)) return null;
+  if (/(글자|자간|단어|행간|여백|쪽번호|면주|각주\s*번호)/.test(m.replace(/제목|부제/g, ''))) return null;
+  const sub = /(부제목|부제|소제목)/.test(m), main = /(?<![소부])(제목|타이틀|표제)/.test(m);
+  if (main && sub) return { patches: { headingGap: '0' } };               // 제목↔소제목 사이
+  if ((main || sub) && /(본문|내용|글)/.test(m)) return { patches: { bodyGap: '0' } }; // 제목·소제목↔본문 사이
+  if (/(문단|단락)/.test(m)) return { patches: { parSkip: '0' } };
+  if (/(각주).*(사이|끼리)|각주끼리/.test(m)) return { patches: { footnoteSep: '0' } };
+  return null;
 }
