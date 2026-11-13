@@ -1,4 +1,4 @@
-// 따옴표 안 낱말에 형광펜(배경색) 또는 글자색 — ‘…’ “…” 로 묶인 짧은 구절을 \imprintHL{…}로 감싸고,
+// 따옴표 안 낱말에 형광펜(배경색) 또는 글자색·꾸밈 — ‘…’ “…” 로 묶인 짧은 구절을 \imprintHL{…}로 감싸고,
 // 모양은 sty의 \imprintHL 정의 한 줄(% imprintHL)로 정한다. 켜기/끄기/색 바꾸기를 여러 번 해도 겹치지 않는다.
 export const HL_COLORS = {
   yellow: { label: '노랑', expr: 'yellow!55' },
@@ -8,7 +8,7 @@ export const HL_COLORS = {
   orange: { label: '주황', expr: 'orange!40' },
   gray:   { label: '회색', expr: 'black!15' },
 };
-// 글자색 — mode는 'text:red'처럼 쓴다
+// 글자색 — mode는 'text:red'처럼 쓴다. 요소별 색(styElement)도 같은 표를 쓴다
 export const TEXT_COLORS = {
   red:    { label: '빨강', expr: 'red!80!black' },
   blue:   { label: '파랑', expr: 'blue!70!black' },
@@ -16,16 +16,25 @@ export const TEXT_COLORS = {
   orange: { label: '주황', expr: 'orange!90!black' },
   pink:   { label: '분홍', expr: 'magenta!80!black' },
   gray:   { label: '회색', expr: 'black!55' },
+  purple: { label: '보라', expr: 'violet!80!black' },
+  brown:  { label: '갈색', expr: 'brown!90!black' },
+  navy:   { label: '남색', expr: 'blue!55!black' },
+  yellow: { label: '노랑', expr: 'yellow!60!black' },
 };
-export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}' }; // 굵게·기울임
-// 'text:red+bold'처럼 글자색·형광펜에 굵게/기울임을 더할 수 있다(모델이 'text:red|bold'로 내도 같은 뜻으로 읽는다)
-const splitMode = mode => String(mode).split(/[+|,]/).map(x => x.trim()).filter(Boolean);
-const baseOk = v => !!HL_COLORS[v] || (/^text:/.test(v) && !!TEXT_COLORS[v.slice(5)]);
+// 꾸밈: 굵게·기울임·밑줄·취소선. 몇 개든 겹쳐 쓸 수 있다(예: 'text:red+bold+underline')
+export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}', underline: '\\uline{#1}', strike: '\\sout{#1}' };
+// 모델이 'text:red|bold'처럼 | , 로 이어 내도 같은 뜻으로 읽는다. 'reset'은 색을 본문 기본색으로 되돌리는 자리 표시
+// ("따옴표 아닌 내용만 빨강"에서 따옴표는 빨강이 되지 않게 둘 때 쓴다)
+const splitMode = mode => String(mode).split(/[+|,]/).map(x => x.trim()).filter(x => x && x !== 'off');
+const baseOk = v => v === 'reset' || !!HL_COLORS[v] || (/^text:/.test(v) && !!TEXT_COLORS[v.slice(5)]);
 export const isHlMode = v => {
   const t = splitMode(v);
-  return t.length > 0 && t.length <= 2 && t.every(x => FACE_MODES[x] || baseOk(x)) && t.filter(x => !FACE_MODES[x]).length <= 1 && t.filter(x => FACE_MODES[x]).length <= 1;
+  const faces = t.filter(x => FACE_MODES[x]), bases = t.filter(x => !FACE_MODES[x]);
+  return t.length > 0 && t.every(x => FACE_MODES[x] || baseOk(x)) && bases.length <= 1 && new Set(faces).size === faces.length;
 };
+export const normalizeHlMode = mode => splitMode(mode).join('+');
 
+import { mapSafeLines, fixLocaleLine } from './texSafe.js';
 const MARK = '% imprintHL';
 const QUOTE_RE = /(‘[^‘’\\\n{}]{1,40}’|“[^“”\\\n{}]{1,40}”)/g;
 
@@ -39,67 +48,49 @@ export function readHighlight(sty) {
   return m ? m[1] : 'off';
 }
 
-// mode: 'off' | HL_COLORS 키(배경) | 'text:색'(글자색). { sty, tex }를 돌려준다.
+// mode: 'off' | 배경색 | 'text:색' | 'reset' 에 꾸밈(bold·italic·underline·strike)을 +로 몇 개든 더한 것. { sty, tex }를 돌려준다.
 export function applyHighlight(sty, tex, rawMode) {
   const parts = splitMode(rawMode);
-  const faceTok = parts.find(x => FACE_MODES[x]);
-  const baseTok = parts.find(x => !FACE_MODES[x]);
+  const faceToks = parts.filter(x => FACE_MODES[x]);
+  const baseTok = parts.find(x => !FACE_MODES[x]) || null;
   const mode = parts.length ? parts.join('+') : 'off';
-  const isText = /^text:/.test(String(baseTok || ''));
-  const face = faceTok && !baseTok ? FACE_MODES[faceTok] : null;
-  const color = face ? { expr: '' } : baseTok ? (isText ? TEXT_COLORS[baseTok.slice(5)] : HL_COLORS[baseTok]) : null;
-  let outSty = String(sty).replace(/^.*% imprintHL.*\r?\n?/gm, '');
+  const outSty = String(sty).replace(/^.*% imprintHL.*\r?\n?/gm, '');
   let outTex = String(tex);
-  if (!color) {
+  if (!parts.length) {
     outTex = outTex.replace(/\\imprintHL\{([^{}]*)\}/g, '$1');
     return { sty: outSty, tex: outTex };
   }
-  let macro = face ? face : isText
-    ? `\\textcolor{${color.expr}}{#1}`
-    : `{\\setlength{\\fboxsep}{0.5pt}\\colorbox{${color.expr}}{#1}}`;
-  // 색(또는 형광펜) + 굵게/기울임: 안쪽에 색 매크로, 바깥에 서체 매크로
-  if (faceTok && baseTok) macro = FACE_MODES[faceTok].replace('#1', () => macro);
-  outSty = appendBeforeEndinput(outSty,
-    `\\RequirePackage{xcolor}\\providecommand{\\imprintHL}[1]{${macro}}\\renewcommand{\\imprintHL}[1]{${macro}} ${MARK} ${mode}`);
+  // 안쪽부터: 색(또는 형광펜/reset) → 꾸밈들
+  let macro = '#1';
+  if (baseTok === 'reset') macro = '{\\normalcolor #1}';
+  else if (baseTok && /^text:/.test(baseTok) && TEXT_COLORS[baseTok.slice(5)]) macro = `\\textcolor{${TEXT_COLORS[baseTok.slice(5)].expr}}{#1}`;
+  else if (baseTok && HL_COLORS[baseTok]) macro = `{\\setlength{\\fboxsep}{0.5pt}\\colorbox{${HL_COLORS[baseTok].expr}}{#1}}`;
+  for (const f of faceToks) macro = FACE_MODES[f].replace('#1', () => macro);
+  const needUlem = faceToks.some(f => f === 'underline' || f === 'strike');
+  const styOut = appendBeforeEndinput(outSty,
+    `\\RequirePackage{xcolor}${needUlem ? '\\RequirePackage[normalem]{ulem}' : ''}\\providecommand{\\imprintHL}[1]{${macro}}\\renewcommand{\\imprintHL}[1]{${macro}} ${MARK} ${mode}`);
   const at = outTex.indexOf('\\begin{document}');
   const head = at < 0 ? '' : outTex.slice(0, at);
   let body = at < 0 ? outTex : outTex.slice(at);
   // 이미 감싼 것은 한 번 벗기고 다시 감싼다 — 같은 구절이 두 번 감싸지지 않게
   // 특수문자 서체·색 감싸기(\imprintSym)도 한 번 벗겨야 따옴표 구절이 인식된다 — 호출한 쪽에서 다시 적용한다
-  body = body.replace(/\\imprintSym\{([^{}]*)\}/g, '$1').replace(/\\imprintHL\{([^{}]*)\}/g, '$1').replace(QUOTE_RE, m => `\\imprintHL{${m}}`);
-  return { sty: outSty, tex: head + body };
+  body = fixLocaleLine(body).replace(/\\imprintSym\{([^{}]*)\}/g, '$1').replace(/\\imprintHL\{([^{}]*)\}/g, '$1');
+  body = mapSafeLines(body, l => l.replace(QUOTE_RE, m => `\\imprintHL{${m}}`));
+  return { sty: styOut, tex: head + body };
 }
 
 export const countHighlighted = tex => (String(tex).match(/\\imprintHL\{/g) || []).length;
 
-// 자연어: "따옴표 안의 단어들 형광펜 칠해줘" / "빨간색으로 바꿔줘" / "형광펜 지워줘"
+// 자연어(예전 단순 판): 새 통합 해석기(nlStyle.js)가 먼저 처리하고, 여기는 형광펜 말만 남아 있을 때 쓴다
 const HAS_QUOTE = /(따옴표|인용|‘|’|“|”|작은따옴표|큰따옴표|홑따옴표)/;
 const HAS_HL = /(형광펜|하이라이트|배경\s*색|칠해|칠하|마커|밑바탕)/;
 const OFF = /(지워|없애|빼\s*줘|해제|취소|제거|원래대로)/;
 const COLOR_WORDS = [[/(노랑|노란|yellow)/i, 'yellow'], [/(연두|초록|녹색|green)/i, 'green'], [/(분홍|핑크|pink)/i, 'pink'], [/(하늘|파랑|파란|청색|blue)/i, 'blue'], [/(주황|오렌지|orange)/i, 'orange'], [/(회색|그레이|gray|grey)/i, 'gray']];
-const TEXT_WORDS = [[/(빨간|빨강|붉은|레드|red)/i, 'red'], [/(파란|파랑|블루|청색)/i, 'blue'], [/(초록|녹색|연두|그린)/i, 'green'], [/(주황|오렌지)/i, 'orange'], [/(분홍|핑크)/i, 'pink'], [/(회색|그레이)/i, 'gray']];
 
 export function planHighlight(msg = '') {
   const m = String(msg);
   const quoted = HAS_QUOTE.test(m);
   const off = OFF.test(m);
-  // 색 + 굵게 한 문장 — "따옴표 안에 빨강색 굵게" → 빨강 글자색에 굵게를 더한다
-  if (quoted && !off && /(볼드|굵게|굵은|두껍게|bold)/i.test(m) && !/(형광펜|하이라이트|배경)/.test(m)) {
-    const t0 = TEXT_WORDS.find(([re]) => re.test(m));
-    if (t0 && /(색|빨강|빨간|파랑|파란|초록|주황|분홍|회색)/.test(m)) return { patches: { quoteHighlight: 'text:' + t0[1] + '+bold' } };
-  }
-  // 굵게·기울임 — "따옴표 안에 있는 것만 볼드 처리해줘"
-  if (quoted && !off) {
-    if (/(볼드|굵게|굵은|두껍게|bold)/i.test(m)) return { patches: { quoteHighlight: 'bold' } };
-    if (/(기울|이탤릭|italic|비스듬)/i.test(m)) return { patches: { quoteHighlight: 'italic' } };
-  }
-  if (quoted && off && /(볼드|굵|기울|이탤릭)/.test(m)) return { patches: { quoteHighlight: 'off' } };
-  // 글자색 — 형광펜 말이 없고 색 이름이 있을 때
-  if (quoted && !/(형광펜|하이라이트|배경)/.test(m) && /(색|빨강|빨간|파랑|파란|초록|주황|분홍|회색)/.test(m)) {
-    if (off) return { patches: { quoteHighlight: 'off' } };
-    const t = TEXT_WORDS.find(([re]) => re.test(m));
-    if (t) return { patches: { quoteHighlight: 'text:' + t[1] } };
-  }
   if (!HAS_HL.test(m)) return null;
   if (!quoted && !(off && /형광펜|하이라이트/.test(m))) return null;
   if (off) return { patches: { quoteHighlight: 'off' } };

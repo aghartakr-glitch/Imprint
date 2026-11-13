@@ -1,7 +1,9 @@
 // 특수문자만 서체·색 바꾸기 — 본문 속 특수문자를 \imprintSym{…}로 감싸고, 모양(서체 계열·색)은 sty의 \imprintSym 정의 한 줄(% imprintSym)로 정한다.
 // 기본은 전부 적용하고, 항목별로 뺄 수 있다. 항목: sym(기호류 ★●→※…) · quote(따옴표 ‘’“”「」) · bracket(괄호 ()) · punct(쉼표·마침표·물음표·느낌표·쌍점·말줄임·줄표) · num(원문자·번호 ①②③).
 // 사용자가 말하는 번호: 1=기호류, 2=문장부호(따옴표·괄호·나머지), 3=번호(원문자).
-import { TEXT_COLORS } from './styHighlight.js';
+import { TEXT_COLORS, FACE_MODES } from './styHighlight.js';
+import { mapSafeLines, fixLocaleLine } from './texSafe.js';
+import { decoChanges } from './nlStyle.js';
 import { SERIF_FONTS, SANS_FONTS, findFontByName } from './styFonts.js';
 
 export const SYMBOL_CATS = ['sym', 'quote', 'bracket', 'punct', 'num'];
@@ -24,16 +26,17 @@ function appendBeforeEndinput(sty, text) {
 }
 
 const parse = str => {
-  const o = { font: null, color: null, skip: [] };
+  const o = { font: null, color: null, skip: [], deco: [] };
   for (const part of String(str || '').split(';')) {
     const [k, v] = part.split('=');
     if (k === 'font' && v) o.font = v;
     else if (k === 'color' && v) o.color = v;
     else if (k === 'skip' && v) o.skip = v.split('/').filter(x => SYMBOL_CATS.includes(x));
+    else if (k === 'deco' && v) o.deco = v.split('/').filter(x => FACE_MODES[x]);
   }
   return o;
 };
-const stringify = o => `font=${o.font || ''};color=${o.color || ''};skip=${(o.skip || []).join('/')}`;
+const stringify = o => `font=${o.font || ''};color=${o.color || ''};skip=${(o.skip || []).join('/')};deco=${(o.deco || []).join('/')}`;
 
 export function readSymbolStyle(sty) {
   const m = String(sty).match(/% imprintSym (\S+)/);
@@ -52,7 +55,8 @@ export function mergeSymbolSpec(currentStr, patchStr) {
   if (patchStr === 'off') return null;
   const cur = parse(currentStr), p = parse(patchStr);
   const hasSkipField = /skip=/.test(String(patchStr));
-  return { font: p.font ?? cur.font, color: p.color ?? cur.color, skip: hasSkipField ? p.skip : cur.skip };
+  const hasDeco = /deco=/.test(String(patchStr));
+  return { font: p.font ?? cur.font, color: p.color ?? cur.color, skip: hasSkipField ? p.skip : cur.skip, deco: hasDeco ? p.deco : cur.deco };
 }
 
 // patch: 'font=sans;color=red;skip=num' 형태(일부만 있어도 됨) 또는 'off'. { sty, tex }를 돌려준다.
@@ -61,23 +65,25 @@ export function applySymbolStyle(sty, tex, patch) {
   const spec = mergeSymbolSpec(cur, patch);
   let outSty = String(sty).replace(/^.*% imprintSym.*\r?\n?/gm, '');
   // 이미 감싼 것은 벗기고 다시 감싼다
-  let outTex = String(tex).replace(/\\imprintSym\{([^{}]*)\}/g, '$1');
-  if (!spec || (!spec.font && !spec.color)) return { sty: outSty, tex: outTex };
+  let outTex = fixLocaleLine(String(tex)).replace(/\\imprintSym\{([^{}]*)\}/g, '$1');
+  if (!spec || (!spec.font && !spec.color && !spec.deco.length)) return { sty: outSty, tex: outTex };
   // 서체 이름(나눔명조·본명조·돋움 등)을 말했으면 그 폰트를 특수문자 전용 서체(\imprintSymFont)로 따로 정의한다. sans/serif는 현재 고딕·명조 계열
   const named = SERIF_FONTS[spec.font] || SANS_FONTS[spec.font];
   const fontDef = named ? namedFontLine(named) : '';
   const fam = named ? '\\imprintSymFont ' : spec.font === 'sans' ? '\\sffamily ' : spec.font === 'serif' ? '\\rmfamily ' : '';
   const ce = colorExpr(spec.color);
-  const inner = ce ? `\\textcolor{${ce}}{#1}` : '#1';
+  let inner = ce ? `\\textcolor{${ce}}{#1}` : '#1';
+  for (const dk of spec.deco) inner = FACE_MODES[dk].replace('#1', () => inner);   // 굵게·기울임·밑줄·취소선을 몇 개든 겹쳐 쓴다
+  const needUlem = spec.deco.includes('underline') || spec.deco.includes('strike');
   const def = `{${fam}${inner}}`;
   outSty = appendBeforeEndinput(outSty,
-    `${fontDef}${ce ? '\\RequirePackage{xcolor}' : ''}\\providecommand{\\imprintSym}[1]{#1}\\renewcommand{\\imprintSym}[1]${def} ${MARK} ${stringify(spec)}`);
+    `${fontDef}${ce ? '\\RequirePackage{xcolor}' : ''}${needUlem ? '\\RequirePackage[normalem]{ulem}' : ''}\\providecommand{\\imprintSym}[1]{#1}\\renewcommand{\\imprintSym}[1]${def} ${MARK} ${stringify(spec)}`);
   const at = outTex.indexOf('\\begin{document}');
   const head = at < 0 ? '' : outTex.slice(0, at);
   let body = at < 0 ? outTex : outTex.slice(at);
   for (const cat of SYMBOL_CATS) {
     if (spec.skip.includes(cat)) continue;
-    body = body.replace(RE[cat], m => `\\imprintSym{${m}}`);
+    body = mapSafeLines(body, l => l.replace(RE[cat], m => `\\imprintSym{${m}}`));
   }
   return { sty: outSty, tex: head + body };
 }
@@ -127,7 +133,7 @@ export function planSymbol(msg = '', cmdMap = {}) {
   const m = String(msg);
   if (!TRIGGER.test(m)) return null;
   if (/(각주|주석)\s*(?:번호|숫자|표시)/.test(m) && !/(특수\s*문자|특수\s*기호)/.test(m)) return null; // 각주 번호는 별도 항목
-  if (/(원래대로|해제|취소|없애|지워)/.test(m) && /(특수\s*문자|기호|문장\s*부호)/.test(m) && !/(빼|제외)/.test(m)) return { patches: { symbolStyle: 'off' } };
+  if (/(원래대로|해제|취소|없애|지워)/.test(m) && /(특수\s*문자|기호|문장\s*부호)/.test(m) && !/(빼|제외)/.test(m) && !/(굵|볼드|기울|이탤릭|밑줄|취소선|언더라인)/.test(m)) return { patches: { symbolStyle: 'off' } };
   let font = (FONT_WORDS.find(([re]) => re.test(m)) || [])[1] || null;
   // "나눔명조로", "돋움체로"처럼 서체 이름을 말하면 그 서체(기본 바탕·프리텐다드는 명조/고딕 계열 그대로)
   const nm = findFontByName(m.replace(/특수\s*문자|특수\s*기호|문장\s*부호/g, ' '));
@@ -145,8 +151,11 @@ export function planSymbol(msg = '', cmdMap = {}) {
   const only = onlyCats(m);
   const hasSkip = excl.size > 0 || !!only;
   // 서체·색·제외 항목 중 하나는 있어야 한다
-  if (!font && !color && !hasSkip) return null;
+  const dc = decoChanges(m);
+  const decoOn = dc.add.length > 0 || dc.remove.length > 0;
+  if (!font && !color && !hasSkip && !decoOn) return null;
   const parts = [];
+  if (decoOn) parts.push(`deco=${[...new Set([...cur.deco, ...dc.add])].filter(x => !dc.remove.includes(x)).join('/')}`);
   if (font) parts.push(`font=${font}`);
   if (color) parts.push(`color=${color === 'dark100' ? 'dark100' : color}`);
   if (only) parts.push(`skip=${SYMBOL_CATS.filter(c => !only.has(c)).join('/')}`);

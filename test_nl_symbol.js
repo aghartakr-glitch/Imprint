@@ -52,11 +52,11 @@ if (n < 8) unit.push('전부 적용 ' + n);
 if (a.tex.includes('1\\imprintSym{.}5')) unit.push('숫자 사이 소수점까지 감쌈');
 if (!a.tex.includes('\\vspace{1.5pt}')) unit.push('\\vspace 인자를 건드림');
 const b = applySymbolStyle(a.sty, a.tex, 'skip=num');
-if (/imprintSym\{①\}/.test(b.tex) || !/imprintSym\{★\}/.test(b.tex) || readSymbolStyle(b.sty) !== 'font=sans;color=red;skip=num') unit.push('번호만 빼기·기존 서체색 유지 ' + readSymbolStyle(b.sty));
+if (/imprintSym\{①\}/.test(b.tex) || !/imprintSym\{★\}/.test(b.tex) || readSymbolStyle(b.sty) !== 'font=sans;color=red;skip=num;deco=') unit.push('번호만 빼기·기존 서체색 유지 ' + readSymbolStyle(b.sty));
 const c = applySymbolStyle(b.sty, b.tex, 'skip=');
 if (!/imprintSym\{①\}/.test(c.tex)) unit.push('빼기 목록 비우기');
 const d = applySymbolStyle(c.sty, c.tex, 'color=blue');
-if (readSymbolStyle(d.sty) !== 'font=sans;color=blue;skip=') unit.push('색만 바꾸기 ' + readSymbolStyle(d.sty));
+if (readSymbolStyle(d.sty) !== 'font=sans;color=blue;skip=;deco=') unit.push('색만 바꾸기 ' + readSymbolStyle(d.sty));
 const off = applySymbolStyle(d.sty, d.tex, 'off');
 if (countSymbols(off.tex) !== 0 || readSymbolStyle(off.sty) !== undefined || off.tex !== tex0) unit.push('끄기·원문 복원');
 // 따옴표 형광펜과 함께 써도 서로 깨지지 않는다

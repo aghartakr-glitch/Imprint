@@ -5,6 +5,7 @@
 
 import { planFontEdit, patchText } from './nlFonts.js';
 import { planHighlight } from './styHighlight.js';
+import { planStyle } from './nlStyle.js';
 import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
@@ -13,7 +14,6 @@ import { planMore, planSizeRelation, planWidthFit, planLeadingRelation, planOneL
 import { planMargins } from './nlMargin.js';
 import { planDropCap } from './styDropCap.js';
 import { planSymbol } from './stySymbol.js';
-import { planColorEdit } from './nlColor.js';
 import { detectIntensity, detectDirection, hasExplicitAmount, isFollowUp, synthesizePatches, normalizeMsg, LEVEL_NAMES } from './nlIntensity.js';
 
 export const KNOB_ALIASES = [
@@ -79,7 +79,7 @@ export const KNOB_ALIASES = [
   { key: 'noteSize', re: /^(?!.*(?:행간|줄\s*간격|간격|사이|구분선|서체|글꼴)).*각주(?:와|랑|하고|\s*및)\s*.*(키워|크게|커|작게|줄여|작아)/, sample: '각주와 쪽번호 모두 키워줘' },
   { key: 'parSkip', re: /(문단|단락)\s*간격\s*[\d.]+\s*(pt|포인트)/i, sample: '문단 간격 6pt' },
   { key: 'pnSize', re: /쪽번호\s*[\d.]+\s*(pt|포인트)/i, sample: '쪽번호 8pt' },
-  { key: null, reason: '되돌리기·취소는 이 채팅에서 지원하지 않음 — 이전 버전 파일(main_v숫자)을 선택하세요', re: /^(?!.*(본문|제목|각주|여백|행간|자간|글자|글씨|쪽번호|면주|문단|서체)).*(원래대로|처음\s*상태|초기화|취소|롤백|undo)/i, sample: '원래대로 돌려줘' },
+  { key: null, reason: '되돌리기·취소는 이 채팅에서 지원하지 않음 — 이전 버전 파일(main_v숫자)을 선택하세요', re: /^(?!.*(본문|제목|각주|여백|행간|자간|글자|글씨|쪽번호|면주|문단|서체)).*(원래대로|처음\s*상태|초기화|취소(?!선)|롤백|undo)/i, sample: '원래대로 돌려줘' },
   { key: 'serifFont', re: /(나눔\s*명조|본명조|노토\s*(?:세리프|명조)|신문\s*명조|신문체|백묵\s*바탕|궁서|필기체|손글씨|붓글씨|캘리|펜글씨|옛글|바탕체|(?:다른|색다른|새로운|딴|특이한)\s*(?:명조|바탕|세리프)|(?:가는|얇은|굵은|두꺼운|부드러운|둥근|현대적인?|깔끔한)\s*(?:명조|바탕|세리프))/, sample: '좀 다른 명조체로 바꿔줘' },
   { key: 'sansFont', re: /(돋움|굴림|헤드라인체?|프리텐다드|디나루|둥근\s*고딕|그래픽체|(?:다른|색다른|새로운|딴|특이한)\s*(?:고딕|산세리프)|(?:가는|얇은|굵은|두꺼운|둥근|라운드)\s*(?:고딕|산세리프))/, sample: '고딕을 돋움체로 바꿔줘' },
   { key: 'bodyFontFamily', re: /^(?!.*(?:각주|주석|면주|쪽\s*번호|번호)).*(?:본문.*(고딕|산세리프|sans)|^(?!.*(?:제목|부제)).*(고딕|산세리프|sans))/i, sample: '본문 서체를 고딕으로 바꿔줘' },
@@ -348,11 +348,6 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
     fontOnly = true;
   }
   // 글자 색(면주·쪽번호·각주·제목·부제목·본문) — 연하게/진하게/회색으로를 단계표로 계산한다
-  const colorPlan = unsupported.length === 0 ? planColorEdit(msg, cmdMap) : null;
-  if (colorPlan) {
-    synth = { text: patchText(colorPlan.patches), keys: Object.keys(colorPlan.patches), patches: { ...colorPlan.patches }, font: true };
-    fontOnly = true;
-  }
   // 전체 인상 요청("전체적으로 좀 비어 보이게") — 여백·행간·문단 간격을 함께 조절한다
   // 널널하게·시원하게는 본문 행간 항목에도 걸리므로, 문장이 문서 전체를 가리킬 때만 행간 단독 힌트를 전체 요청으로 본다
   const airyOk = hits.every(h => (h.unsupported && /전체 인상/.test(h.unsupported)) || (h.key === 'bodyLeading' && /(전체|전반|전부|다 |통째)/.test(msg)));
@@ -394,6 +389,23 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   if (hl) {
     fontOnly = !synth;
     synth = synth ? { ...synth, text: synth.text + ',' + patchText(hl.patches), patches: { ...synth.patches, ...hl.patches } } : { text: patchText(hl.patches), keys: Object.keys(hl.patches), patches: { ...hl.patches }, font: true };
+  }
+  // 요소별 색·꾸밈(굵게·기울임·밑줄·취소선): 각주·쪽번호·면주·제목·부제목·본문·각주 번호·따옴표 안/아닌 글자를 각각.
+  // 색·꾸밈이 아닌 다른 계획(굵기 키·옛 색 키)이 같은 요소를 건드리지 않도록 걷어내고 이 값만 쓴다
+  const stylePlan = unsupported.length === 0 || impressionOnly ? planStyle(msg, cmdMap) : null;
+  if (stylePlan) {
+    unsupported = [];
+    const keep = {};
+    // 같은 문장에서 별칭이 잡은 크기·행간은 스타일 대상 요소의 것만 남긴다("각주 번호 크게"가 본문 글자 크기까지 키우던 문제)
+    const PREFIX = { body: /^body(Size|Leading)$/, h1: /^h1(Size|Leading)$/, h2: /^h2(Size|Leading)$/, note: /^(note|footnote)(Size|Leading)$/, rh: /^rh(Size|Leading)$/, pn: /^pn(Size|Leading)$/ };
+    const allowed = (stylePlan.targets || []).filter(t => PREFIX[t]).map(t => PREFIX[t]);
+    for (const [k, v] of Object.entries(!inherited ? (synth?.patches || {}) : {})) {
+      if (/(Weight|Color|Style)$|^quoteHighlight$/.test(k)) continue;
+      if (allowed.some(re => re.test(k))) keep[k] = v;
+    }
+    const merged = { ...keep, ...stylePlan.patches };
+    synth = { text: patchText(merged), keys: Object.keys(merged), patches: merged, font: true };
+    fontOnly = Object.keys(keep).length === 0;
   }
   // 특수문자(기호·문장부호·원문자)만 서체·색 — 다른 계획(본문 서체·색 등)보다 우선한다. 기본은 전부, "N번 빼고"처럼 말한 항목은 뺀다
   const symPlan = planSymbol(msg, cmdMap);

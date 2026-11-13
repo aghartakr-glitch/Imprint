@@ -36,7 +36,7 @@ if (/imprintLightSans|imprintNoteLight/.test(applyNoteLight(a, false))) unit.pus
 // 특수문자 서체 이름
 const sty0 = '\\makeatother\n\\endinput\n', tex0 = '\\begin{document}\n가 ★ 나\n\\end{document}';
 const s1 = applySymbolStyle(sty0, tex0, 'font=nanum');
-if (!s1.sty.includes('\\newfontfamily\\imprintSymFont{NanumMyeongjo}') || readSymbolStyle(s1.sty) !== 'font=nanum;color=;skip=') unit.push('나눔명조 정의 ' + readSymbolStyle(s1.sty));
+if (!s1.sty.includes('\\newfontfamily\\imprintSymFont{NanumMyeongjo}') || readSymbolStyle(s1.sty) !== 'font=nanum;color=;skip=;deco=') unit.push('나눔명조 정의 ' + readSymbolStyle(s1.sty));
 const s2 = applySymbolStyle(s1.sty, s1.tex, 'font=sans');
 if (s2.sty.includes('newfontfamily')) unit.push('서체를 바꿀 때 이전 정의가 남음');
 // 큰 첫 글자는 줄 높이를 고정한다

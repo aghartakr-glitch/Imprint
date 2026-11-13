@@ -7,10 +7,10 @@ const CM = { h1Size: '21', h1Leading: '26', h2Size: '19', h2Leading: '23', bodyS
 const only = (p, ...keys) => Object.keys(p).length === keys.length && keys.every(k => k in p);
 // [문장, 직전 키, 검사]
 const CASES = [
-  ['각주 숫자를 연하게 해줘 본문에', [], p => only(p, 'footnoteMarkColor') && Number(p.footnoteMarkColor) < 100],
-  ['본문에 있는 각주 숫자를 연하게 해줘 밑에 각주는 건들지 말고', [], p => only(p, 'footnoteMarkColor')],
-  ['본문 속 각주 번호 진하게', [], p => only(p, 'footnoteMarkColor')],
-  ['각주 진하게', [], p => only(p, 'noteColor') && Number(p.noteColor) > 70],
+  ['각주 숫자를 연하게 해줘 본문에', [], p => only(p, 'markStyle') && /color=\d+/.test(p.markStyle)],
+  ['본문에 있는 각주 숫자를 연하게 해줘 밑에 각주는 건들지 말고', [], p => only(p, 'markStyle')],
+  ['본문 속 각주 번호 진하게', [], p => only(p, 'markStyle') && /bold/.test(p.markStyle)],
+  ['각주 진하게', [], p => only(p, 'noteStyle') && /color=\d+/.test(p.noteStyle)],
   ['각주 폰트 굵기도 얇게 변경해줘', ['h2Size'], p => only(p, 'footnoteWeight') && p.footnoteWeight === 'light'],
   ['각주 굵게', ['h2Size'], p => only(p, 'footnoteWeight') && p.footnoteWeight === 'bold'],
   ['굵게', ['h2Size'], p => Object.keys(p).length === 0],
@@ -47,7 +47,7 @@ if (/imprintMarkColor/.test(applyMarkColor(m1, 100))) unit.push('100이면 끄�
 const tex0 = '\\begin{document}\n그는 ‘평면’이라 했다.\n\\end{document}';
 const h = applyHighlight(sty0, tex0, 'text:red+bold');
 if (countHighlighted(h.tex) !== 1 || !/textbf\{\\textcolor/.test(h.sty) || readHighlight(h.sty) !== 'text:red+bold') unit.push('색+굵게 조합');
-if (!isHlMode('text:red|bold') || !isHlMode('yellow+italic') || isHlMode('bold+italic') || isHlMode('text:red+yellow')) unit.push('모드 검증');
+if (!isHlMode('text:red|bold') || !isHlMode('yellow+italic') || !isHlMode('bold+italic') || !isHlMode('text:red+bold+italic+underline+strike') || isHlMode('bold+bold') || isHlMode('text:red+yellow')) unit.push('모드 검증');
 const off = applyHighlight(h.sty, h.tex, 'off');
 if (countHighlighted(off.tex) !== 0 || /imprintHL/.test(off.sty)) unit.push('끄기');
 console.log(`로그 보완 문장 ${CASES.length + ASK.length}개: ${bad}개 실패 / 적용 점검 ${unit.length ? unit.join(', ') : '통과'}`);

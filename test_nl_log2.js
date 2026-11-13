@@ -5,9 +5,9 @@ const CM = { noteColor: '75', bodyColor: '100', noteSize: '7', noteLeading: '12'
 const p0 = msg => planNaturalEdit(msg, CM, [], {}).synth?.patches || {};
 const keys = p => Object.keys(p).sort().join(',');
 const CASES = [
-  ['각주 글자 연하게 해줘 본문은 그대로', p => 'noteColor' in p && !('bodyColor' in p)],
-  ['각주 글자 연하게 해줘 적당히', p => keys(p) === 'noteColor'],
-  ['본문은 건드리지 말고 각주 글씨 연하게', p => 'noteColor' in p && !('bodyColor' in p)],
+  ['각주 글자 연하게 해줘 본문은 그대로', p => 'noteStyle' in p && !('bodyStyle' in p) && !('bodyColor' in p)],
+  ['각주 글자 연하게 해줘 적당히', p => keys(p) === 'noteStyle'],
+  ['본문은 건드리지 말고 각주 글씨 연하게', p => 'noteStyle' in p && !('bodyStyle' in p)],
   ['제목 더 크게 해줘 굵게', p => Number(p.h1Size) > 21 && p.h1Weight === 'bold' && !('h2Size' in p)],
   ['제목 키우고 굵게', p => Number(p.h1Size) > 21 && p.h1Weight === 'bold'],
   ['제목 크고 굵게', p => Number(p.h1Size) > 21 && p.h1Weight === 'bold'],

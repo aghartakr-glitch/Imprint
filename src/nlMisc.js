@@ -49,7 +49,7 @@ export function planSlotPos(msg = '', cmdMap = {}) {
     const el = /(쪽\s*번호|페이지\s*번호|쪽수)/.test(part) ? 'pnPos' : /(면주|머리말|머릿글|러닝\s*헤드)/.test(part) ? 'rhPos' : carry;
     if (!el) continue;
     carry = el;
-    if (/(색|서체|글꼴|크기|행간|굵|연하|진하|키워|줄여|크게|작게|숨겨|없애|지워)/.test(part)) continue; // 위치가 아닌 요청
+    if (/(색|서체|글꼴|크기|행간|굵|연하|진하|키워|줄여|크게|작게|숨겨|없애|지워|밑줄|기울|취소선|언더라인|빨강|빨간|파랑|파란|초록|주황|분홍|보라|갈색|남색|노랑|노란|회색)/.test(part)) continue; // 위치가 아닌 요청(색·꾸밈 말의 "밑줄"이 하단으로 읽히던 문제 포함)
     const vert = /(하단|아래|밑|맨\s*아래)/.test(part) ? '하단' : /(상단|위쪽|위로|위에|맨\s*위|위\b)/.test(part) ? '상단' : null;
     const side = (SIDE_RE.find(([re]) => re.test(part)) || [])[1] || null;
     if (!vert && !side) continue;

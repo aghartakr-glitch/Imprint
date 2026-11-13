@@ -13,7 +13,10 @@ import { planCollapse } from "./nlMisc.js";
 import { applyDropCap, readDropCap, planDropCap } from "./styDropCap.js";
 import { applyNoteLight, isNoteLight } from "./styWeight.js";
 import { applySymbolStyle, readSymbolStyle, planSymbol } from "./stySymbol.js";
-import { applyColor, readColor, applyMarkColor, readMarkColor, COLOR_KEYS, elementByKey } from "./styColor.js";
+import { readColor, readMarkColor, COLOR_KEYS, elementByKey } from "./styColor.js";
+import { applyElementStyle, readAllElementStyles, STYLE_KEYS, elementOfStyleKey } from "./styElement.js";
+import { planStyle } from "./nlStyle.js";
+import { fixLocaleLine } from "./texSafe.js";
 import { applyHighlight, readHighlight, isHlMode } from "./styHighlight.js";
 import { applyFont, applyFontLike, ensureSansFont, readFonts, fontEnumMap, fontChoicesText, mainIsSans, FONT_TABLES } from "./styFonts.js";
 
@@ -6431,6 +6434,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     { const dc = readDropCap(latexStr); if (dc !== undefined) map.dropCap = dc; }
     { const ss = readSymbolStyle(latexStr); if (ss !== undefined) map.symbolStyle = ss; }
     COLOR_KEYS.forEach(k => { const c = readColor(latexStr, elementByKey(k)); if (c !== undefined) map[k] = c; });
+    Object.assign(map, readAllElementStyles(latexStr));
     { const fonts = readFonts(latexStr); map.serifFont = fonts.serif; map.sansFont = fonts.sans; }
     // 한글 음절 사이 신축(1/100 em) — hangulTrack 줄에서 읽는다
     const htM = latexStr.match(/\\xetexkostretchshrink\{plus([\d.]+)em/);
@@ -7175,7 +7179,7 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: footnoteShift symbolStyle footnoteWeight footnoteMarkColor dropCap h1FontFamily h2FontFamily rhColor pnColor noteColor h1Color h2Color bodyColor footnoteRuleWidth footnoteRuleThickness footnoteRuleColor quoteHighlight headingFontFamily serifFont sansFont bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily footnoteMarkFont rhFontFamily pnFontFamily headingAlignnoteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: bodyStyle h1Style h2Style noteStyle rhStyle pnStyle markStyle footnoteShift symbolStyle footnoteWeight footnoteMarkColor dropCap h1FontFamily h2FontFamily rhColor pnColor noteColor h1Color h2Color bodyColor footnoteRuleWidth footnoteRuleThickness footnoteRuleColor quoteHighlight headingFontFamily serifFont sansFont bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily footnoteMarkFont rhFontFamily pnFontFamily headingAlignnoteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
   (각주만 명조/고딕으로 바꿔달라는 요청 → footnoteFontFamily=serif 또는 sans. 면주 서체는 rhFontFamily, 쪽번호 서체는 pnFontFamily. 이 셋은 본문 서체(bodyFontFamily)와 독립이다 — "본문과 같은 계열이라 따로 바꿀 수 없다"고 답하지 말고 값을 설정할 것)
@@ -7183,7 +7187,8 @@ ${customTexts.join('\n')}`;
   (각주 덩어리 자체를 올리기/내리기 → footnoteShift=mm 변화량(위로 +, 아래로 −, 예: 2 또는 -3.5; 현재 값은 모름). 본문↔각주 간격(footinsSkip)은 각주가 아니라 본문을 밀어 올릴 뿐이라 각주 위치를 옮기는 용도가 아니다. 각주 줄간격은 noteLeading이고 글자 크기(noteSize)보다 작아질 수 없다.)
   (각주 굵기 → footnoteWeight=bold|normal|light(light는 보통보다 가는 Pretendard Light, 고딕 각주만 가능; "더 얇게"는 light). 본문 속 각주 숫자(위첨자)만 연하게/진하게 → footnoteMarkColor(검정 진하기 %, 낮을수록 연함; 현재 ${cmdMap.footnoteMarkColor ?? 100}) — 각주 문장 색(noteColor)과 별개이니 "밑에 각주는 건들지 말고"면 noteColor는 바꾸지 말 것. 따옴표 안 글자색+굵게는 quoteHighlight=text:red+bold 처럼 +로 잇는다.)
   (문단 첫 글자만 키우기 → dropCap=배율(1.3~3.3, 1이면 끔; 현재 ${cmdMap.dropCap ?? '끔'}). 본문 전체 글자 크기(bodySize)는 바꾸지 말 것. "지원하지 않는다"고 답하지 말 것.)
-  (글자 색 — rhColor(면주) pnColor(쪽번호) noteColor(각주) h1Color(제목) h2Color(부제목) bodyColor(본문) = 검정의 진하기 %, 100=검정, 낮을수록 연한 회색(최소 5). "연하게/흐리게"는 값을 낮추고 "진하게/검정으로"는 올린다. 현재: 면주 ${cmdMap.rhColor ?? 100} / 쪽번호 ${cmdMap.pnColor ?? 100} / 각주 ${cmdMap.noteColor ?? 100} / 제목 ${cmdMap.h1Color ?? 100} / 본문 ${cmdMap.bodyColor ?? 100}. 면주 색상은 "지원 불가"라고 답하지 말 것.)
+  (요소별 색·꾸밈 — bodyStyle(본문) h1Style(제목) h2Style(부제목) noteStyle(각주 문장) rhStyle(면주) pnStyle(쪽번호) markStyle(본문 속 각주 번호) 값은 'color=red;deco=bold/underline;size=1.6' 형식(일부만 써도 됨; 안 쓴 항목은 현재 값 유지, deco=는 꾸밈 전부 해제). 모든 요소가 서로 독립이라 "각주만"이면 noteStyle만 바꾸고 본문 등 다른 요소는 건드리지 말 것. color: red blue green orange pink purple brown navy yellow gray, 회색 진하기 숫자(55), 색+연하기(red!60), 비우면 검정. deco: bold italic underline strike 중 몇 개든 겹쳐 쓸 수 있음(본문 전체 밑줄·취소선은 불가). size는 markStyle 전용 배율(1=기본). 현재: ${['bodyStyle','h1Style','h2Style','noteStyle','rhStyle','pnStyle','markStyle'].map(k => cmdMap[k] ? k + '=' + cmdMap[k] : '').filter(Boolean).join(' / ') || '없음'}. 따옴표 안 글자: quoteHighlight=text:red+bold+underline 처럼 색(text:색/형광펜 색)에 bold·italic·underline·strike를 +로 몇 개든 잇는다(현재: ${cmdMap.quoteHighlight ?? 'off'}). "따옴표 아닌 내용만 빨강"은 bodyStyle=color=red 와 quoteHighlight=reset(따옴표는 기본색)을 같이 낸다. 이 요소들의 색을 "지원 안 한다"거나 "재생성이 필요하다"고 답하지 말 것.)
+  (옛 색 키 — rhColor(면주) pnColor(쪽번호) noteColor(각주) h1Color(제목) h2Color(부제목) bodyColor(본문) = 검정의 진하기 %, 100=검정, 낮을수록 연한 회색(최소 5). "연하게/흐리게"는 값을 낮추고 "진하게/검정으로"는 올린다. 현재: 면주 ${cmdMap.rhColor ?? 100} / 쪽번호 ${cmdMap.pnColor ?? 100} / 각주 ${cmdMap.noteColor ?? 100} / 제목 ${cmdMap.h1Color ?? 100} / 본문 ${cmdMap.bodyColor ?? 100}. 면주 색상은 "지원 불가"라고 답하지 말 것.)
   (각주 구분선 — footnoteRule=on|off, footnoteRuleWidth(판면 폭 대비 %, 10~100; "여백에 맞게/꽉 차게"=100), footnoteRuleThickness(pt, 0.1~3), footnoteRuleColor(검정 진하기 %, 낮을수록 연함). 현재: ${cmdMap.footnoteRule ?? '알 수 없음'} / 길이 ${cmdMap.footnoteRuleWidth ?? '-'}% / 두께 ${cmdMap.footnoteRuleThickness ?? '-'}pt / 진하기 ${cmdMap.footnoteRuleColor ?? '-'}%. 구분선 말에 든 "여백"은 페이지 여백이 아니다. footnoterule을 main.tex에 직접 쓰라고 답하지 말 것.)
   (따옴표(‘ ’ “ ”) 안의 낱말·구절에 형광펜/배경색 → quoteHighlight=bold|italic(따옴표 안만 굵게·기울임), yellow|green|pink|blue|orange|gray(배경 형광펜), text:red|text:blue|text:green|text:orange|text:pink|text:gray(글자색), 끄기는 off (현재: ${cmdMap.quoteHighlight ?? 'off'}). "main.tex를 직접 고쳐라"고 답하지 말 것 — 시스템이 main.tex를 자동으로 감싼다.)
   (제목만 h1FontFamily, 부제목·소제목만 h2FontFamily, 둘 다 headingFontFamily = serif 또는 sans (제목 현재: ${cmdMap.h1FontFamily ?? '?'} / 부제목 현재: ${cmdMap.h2FontFamily ?? '?'}) — 또는 headingFontFamily=serif 또는 sans (현재: ${cmdMap.headingFontFamily ?? '알 수 없음'}). "제목 서체는 못 바꾼다"고 답하지 말 것.)
@@ -7395,7 +7400,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
       let directDiffs = [];
       // sty_patch 키를 앞에서부터 하나씩 적용한 중간 상태들 — 컴파일이 깨졌을 때 어느 키가 원인인지 찾는 데 쓴다
       const patchSteps = [];
-      let finalLatex = latex;
+      let finalLatex = fixLocaleLine(latex); // 이전 수정이 로케일 줄을 감싸 "ko"가 찍히던 문서도 이번 수정 때 복구된다
       let finalSty = styCode;
       let codeChanged = false;
 
@@ -7447,8 +7452,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         if (plan.synth) {
           styPatchMatch = [null, plan.synth.text];
           const fontLabel = plan.font ? (FONT_TABLES[plan.font.role]?.[plan.font.id]?.label || (plan.font.kind === 'same' ? '같은 서체' : plan.font.id === 'sans' ? '고딕' : '명조')) : '';
+          // 서체 요청일 때만 서체 이름을 말한다(색·꾸밈·위치·간격 등 다른 요청에 '명조 서체로'라고 잘못 붙던 문제)
+          const isFontKind = plan.font && ['named', 'other', 'mood', 'same', 'family'].includes(plan.font.kind);
           synthNote = plan.fontOnly
-            ? `"${userMsg}" 요청을 '${fontLabel}' 서체로 적용했어요.`
+            ? (isFontKind ? `"${userMsg}" 요청을 '${fontLabel}' 서체로 적용했어요.` : `"${userMsg}" 요청을 적용했어요.`)
             : `${plan.inherited ? '직전에 바꾼 항목에 이어서 ' : ''}"${userMsg}" 요청을 '${LEVEL_NAMES[plan.level]}' 단계로 적용했어요.${plan.font ? ` 서체는 '${fontLabel}'.` : ''}`;
         }
       }
@@ -7485,6 +7492,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         // "제목이랑 부제목 완전 붙어야대"처럼 강하게 붙이라는 말은 모델이 늘리는 쪽으로 읽거나 거절하는 일이 있어 간격 0으로 고정한다
         // "문단 첫 글자만 크게"를 모델이 본문 전체 크기로 읽는 일이 있어, 첫 글자 요청이면 본문 크기·행간 변경을 빼고 첫 글자 배율만 쓴다
         // "특수문자만 고딕으로"를 모델이 본문 전체 서체·색으로 읽는 일이 있어, 특수문자 요청이면 그 값만 쓴다
+        // 요소별 색·꾸밈(각주만 연하게·쪽번호 초록·각주 번호 빨강·따옴표 안 빨강+굵게+밑줄 …): 모델이 다른 요소 색까지 바꾸거나 못 한다고 하던 요청은
+        // 코드가 읽은 요소·값만 쓰고, 모델이 낸 색·굵기·꾸밈 값은 버린다
+        { const stp = planStyle(userMsg, cmdMap);
+          if (stp?.patches) { Object.keys(patches).forEach(k => { if (/(Color|Style|Weight)$/.test(k) || k === 'quoteHighlight') delete patches[k]; }); Object.assign(patches, stp.patches); } }
         { const sp = planSymbol(userMsg, cmdMap);
           if (sp?.patches) { ['bodyFontFamily', 'bodyColor', 'noteColor', 'headingFontFamily', 'serifFont', 'sansFont'].forEach(k => { delete patches[k]; }); Object.assign(patches, sp.patches); } }
         { const dp = planDropCap(userMsg, detectIntensity(userMsg).level);
@@ -7506,7 +7517,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
-          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', footnoteMarkFont:'각주 번호 서체 계열', rhColor:'면주 진하기', pnColor:'쪽번호 진하기', noteColor:'각주 진하기', h1Color:'제목 진하기', h2Color:'부제목 진하기', bodyColor:'본문 진하기', dropCap:'문단 첫 글자 배율', symbolStyle:'특수문자 서체·색', footnoteWeight:'각주 굵기', footnoteShift:'각주 덩어리 위치(위로+)', footnoteMarkColor:'각주 숫자(본문) 진하기', footnoteRuleWidth:'구분선 길이', footnoteRuleThickness:'구분선 두께', footnoteRuleColor:'구분선 진하기', serifFont:'명조 서체', sansFont:'고딕 서체', fontSameAs:'서체 맞춤', quoteHighlight:'따옴표 형광펜', headingFontFamily:'제목 서체 계열', h1FontFamily:'제목 서체 계열', h2FontFamily:'부제목 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
+          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', footnoteMarkFont:'각주 번호 서체 계열', rhColor:'면주 진하기', pnColor:'쪽번호 진하기', noteColor:'각주 진하기', h1Color:'제목 진하기', h2Color:'부제목 진하기', bodyColor:'본문 진하기', dropCap:'문단 첫 글자 배율', symbolStyle:'특수문자 서체·색', footnoteWeight:'각주 굵기', footnoteShift:'각주 덩어리 위치(위로+)', bodyStyle:'본문 색·꾸밈', h1Style:'제목 색·꾸밈', h2Style:'부제목 색·꾸밈', noteStyle:'각주 색·꾸밈', rhStyle:'면주 색·꾸밈', pnStyle:'쪽번호 색·꾸밈', markStyle:'본문 속 각주 번호 색·꾸밈·크기', footnoteMarkColor:'각주 숫자(본문) 진하기', footnoteRuleWidth:'구분선 길이', footnoteRuleThickness:'구분선 두께', footnoteRuleColor:'구분선 진하기', serifFont:'명조 서체', sansFont:'고딕 서체', fontSameAs:'서체 맞춤', quoteHighlight:'따옴표 형광펜', headingFontFamily:'제목 서체 계열', h1FontFamily:'제목 서체 계열', h2FontFamily:'부제목 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
           bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', hangulTrack:'양끝맞춤 자간 균일도', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
@@ -7516,7 +7527,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', footnoteMarkFont:'', bodyFontFamily:'', rhColor:'%', pnColor:'%', noteColor:'%', h1Color:'%', h2Color:'%', bodyColor:'%', dropCap:'배', symbolStyle:'', footnoteWeight:'', footnoteShift:'mm', footnoteMarkColor:'%', footnoteRuleWidth:'%', footnoteRuleThickness:'pt', footnoteRuleColor:'%', serifFont:'', sansFont:'', fontSameAs:'', quoteHighlight:'', headingFontFamily:'', h1FontFamily:'', h2FontFamily:'', letterSpace:'%', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', footnoteMarkFont:'', bodyFontFamily:'', rhColor:'%', pnColor:'%', noteColor:'%', h1Color:'%', h2Color:'%', bodyColor:'%', dropCap:'배', symbolStyle:'', footnoteWeight:'', footnoteShift:'mm', bodyStyle:'', h1Style:'', h2Style:'', noteStyle:'', rhStyle:'', pnStyle:'', markStyle:'', footnoteMarkColor:'%', footnoteRuleWidth:'%', footnoteRuleThickness:'pt', footnoteRuleColor:'%', serifFont:'', sansFont:'', fontSameAs:'', quoteHighlight:'', headingFontFamily:'', h1FontFamily:'', h2FontFamily:'', letterSpace:'%', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
@@ -7618,8 +7629,8 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               /(\\newcommand\{\\notef\}\{(?:\\normalfont|\\rmfamily|\\sffamily|\\imprintLightSans)?)(?:\\bfseries|\\mdseries)?(\\fontsize)/,
               `$1${wTok}$2`);
           } else if (key === 'footnoteMarkColor') {
-            // 본문 속 각주 숫자(위첨자) 색 — 100이면 원래 검정
-            patchedSty = applyMarkColor(patchedSty, val);
+            // 본문 속 각주 숫자(위첨자) 색 — 100이면 원래 검정. 색 이름도 된다
+            { const r = applyElementStyle(patchedSty, finalLatex, 'mark', `color=${Number(val) >= 100 ? '' : val}`); patchedSty = r.sty; finalLatex = r.tex; mainTexPatched = true; }
           } else if (key === 'bodyWeight') {
             // \bodyf(제목 뒤 본문 복귀)와 \AtBeginDocument(문서 첫 문단) 두 곳을 같이 바꿔야 전체 본문이 굵어진다
             const wClass = val === 'bold' ? '\\bfseries' : '\\mdseries';
@@ -7639,12 +7650,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             // 각주(\notef) · 면주(\runningheadf) · 쪽번호(\foliof) 서체를 명조/고딕으로 — 본문 서체와 따로 바꾼다
             const famCmd = { footnoteFontFamily: 'notef', rhFontFamily: 'runningheadf', pnFontFamily: 'foliof' }[key];
             const famTok = val === 'sans' ? '\\sffamily' : '\\rmfamily';
+            // 서체 표시가 없는 정의(\newcommand{\notef}{\fontsize…}처럼 주서체를 따라가는 것)에도 계열을 앞에 넣는다 — 표시가 있어야만 바뀌던 문제("각주만 고딕체로"가 변화 없음)
             patchedSty = patchedSty.replace(
-              new RegExp(`(\\\\newcommand\\{\\\\${famCmd}\\}\\{)(?:\\\\rmfamily|\\\\sffamily)`),
+              new RegExp(`(\\\\newcommand\\{\\\\${famCmd}\\}\\{)(?:\\\\rmfamily|\\\\sffamily|\\\\normalfont|\\\\imprintLightSans)?`),
               (m, pre) => `${pre}${famTok}`);
+            if (key === 'footnoteFontFamily') patchedSty = applyNoteLight(patchedSty, false); // Light는 고딕 각주에만 있으므로 계열을 바꾸면 되돌린다
           } else if (COLOR_KEYS.includes(key)) {
-            // 요소별 글자 색(검정의 진하기 %) — 100이면 원래 검정으로 되돌린다
-            patchedSty = applyColor(patchedSty, elementByKey(key), val);
+            // 옛 방식 색 키(rhColor 등, 값은 진하기 % 또는 색 이름) — 요소별 스타일 한 줄로 합쳐 색 이름·꾸밈과 같이 쓸 수 있게 한다
+            { const r = applyElementStyle(patchedSty, finalLatex, elementByKey(key), `color=${Number(val) >= 100 ? '' : val}`); patchedSty = r.sty; finalLatex = r.tex; mainTexPatched = true; }
+          } else if (STYLE_KEYS.includes(key)) {
+            // 요소별 색·꾸밈(굵게·기울임·밑줄·취소선)·각주 번호 크기 — 'color=red;deco=bold/underline;size=1.6'
+            { const r = applyElementStyle(patchedSty, finalLatex, elementOfStyleKey(key), val); patchedSty = r.sty; finalLatex = r.tex; mainTexPatched = true; }
           } else if (key === 'symbolStyle') {
             // 특수문자만 서체·색 — 본문 속 기호·문장부호·원문자를 감싸고 .sty에 서체·색·빼는 항목을 남긴다
             const r = applySymbolStyle(patchedSty, finalLatex, val);

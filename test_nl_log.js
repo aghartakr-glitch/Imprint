@@ -28,7 +28,7 @@ const CASES = [
   ['소제목이 덜 튀게 해줘', p => Number(p.h2Size) < 18],
   // 위치·정렬이 아닌 말 — 건드리면 안 된다
   ['쪽번호 크기 키워줘', p => !('pnPos' in p) && !('pnPos' in p)],
-  ['면주 연하게 해줘', p => !('rhPos' in p) && 'rhColor' in p],
+  ['면주 연하게 해줘', p => !('rhPos' in p) && 'rhStyle' in p],
   ['본문 크기 키워줘', p => !('bodyWeight' in p) && !('bodyAlign' in p)],
   ['따옴표 안 굵게 해줘', p => p.quoteHighlight === 'bold' && !('h1Weight' in p)],
 ];
