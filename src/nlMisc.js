@@ -4,6 +4,7 @@
 //  · 쪽번호·면주 위치: "쪽번호 아래 바깥쪽, 면주는 아래 안쪽", "면주 좌측 하단으로", "쪽번호 다시 우측으로"
 //  · 전체 서체 계열: "전체 고딕으로", "문서 전체 명조로"
 import { hasColorRequest } from './nlColor.js';
+import { synthesizePatches } from './nlIntensity.js';
 
 // ── 굵기 ────────────────────────────────────────────────────────────────
 const BOLD_RE = /(굵게|굵은|볼드|두껍게|두꺼운|bold|강조\s*(?:되|해|하|시켜)|돋보이게)/i;
@@ -24,7 +25,8 @@ export function planWeight(msg = "") {
   else if (/(각주|주석)/.test(m)) patches.footnoteWeight = value; // 각주 글자 굵기 (로그: "각주 폰트 굵기도 얇게")
   else if (/본문/.test(m)) patches.bodyWeight = value;
   else return null;
-  return { patches };
+  // 크기 요청과 같은 문장("제목 더 크게 해줘 굵게")이면 굵기만 바꾸고 크기를 버리지 않게 합칠 수 있다
+  return { patches, merge: true };
 }
 
 // ── 정렬 ────────────────────────────────────────────────────────────────
@@ -90,4 +92,30 @@ export function planCollapse(msg = '') {
   if (/(문단|단락)/.test(m)) return { patches: { parSkip: '0' } };
   if (/(각주).*(사이|끼리)|각주끼리/.test(m)) return { patches: { footnoteSep: '0' } };
   return null;
+}
+
+// ── 각주 위치(본문과의 거리·하단으로) ─────────────────────────────────────────
+// "주석 전체 위치를 본문과 많이 떨어트려줘, 하단으로 내려줘" — 로그에서 모델이 본문↔각주 간격을 오히려 줄였다.
+//  · 떨어트려/멀리/띄워/"엔터 두 번 친 것처럼" → 본문↔각주 간격(footinsSkip) 늘림, 가깝게/붙여 → 줄임
+//  · "하단으로 내려" → 하단 여백(marginBottom)을 줄여 본문 블록과 각주를 함께 아래로 내린다
+const FAR_RE = /(떨어\s*(?:트|뜨)려|떨어지게|멀리|멀게|엔터\s*(?:한|두|세|\d+)?\s*(?:번)?\s*(?:을\s*)?친\s*것처럼|한\s*줄\s*(?:더\s*)?(?:띄|넣))/;
+const NEAR_RE = /(가깝게|가까이|바짝|본문\s*쪽으로\s*붙)/;
+const DOWN_RE = /(하단으로|아래로|밑으로)\s*(?:좀\s*|더\s*|많이\s*)*(?:내려|옮겨|내리)/;
+export function planFootnotePlace(msg = '', cmdMap = {}, level = 3) {
+  const m = String(msg);
+  if (!/(각주|주석)/.test(m)) return null;
+  if (/(구분선|색|서체|번호|숫자|표시|크기|글자|글씨|굵|줄\s*간격|행간|끼리|항목)/.test(m)) return null;
+  const far = FAR_RE.test(m), near = NEAR_RE.test(m), down = DOWN_RE.test(m);
+  if (!far && !near && !down) return null;
+  const words = ['아주 조금', '조금', '적당히', '많이', '아주 많이'][Math.max(1, Math.min(5, level)) - 1];
+  const patches = {};
+  if (far || near) {
+    const s = synthesizePatches(`${far ? '늘려' : '줄여'} ${words}`, ['footinsSkip'], cmdMap);
+    if (s) Object.assign(patches, s.patches);
+  }
+  if (down) {
+    const s = synthesizePatches(`줄여 ${words}`, ['marginBottom'], cmdMap);
+    if (s) Object.assign(patches, s.patches);
+  }
+  return Object.keys(patches).length ? { patches } : null;
 }

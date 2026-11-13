@@ -8,7 +8,7 @@ import { planHighlight } from './styHighlight.js';
 import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
-import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse } from './nlMisc.js';
+import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse, planFootnotePlace } from './nlMisc.js';
 import { planMore, planSizeRelation, planWidthFit } from './nlRelation.js';
 import { planMargins } from './nlMargin.js';
 import { planDropCap } from './styDropCap.js';
@@ -369,11 +369,18 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   const marg = planMargins(msg, cmdMap);
   if (marg?.ask) { unsupported = [marg.ask]; synth = null; }
   else if (marg) { unsupported = []; synth = { text: patchText(marg.patches), keys: Object.keys(marg.patches), patches: { ...marg.patches }, font: true }; fontOnly = true; }
-  for (const plan of marg ? [] : [planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
+  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
     if (!plan) continue;
     unsupported = [];
     // 이 계획들은 문장에서 대상과 값을 직접 정한 것이라 앞서 모델/별칭이 잡은 값에 섞지 않고 그대로 쓴다(섞이면 직전 수정 키나 다른 항목이 같이 바뀐다)
-    const merged = { ...plan.patches };
+    // 굵기 계획(merge)은 같은 문장의 크기 요청("제목 더 크게 해줘 굵게")을 버리지 않게, 직접 말한 값(직전 수정 이어받기가 아닌 것)과 합친다
+    let baseP = synth?.patches || {};
+    if (plan.merge && !inherited && !Object.keys(baseP).length) {
+      // 별칭은 "굵"이 든 문장의 크기 요청을 일부러 잡지 않으므로, 굵기 말을 걷어낸 문장으로 크기 계획을 따로 구한다
+      const stripped = normalizeMsg(String(msg)).replace(/(굵게|볼드(?:로)?|두껍게|얇게|가늘게|굵기|강조(?:되게|해|하게)?)/g, ' ');
+      if (stripped.trim() !== String(msg).trim()) baseP = planSingle(stripped, cmdMap, []).synth?.patches || {};
+    }
+    const merged = plan.merge && !inherited ? { ...baseP, ...plan.patches } : { ...plan.patches };
     synth = { text: patchText(merged), keys: Object.keys(merged), patches: merged, font: true };
     fontOnly = true;
   }

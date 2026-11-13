@@ -31,6 +31,10 @@ export function elementsIn(msg) {
   // 제목·부제목이 같이 잡히면 더 구체적인 쪽만, 본문은 글자·글씨가 다른 요소와 함께 나온 말이면 뺀다
   if (els.includes('h2') && els.includes('h1') && !/(제목\s*(?:과|와|이랑|하고|,)\s*부제)|(?:제목.*부제목.*(?:모두|둘\s*다))/.test(m)) els.splice(els.indexOf('h1'), 1);
   if (els.length > 1 && els.includes('body') && !/본문/.test(m)) els.splice(els.indexOf('body'), 1);
+  // "본문은 그대로", "제목은 빼고" — 건드리지 말라고 한 요소는 뺀다(로그: 각주만 연하게 해달라는데 본문까지 연해짐)
+  for (const x of m.matchAll(/([가-힣]+(?:\s*[가-힣]+)?)\s*(?:은|는|도)?\s*(?:그대로|유지|놔두|놔둬|냅두|건드리지|빼고|제외|말고)/g)) {
+    for (const [el, re] of ELEMENT_RES) if (re.test(x[1]) && els.includes(el)) els.splice(els.indexOf(el), 1);
+  }
   return els;
 }
 
