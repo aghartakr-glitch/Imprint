@@ -75,6 +75,12 @@ const pn = applyElementStyle(sty0, tex0, 'pn', 'deco=underline');
 if (!/\\imprintDecoPn\{\\thepage\}/.test(pn.sty)) unit.push('쪽번호 밑줄 감싸기');
 const mk = applyElementStyle(sty0, tex0, 'mark', 'color=red;size=1.8');
 if (!/makeatletter\\AtBeginDocument/.test(mk.sty) || !/dimexpr1\.8/.test(mk.sty)) unit.push('각주 번호 색·크기 ' + mk.sty.split('\n').pop());
+// 본문 색은 전역으로 걸리지 않고 본문 문단에서만, 묶음 없는 \bodyf{}는 걷힌다
+const bd = applyElementStyle(sty0, tex0 + '\\vspace{1pt}\\bodyf{}', 'body', 'color=red');
+if (/AtBeginDocument\{\\color/.test(bd.sty)) unit.push('본문 색 전역 적용');
+if (/\\bodyf\{\}/.test(bd.tex)) unit.push('묶음 없는 bodyf 남음');
+if (!/\{\\noindent\\bodyf /.test(applyElementStyle(sty0, '{\\bodyf\\noindent 글\\par}', 'body', 'color=red').tex)) unit.push('문단 연 뒤 색 걸기');
+if (!/makefntext\[1\]\{\\normalcolor/.test(bd.sty)) unit.push('각주는 기본색');
 // 로케일 줄은 따옴표 색을 입혀도 건드리지 않는다
 const hl = applyHighlight(sty0, tex0, 'text:red+bold');
 if (countHighlighted(hl.tex) !== 1 || /imprintHL\{“ko”\}/.test(hl.tex)) unit.push('로케일 줄 보호 ' + countHighlighted(hl.tex));

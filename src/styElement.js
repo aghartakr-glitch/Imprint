@@ -118,6 +118,9 @@ export function applyElementStyle(sty, tex, el, patch) {
   // 사용처 감싸기는 켜질 때 한 번, 꺼질 때 걷는다(감싼 채로 매크로 정의가 사라지면 컴파일이 깨진다)
   const w = wrapSites(out, outTex, el, wantDeco);
   out = w.sty; outTex = w.tex;
+  // 묶음 없이 쓰인 \bodyf{}는 색을 문서 끝까지 끌고 가므로, 본문 색이 있으면 걷어낸다(문단은 각자 {\bodyf …}로 크기를 정한다)
+  // 세로 모드에서 색 명령이 먼저 나가면 앞 줄(부제목)까지 물들 수 있어, 문단을 연 다음 색을 건다
+  if (el === 'body') outTex = outTex.replace(/\\bodyf\{\}/g, '').replace(/\{\\bodyf\\noindent(\s)/g, '{\\noindent\\bodyf$1');
   const pieces = [];
   if (ce) pieces.push('\\RequirePackage{xcolor}');
   if (ul || st) pieces.push('\\RequirePackage[normalem]{ulem}');
@@ -133,7 +136,8 @@ export function applyElementStyle(sty, tex, el, patch) {
     if (sw || size) pieces.push(`\\makeatletter\\AtBeginDocument{\\let\\imprintOrigMk\\@makefnmark\\renewcommand\\@makefnmark{{${sw}${size}\\imprintOrigMk}}}\\makeatother`);
   } else if (sw) {
     pieces.push(`\\let\\imprintOrig${tag}\\${E.cmd}\\renewcommand{\\${E.cmd}}{\\imprintOrig${tag}${sw}}`);
-    if (el === 'body') pieces.push(`\\AtBeginDocument{${sw}\\selectfont}`);
+    // 본문 색은 본문 문단(\bodyf) 안에서만 — 전역으로 걸면 제목·면주·쪽번호로 번진다. 문단 속 각주는 기본색으로 되돌린다
+    if (el === 'body' && ce) pieces.push('\\makeatletter\\AtBeginDocument{\\let\\imprintOrigFnt\\@makefntext\\renewcommand\\@makefntext[1]{\\normalcolor\\imprintOrigFnt{#1}}}\\makeatother');
   }
   const empty = !next.color && !next.deco.length && !next.size;
   if (!empty || wantDeco) {
