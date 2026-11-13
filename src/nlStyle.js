@@ -41,7 +41,7 @@ export function decoChanges(m) {
 function targetsOf(m) {
   if (/(특수\s*문자|특수\s*기호|문장\s*부호)/.test(m)) return { kind: 'skip' };                       // 특수문자는 별도 처리(symbolStyle)
   if (/(구분선|가로줄|각주\s*위\s*(?:에|의)?\s*(?:줄|선))/.test(m)) return { kind: 'skip' };          // 각주 구분선은 구분선 항목이 처리한다
-  if (/따옴표\s*(?:가\s*)?(?:아닌|말고|이외|외의|밖|제외|빼고)|따옴표를?\s*(?:제외|빼고)/.test(m)) return { kind: 'nonquote' };
+  if (/따옴표\s*(?:가\s*)?(?:아닌|말고|이외|외의|밖|제외|빼고)|따옴표를?\s*(?:제외|빼고)|(?:따옴표|인용)[^,.\n]{0,12}?(?:제외|빼고|말고|이외|외의|아닌)/.test(m)) return { kind: 'nonquote' };
   if (/(따옴표|인용|‘|“)/.test(m) && !/(각주|주석|제목|쪽\s*번호|면주)/.test(m)) return { kind: 'quote' };
   const mark = /각주\s*(?:숫자|번호|표시)|위첨자/.test(m) && !/(밑|아래|목록|하단)\s*(?:에\s*있는\s*)?(?:각주)/.test(m);
   if (mark) return { kind: 'els', els: ['mark'] };

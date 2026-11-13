@@ -18,6 +18,8 @@ const CASES = [
   ['쪽번호만 초록으로', p => only(p, 'pnStyle') && spec(p, 'pnStyle').color === 'green'],
   ['각주만 파랑색', p => only(p, 'noteStyle') && spec(p, 'noteStyle').color === 'blue'],
   ['따옴표 아닌 내용만 빨간색으로 해줘', p => spec(p, 'bodyStyle').color === 'red' && p.quoteHighlight === 'reset'],
+  ['따옴표 안에 있는 것 제외한 본문만 빨강색으로', p => spec(p, 'bodyStyle').color === 'red' && p.quoteHighlight === 'reset'],
+  ['따옴표 안에 있는거 빼고 본문 빨강', p => spec(p, 'bodyStyle').color === 'red' && p.quoteHighlight === 'reset'],
   ['따옴표 말고 빨간 적용', p => spec(p, 'bodyStyle').color === 'red' && /reset/.test(p.quoteHighlight)],
   ['따옴표 안에 있는거 빨강으로, 밑줄', p => p.quoteHighlight === 'text:red+underline'],
   ['따옴표 안에 빨강 굵게 밑줄', p => ['text:red', 'bold', 'underline'].every(x => p.quoteHighlight.split('+').includes(x))],
