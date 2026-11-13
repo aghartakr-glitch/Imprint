@@ -24,9 +24,13 @@ export function applyDropCap(sty, tex, scale) {
   let outTex = String(tex).replace(/\\imprintDrop\{([^{}]*)\}/g, '$1');
   if (!Number.isFinite(v) || v <= 1) return { sty: outSty, tex: outTex };
   const s = Math.min(6, v);
+  // 2.6배 이상이면 글자가 첫 줄 높이를 밀어내 문단 위가 벌어지므로, 줄 높이를 본문 한 줄로 고정(\raisebox[높이][깊이])해 줄 간격 격자를 유지한다
+  const big = s >= 2.6;
+  const open = big ? '\\raisebox{0pt}[\\ht\\strutbox][\\dp\\strutbox]{' : '';
+  const close = big ? '}' : '';
   outSty = appendBeforeEndinput(outSty,
     // \f@size 같은 @ 이름을 쓰므로 \makeatletter로 감싼다(.sty 앞쪽의 \makeatother 뒤에서는 @가 글자가 아니다)
-    `\\makeatletter\\providecommand{\\imprintDrop}[1]{}\\renewcommand{\\imprintDrop}[1]{{\\fontsize{\\dimexpr${s}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont #1}}\\makeatother ${MARK} ${s}`);
+    `\\makeatletter\\providecommand{\\imprintDrop}[1]{}\\renewcommand{\\imprintDrop}[1]{{${open}\\fontsize{\\dimexpr${s}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont #1${close}}}\\makeatother ${MARK} ${s}`);
   outTex = outTex.replace(PARA_HEAD, (m, head, ch) => `${head}\\imprintDrop{${ch}}`);
   return { sty: outSty, tex: outTex };
 }

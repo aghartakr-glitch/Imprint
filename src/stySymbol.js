@@ -2,6 +2,7 @@
 // 기본은 전부 적용하고, 항목별로 뺄 수 있다. 항목: sym(기호류 ★●→※…) · quote(따옴표 ‘’“”「」) · bracket(괄호 ()) · punct(쉼표·마침표·물음표·느낌표·쌍점·말줄임·줄표) · num(원문자·번호 ①②③).
 // 사용자가 말하는 번호: 1=기호류, 2=문장부호(따옴표·괄호·나머지), 3=번호(원문자).
 import { TEXT_COLORS } from './styHighlight.js';
+import { SERIF_FONTS, SANS_FONTS, findFontByName } from './styFonts.js';
 
 export const SYMBOL_CATS = ['sym', 'quote', 'bracket', 'punct', 'num'];
 export const CAT_LABEL = { sym: '기호류', quote: '따옴표', bracket: '괄호', punct: '쉼표·마침표 등 문장부호', num: '번호(원문자)' };
@@ -62,12 +63,15 @@ export function applySymbolStyle(sty, tex, patch) {
   // 이미 감싼 것은 벗기고 다시 감싼다
   let outTex = String(tex).replace(/\\imprintSym\{([^{}]*)\}/g, '$1');
   if (!spec || (!spec.font && !spec.color)) return { sty: outSty, tex: outTex };
-  const fam = spec.font === 'sans' ? '\\sffamily ' : spec.font === 'serif' ? '\\rmfamily ' : '';
+  // 서체 이름(나눔명조·본명조·돋움 등)을 말했으면 그 폰트를 특수문자 전용 서체(\imprintSymFont)로 따로 정의한다. sans/serif는 현재 고딕·명조 계열
+  const named = SERIF_FONTS[spec.font] || SANS_FONTS[spec.font];
+  const fontDef = named ? namedFontLine(named) : '';
+  const fam = named ? '\\imprintSymFont ' : spec.font === 'sans' ? '\\sffamily ' : spec.font === 'serif' ? '\\rmfamily ' : '';
   const ce = colorExpr(spec.color);
   const inner = ce ? `\\textcolor{${ce}}{#1}` : '#1';
   const def = `{${fam}${inner}}`;
   outSty = appendBeforeEndinput(outSty,
-    `${ce ? '\\RequirePackage{xcolor}' : ''}\\providecommand{\\imprintSym}[1]{#1}\\renewcommand{\\imprintSym}[1]${def} ${MARK} ${stringify(spec)}`);
+    `${fontDef}${ce ? '\\RequirePackage{xcolor}' : ''}\\providecommand{\\imprintSym}[1]{#1}\\renewcommand{\\imprintSym}[1]${def} ${MARK} ${stringify(spec)}`);
   const at = outTex.indexOf('\\begin{document}');
   const head = at < 0 ? '' : outTex.slice(0, at);
   let body = at < 0 ? outTex : outTex.slice(at);
@@ -82,6 +86,11 @@ export const countSymbols = tex => (String(tex).match(/\\imprintSym\{/g) || []).
 
 // ── 자연어 ────────────────────────────────────────────────────────────────
 const TRIGGER = /(특수\s*문자|특수\s*기호|기호|문장\s*부호)/;
+// 특수문자 전용 폰트 정의 — fonts/ 폴더 폰트(Path)는 그대로, TeX Live 한글 폰트는 파일 이름으로
+function namedFontLine(f) {
+  if (f.path) return `\\newfontfamily\\imprintSymFont{${f.path.name}}[Path=./fonts/,Extension=${f.path.ext},UprightFont=${f.path.up},BoldFont=${f.path.bold}]`;
+  return `\\newfontfamily\\imprintSymFont{${f.hangul[0]}}${f.hangul[1] ? `[${f.hangul[1]}]` : ''}`;
+}
 const FONT_WORDS = [[/(고딕|산세리프|sans)/i, 'sans'], [/(명조|바탕|세리프|serif)/i, 'serif']];
 const COLOR_WORDS = [[/(빨간|빨강|붉은|레드)/, 'red'], [/(파란|파랑|블루)/, 'blue'], [/(초록|녹색|연두|그린)/, 'green'], [/(주황|오렌지)/, 'orange'], [/(분홍|핑크)/, 'pink'], [/(회색|그레이)/, 'gray']];
 const NAMED_CATS = [
@@ -119,7 +128,10 @@ export function planSymbol(msg = '', cmdMap = {}) {
   if (!TRIGGER.test(m)) return null;
   if (/(각주|주석)\s*(?:번호|숫자|표시)/.test(m) && !/(특수\s*문자|특수\s*기호)/.test(m)) return null; // 각주 번호는 별도 항목
   if (/(원래대로|해제|취소|없애|지워)/.test(m) && /(특수\s*문자|기호|문장\s*부호)/.test(m) && !/(빼|제외)/.test(m)) return { patches: { symbolStyle: 'off' } };
-  const font = (FONT_WORDS.find(([re]) => re.test(m)) || [])[1] || null;
+  let font = (FONT_WORDS.find(([re]) => re.test(m)) || [])[1] || null;
+  // "나눔명조로", "돋움체로"처럼 서체 이름을 말하면 그 서체(기본 바탕·프리텐다드는 명조/고딕 계열 그대로)
+  const nm = findFontByName(m.replace(/특수\s*문자|특수\s*기호|문장\s*부호/g, ' '));
+  if (nm && !['batang', 'pretendard'].includes(nm.id)) font = nm.id;
   let color = (COLOR_WORDS.find(([re]) => re.test(m)) || [])[1] || null;
   const cur = parse(cmdMap.symbolStyle);
   if (!color && /(연하|흐리|옅)/.test(m)) {

@@ -9,7 +9,7 @@ import { synthesizePatches } from './nlIntensity.js';
 // ── 굵기 ────────────────────────────────────────────────────────────────
 const BOLD_RE = /(굵게|굵은|볼드|두껍게|두꺼운|bold|강조\s*(?:되|해|하|시켜)|돋보이게)/i;
 const NORMAL_RE = /(얇게|가늘게|보통\s*굵기|일반\s*굵기|굵기\s*(?:빼|없애|해제)|볼드\s*(?:빼|없애|해제|취소)|굵지\s*않게|normal)/i;
-export function planWeight(msg = "") {
+export function planWeight(msg = "", cmdMap = {}) {
   const m = String(msg);
   if (/(따옴표|인용|구분선|형광펜|가로줄|각\s*주\s*위\s*(?:에|의)?\s*(?:줄|선))/.test(m) || hasColorRequest(m)) return null;
   const normal = NORMAL_RE.test(m);
@@ -22,7 +22,7 @@ export function planWeight(msg = "") {
   if (hasSub && hasMain) patches.headingWeight = value;
   else if (hasSub) patches.h2Weight = value;
   else if (hasMain) patches.h1Weight = value;
-  else if (/(각주|주석)/.test(m)) patches.footnoteWeight = value; // 각주 글자 굵기 (로그: "각주 폰트 굵기도 얇게")
+  else if (/(각주|주석)/.test(m)) patches.footnoteWeight = (/(얇게|가늘게)/.test(m) && cmdMap.footnoteWeight !== "bold") ? "light" : value; // 각주 굵기: "더 얇게"는 보통보다 가는 Light까지 내려간다
   else if (/본문/.test(m)) patches.bodyWeight = value;
   else return null;
   // 크기 요청과 같은 문장("제목 더 크게 해줘 굵게")이면 굵기만 바꾸고 크기를 버리지 않게 합칠 수 있다

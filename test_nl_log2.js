@@ -12,7 +12,7 @@ const CASES = [
   ['제목 키우고 굵게', p => Number(p.h1Size) > 21 && p.h1Weight === 'bold'],
   ['제목 크고 굵게', p => Number(p.h1Size) > 21 && p.h1Weight === 'bold'],
   ['본문 글자 키우고 볼드', p => Number(p.bodySize) > 9.5 && p.bodyWeight === 'bold'],
-  ['각주를 더 작고 얇게 해줘 티 덜나게', p => Number(p.noteSize) < 7 && p.footnoteWeight === 'normal'],
+  ['각주를 더 작고 얇게 해줘 티 덜나게', p => Number(p.noteSize) < 7 && p.footnoteWeight === 'light'],
   ['제목 굵게', p => keys(p) === 'h1Weight'],
   ['각주가 작고 얇아 보여', p => !('footnoteWeight' in p)],
   ['주석 전체 위치를 본문과 많이 떨어트려줘, 하단으로 내려줘', p => Number(p.footinsSkip) > 10 && Number(p.footnoteShift) < 0 && !('marginBottom' in p)],

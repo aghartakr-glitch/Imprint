@@ -11,6 +11,7 @@ import { planMargins } from "./nlMargin.js";
 import { applyParIndentToTex } from "./styIndent.js";
 import { planCollapse } from "./nlMisc.js";
 import { applyDropCap, readDropCap, planDropCap } from "./styDropCap.js";
+import { applyNoteLight, isNoteLight } from "./styWeight.js";
 import { applySymbolStyle, readSymbolStyle, planSymbol } from "./stySymbol.js";
 import { applyColor, readColor, applyMarkColor, readMarkColor, COLOR_KEYS, elementByKey } from "./styColor.js";
 import { applyHighlight, readHighlight, isHlMode } from "./styHighlight.js";
@@ -539,7 +540,7 @@ function normalizeStyPatchValue(key, raw) {
   if (key === 'rhPos') return { ok: true, value: /수직/.test(v) ? v.replace(/\s/g, '') : normalizeSlotPos(v) };
   if (WEIGHT_KEYS.has(key)) {
     const w = v.toLowerCase();
-    const map = { bold:'bold', 굵게:'bold', 진하게:'bold', normal:'normal', 보통:'normal', black:'black', 블랙:'black' };
+    const map = { bold:'bold', 굵게:'bold', 진하게:'bold', normal:'normal', 보통:'normal', black:'black', 블랙:'black', light:'light', 가늘게:'light', 얇게:'light' };
     return map[w] ? { ok: true, value: map[w] } : { ok: false, value: v };
   }
   return { ok: true, value: v };
@@ -6361,6 +6362,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 각주 굵기 — \notef의 \bfseries/\mdseries
     const noteWeightM = latexStr.match(/\\newcommand\{\\notef\}\{(?:\\normalfont|\\rmfamily|\\sffamily)?(\\bfseries|\\mdseries)?\\fontsize/);
     if (noteWeightM) map.footnoteWeight = noteWeightM[1] === '\\bfseries' ? 'bold' : 'normal';
+    if (isNoteLight(latexStr)) map.footnoteWeight = 'light';
     { const mc = readMarkColor(latexStr); if (mc !== undefined) map.footnoteMarkColor = mc; }
     // 단어 사이 간격 보정(em) — 블록이 없는 구버전 sty는 0으로 보고(적용 시 블록이 추가됨)
     const wsM = latexStr.match(/\\setlength\{\\imprintwordspace\}\{(-?[\d.]+)em\}/);
@@ -7177,9 +7179,9 @@ ${customTexts.join('\n')}`;
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
   (각주만 명조/고딕으로 바꿔달라는 요청 → footnoteFontFamily=serif 또는 sans. 면주 서체는 rhFontFamily, 쪽번호 서체는 pnFontFamily. 이 셋은 본문 서체(bodyFontFamily)와 독립이다 — "본문과 같은 계열이라 따로 바꿀 수 없다"고 답하지 말고 값을 설정할 것)
-  (특수문자(★●→※ 기호류·따옴표·괄호·쉼표·마침표 등 문장부호·①②③ 원문자)만 서체/색 → symbolStyle='font=sans;color=red;skip=quote/bracket' 형식(일부만 써도 됨, 현재: ${cmdMap.symbolStyle ?? '없음'}). font=serif|sans, color=red|blue|green|orange|pink|gray|dark<진하기%>, skip=빼는 항목(sym 기호류/quote 따옴표/bracket 괄호/punct 문장부호/num 원문자, '/'로 연결). 기본은 전부 적용. 사용자가 1번(기호류)·2번(문장부호=quote/bracket/punct)·3번(번호=num)을 빼라고 하면 skip에 넣고, 끄기는 symbolStyle=off. 본문 전체 서체·색(bodyFontFamily 등)은 바꾸지 말 것.)
+  (특수문자(★●→※ 기호류·따옴표·괄호·쉼표·마침표 등 문장부호·①②③ 원문자)만 서체/색 → symbolStyle='font=sans;color=red;skip=quote/bracket' 형식(일부만 써도 됨, 현재: ${cmdMap.symbolStyle ?? '없음'}). font=serif|sans 또는 서체 id(nanum 나눔명조/noto 본명조/shinmun 신문명조/dotum 돋움 등 — 서체 선택 id와 같음), color=red|blue|green|orange|pink|gray|dark<진하기%>, skip=빼는 항목(sym 기호류/quote 따옴표/bracket 괄호/punct 문장부호/num 원문자, '/'로 연결). 기본은 전부 적용. 사용자가 1번(기호류)·2번(문장부호=quote/bracket/punct)·3번(번호=num)을 빼라고 하면 skip에 넣고, 끄기는 symbolStyle=off. 본문 전체 서체·색(bodyFontFamily 등)은 바꾸지 말 것.)
   (각주 덩어리 자체를 올리기/내리기 → footnoteShift=mm 변화량(위로 +, 아래로 −, 예: 2 또는 -3.5; 현재 값은 모름). 본문↔각주 간격(footinsSkip)은 각주가 아니라 본문을 밀어 올릴 뿐이라 각주 위치를 옮기는 용도가 아니다. 각주 줄간격은 noteLeading이고 글자 크기(noteSize)보다 작아질 수 없다.)
-  (각주 굵기 → footnoteWeight=bold|normal. 본문 속 각주 숫자(위첨자)만 연하게/진하게 → footnoteMarkColor(검정 진하기 %, 낮을수록 연함; 현재 ${cmdMap.footnoteMarkColor ?? 100}) — 각주 문장 색(noteColor)과 별개이니 "밑에 각주는 건들지 말고"면 noteColor는 바꾸지 말 것. 따옴표 안 글자색+굵게는 quoteHighlight=text:red+bold 처럼 +로 잇는다.)
+  (각주 굵기 → footnoteWeight=bold|normal|light(light는 보통보다 가는 Pretendard Light, 고딕 각주만 가능; "더 얇게"는 light). 본문 속 각주 숫자(위첨자)만 연하게/진하게 → footnoteMarkColor(검정 진하기 %, 낮을수록 연함; 현재 ${cmdMap.footnoteMarkColor ?? 100}) — 각주 문장 색(noteColor)과 별개이니 "밑에 각주는 건들지 말고"면 noteColor는 바꾸지 말 것. 따옴표 안 글자색+굵게는 quoteHighlight=text:red+bold 처럼 +로 잇는다.)
   (문단 첫 글자만 키우기 → dropCap=배율(1.3~3.3, 1이면 끔; 현재 ${cmdMap.dropCap ?? '끔'}). 본문 전체 글자 크기(bodySize)는 바꾸지 말 것. "지원하지 않는다"고 답하지 말 것.)
   (글자 색 — rhColor(면주) pnColor(쪽번호) noteColor(각주) h1Color(제목) h2Color(부제목) bodyColor(본문) = 검정의 진하기 %, 100=검정, 낮을수록 연한 회색(최소 5). "연하게/흐리게"는 값을 낮추고 "진하게/검정으로"는 올린다. 현재: 면주 ${cmdMap.rhColor ?? 100} / 쪽번호 ${cmdMap.pnColor ?? 100} / 각주 ${cmdMap.noteColor ?? 100} / 제목 ${cmdMap.h1Color ?? 100} / 본문 ${cmdMap.bodyColor ?? 100}. 면주 색상은 "지원 불가"라고 답하지 말 것.)
   (각주 구분선 — footnoteRule=on|off, footnoteRuleWidth(판면 폭 대비 %, 10~100; "여백에 맞게/꽉 차게"=100), footnoteRuleThickness(pt, 0.1~3), footnoteRuleColor(검정 진하기 %, 낮을수록 연함). 현재: ${cmdMap.footnoteRule ?? '알 수 없음'} / 길이 ${cmdMap.footnoteRuleWidth ?? '-'}% / 두께 ${cmdMap.footnoteRuleThickness ?? '-'}pt / 진하기 ${cmdMap.footnoteRuleColor ?? '-'}%. 구분선 말에 든 "여백"은 페이지 여백이 아니다. footnoterule을 main.tex에 직접 쓰라고 답하지 말 것.)
@@ -7608,9 +7610,12 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             }
           } else if (key === 'footnoteWeight') {
             // 각주 글자 굵기 — \notef의 굵기 표시만 바꾼다(본문과 별개)
+            // light는 Pretendard Light 서체로 바꿔 보통보다 더 가늘게(고딕 각주만 가능). 다른 값으로 바꿀 때는 Light를 먼저 걷어낸다
+            patchedSty = applyNoteLight(patchedSty, false);
+            if (val === 'light') patchedSty = applyNoteLight(patchedSty, true);
             const wTok = val === 'bold' ? '\\bfseries' : '\\mdseries';
             patchedSty = patchedSty.replace(
-              /(\\newcommand\{\\notef\}\{(?:\\normalfont|\\rmfamily|\\sffamily)?)(?:\\bfseries|\\mdseries)?(\\fontsize)/,
+              /(\\newcommand\{\\notef\}\{(?:\\normalfont|\\rmfamily|\\sffamily|\\imprintLightSans)?)(?:\\bfseries|\\mdseries)?(\\fontsize)/,
               `$1${wTok}$2`);
           } else if (key === 'footnoteMarkColor') {
             // 본문 속 각주 숫자(위첨자) 색 — 100이면 원래 검정

@@ -369,7 +369,7 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   const marg = planMargins(msg, cmdMap);
   if (marg?.ask) { unsupported = [marg.ask]; synth = null; }
   else if (marg) { unsupported = []; synth = { text: patchText(marg.patches), keys: Object.keys(marg.patches), patches: { ...marg.patches }, font: true }; fontOnly = true; }
-  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planOneLine(msg, cmdMap), planLeadingRelation(msg, cmdMap), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
+  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planOneLine(msg, cmdMap), planLeadingRelation(msg, cmdMap), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg, cmdMap), planAlign(msg)]) {
     if (!plan) continue;
     if (plan.noChange) { unsupported = [plan.noChange]; synth = null; fontOnly = false; break; }
     unsupported = [];

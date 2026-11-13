@@ -11,7 +11,7 @@ const CASES = [
   ['본문에 있는 각주 숫자를 연하게 해줘 밑에 각주는 건들지 말고', [], p => only(p, 'footnoteMarkColor')],
   ['본문 속 각주 번호 진하게', [], p => only(p, 'footnoteMarkColor')],
   ['각주 진하게', [], p => only(p, 'noteColor') && Number(p.noteColor) > 70],
-  ['각주 폰트 굵기도 얇게 변경해줘', ['h2Size'], p => only(p, 'footnoteWeight') && p.footnoteWeight === 'normal'],
+  ['각주 폰트 굵기도 얇게 변경해줘', ['h2Size'], p => only(p, 'footnoteWeight') && p.footnoteWeight === 'light'],
   ['각주 굵게', ['h2Size'], p => only(p, 'footnoteWeight') && p.footnoteWeight === 'bold'],
   ['굵게', ['h2Size'], p => Object.keys(p).length === 0],
   ['굵게', ['quoteHighlight'], p => p.quoteHighlight === 'text:red+bold'],
