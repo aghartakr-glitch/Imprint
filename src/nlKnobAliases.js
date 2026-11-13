@@ -9,7 +9,7 @@ import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
 import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse, planFootnotePlace } from './nlMisc.js';
-import { planMore, planSizeRelation, planWidthFit } from './nlRelation.js';
+import { planMore, planSizeRelation, planWidthFit, planLeadingRelation, planOneLine } from './nlRelation.js';
 import { planMargins } from './nlMargin.js';
 import { planDropCap } from './styDropCap.js';
 import { planSymbol } from './stySymbol.js';
@@ -369,8 +369,9 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   const marg = planMargins(msg, cmdMap);
   if (marg?.ask) { unsupported = [marg.ask]; synth = null; }
   else if (marg) { unsupported = []; synth = { text: patchText(marg.patches), keys: Object.keys(marg.patches), patches: { ...marg.patches }, font: true }; fontOnly = true; }
-  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
+  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planOneLine(msg, cmdMap), planLeadingRelation(msg, cmdMap), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg), planAlign(msg)]) {
     if (!plan) continue;
+    if (plan.noChange) { unsupported = [plan.noChange]; synth = null; fontOnly = false; break; }
     unsupported = [];
     // 이 계획들은 문장에서 대상과 값을 직접 정한 것이라 앞서 모델/별칭이 잡은 값에 섞지 않고 그대로 쓴다(섞이면 직전 수정 키나 다른 항목이 같이 바뀐다)
     // 굵기 계획(merge)은 같은 문장의 크기 요청("제목 더 크게 해줘 굵게")을 버리지 않게, 직접 말한 값(직전 수정 이어받기가 아닌 것)과 합친다

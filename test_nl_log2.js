@@ -15,7 +15,7 @@ const CASES = [
   ['각주를 더 작고 얇게 해줘 티 덜나게', p => Number(p.noteSize) < 7 && p.footnoteWeight === 'normal'],
   ['제목 굵게', p => keys(p) === 'h1Weight'],
   ['각주가 작고 얇아 보여', p => !('footnoteWeight' in p)],
-  ['주석 전체 위치를 본문과 많이 떨어트려줘, 하단으로 내려줘', p => Number(p.footinsSkip) > 10 && Number(p.marginBottom) < 20],
+  ['주석 전체 위치를 본문과 많이 떨어트려줘, 하단으로 내려줘', p => Number(p.footinsSkip) > 10 && Number(p.footnoteShift) < 0 && !('marginBottom' in p)],
   ['1번 주석 앞에 커서 놓고 엔터 두번 친것처럼 늘려줘', p => Number(p.footinsSkip) > 10 && !('marginBottom' in p)],
   ['각주를 본문 가깝게 붙여줘', p => Number(p.footinsSkip) < 10],
   ['각주 끼리 간격 줄여줘', p => keys(p) === 'footnoteSep' && Number(p.footnoteSep) < 14],

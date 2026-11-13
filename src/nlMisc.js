@@ -100,20 +100,27 @@ export function planCollapse(msg = '') {
 //  · "하단으로 내려" → 하단 여백(marginBottom)을 줄여 본문 블록과 각주를 함께 아래로 내린다
 const FAR_RE = /(떨어\s*(?:트|뜨)려|떨어지게|멀리|멀게|엔터\s*(?:한|두|세|\d+)?\s*(?:번)?\s*(?:을\s*)?친\s*것처럼|한\s*줄\s*(?:더\s*)?(?:띄|넣))/;
 const NEAR_RE = /(가깝게|가까이|바짝|본문\s*쪽으로\s*붙)/;
-const DOWN_RE = /(하단으로|아래로|밑으로)\s*(?:좀\s*|더\s*|많이\s*)*(?:내려|옮겨|내리)/;
+const DOWN_RE = /(하단으로|아래로|밑으로)\s*(?:좀\s*|더\s*|많이\s*)*(?:내려|옮겨|내리|낮춰)|(?:내려|내리)\s*줘/;
+const UP_RE = /(위로|상단으로)\s*(?:좀\s*|더\s*|많이\s*)*(?:올려|옮겨|올리|끌어올)|(?:올려|올리)\s*줘/;
+const SHIFT_MM = [1, 2, 3.5, 6, 9]; // 각주 덩어리를 움직이는 단계(mm)
 export function planFootnotePlace(msg = '', cmdMap = {}, level = 3) {
   const m = String(msg);
   if (!/(각주|주석)/.test(m)) return null;
   if (/(구분선|색|서체|번호|숫자|표시|크기|글자|글씨|굵|줄\s*간격|행간|끼리|항목)/.test(m)) return null;
-  const far = FAR_RE.test(m), near = NEAR_RE.test(m), down = DOWN_RE.test(m);
-  if (!far && !near && !down) return null;
-  const words = ['아주 조금', '조금', '적당히', '많이', '아주 많이'][Math.max(1, Math.min(5, level)) - 1];
+  const far = FAR_RE.test(m), near = NEAR_RE.test(m);
+  // 각주 덩어리 자체를 내리기/올리기 — 각주는 본문 칸 맨 아래에 붙어 있어 본문↔각주 간격으로는 안 움직인다. 푸터 거리(footnoteShift)로 움직인다
+  const down = DOWN_RE.test(m), up = !down && UP_RE.test(m);
+  if (!far && !near && !down && !up) return null;
+  const L = Math.max(1, Math.min(5, level)) - 1;
+  const words = ['아주 조금', '조금', '적당히', '많이', '아주 많이'][L];
   const patches = {};
   if (far || near) {
     const s = synthesizePatches(`${far ? '늘려' : '줄여'} ${words}`, ['footinsSkip'], cmdMap);
     if (s) Object.assign(patches, s.patches);
   }
-  if (down) {
+  if (down || up) patches.footnoteShift = String((down ? -1 : 1) * SHIFT_MM[L]);
+  // "하단 여백을 줄이고 주석 전체를 하단으로 더 내려줘" — 하단 여백 말이 같이 있으면 그것도 따로 처리한다
+  if (/하단\s*여백/.test(m) && /(줄이|줄여|좁)/.test(m)) {
     const s = synthesizePatches(`줄여 ${words}`, ['marginBottom'], cmdMap);
     if (s) Object.assign(patches, s.patches);
   }
