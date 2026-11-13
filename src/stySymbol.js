@@ -4,6 +4,7 @@
 import { TEXT_COLORS, FACE_MODES } from './styHighlight.js';
 import { mapSafeLines, fixLocaleLine } from './texSafe.js';
 import { decoChanges } from './nlStyle.js';
+import { composeJamo } from './jamo.js';
 import { SERIF_FONTS, SANS_FONTS, findFontByName } from './styFonts.js';
 
 export const SYMBOL_CATS = ['sym', 'quote', 'bracket', 'punct', 'num'];
@@ -130,7 +131,7 @@ function onlyCats(m) {
 }
 
 export function planSymbol(msg = '', cmdMap = {}) {
-  const m = String(msg);
+  const m = composeJamo(String(msg));
   if (!TRIGGER.test(m)) return null;
   if (/(각주|주석)\s*(?:번호|숫자|표시)/.test(m) && !/(특수\s*문자|특수\s*기호)/.test(m)) return null; // 각주 번호는 별도 항목
   if (/(원래대로|해제|취소|없애|지워)/.test(m) && /(특수\s*문자|기호|문장\s*부호)/.test(m) && !/(빼|제외)/.test(m) && !/(굵|볼드|기울|이탤릭|밑줄|취소선|언더라인)/.test(m)) return { patches: { symbolStyle: 'off' } };

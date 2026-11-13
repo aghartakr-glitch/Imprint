@@ -5,6 +5,7 @@ import { ELEMENTS, DECOS, parseSpec, stringifySpec } from './styElement.js';
 import { elementsIn } from './nlColor.js';
 import { detectIntensity } from './nlIntensity.js';
 import { HL_COLORS } from './styHighlight.js';
+import { composeJamo } from './jamo.js';
 
 export const HUE_WORDS = [
   ['red', /(빨간|빨강|붉은|레드|빨갛)/], ['blue', /(파란|파랑|파랗|블루)/], ['green', /(초록|녹색|그린|연두)/],
@@ -68,7 +69,7 @@ const colorField = (cur, m, hue) => {
 
 // 반환: null | { patches: {noteStyle: 'color=…;deco=…;size=…', …}, targets }
 export function planStyle(msg = '', cmdMap = {}) {
-  const m = String(msg).replace(/각\s+주/g, '각주').replace(/주\s+석/g, '주석').replace(/주석/g, '각주');
+  const m = composeJamo(String(msg)).replace(/각\s+주/g, '각주').replace(/주\s+석/g, '주석').replace(/주석/g, '각주');
   const t = targetsOf(m);
   if (!t || t.kind === 'skip') return null;
   const hue = hueOf(m);

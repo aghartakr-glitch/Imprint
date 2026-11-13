@@ -40,6 +40,10 @@ const CASES = [
   // 건드리면 안 되는 말
   ['각주 구분선 연하게 해줘', p => !('noteStyle' in p) && 'footnoteRuleColor' in p],
   ['특수문자만 빨강', p => only(p, 'symbolStyle')],
+  // 자판이 갈라진 오타
+  ['쪽번호 ㅍ ㅏ랑색', p => only(p, 'pnStyle') && spec(p, 'pnStyle').color === 'blue'],
+  ['쪽번호 ㅍㅏ랑색으로', p => spec(p, 'pnStyle').color === 'blue'],
+  ['제목 ㅊ ㅗ록', p => spec(p, 'h1Style').color === 'green'],
   ['각주 글자 연하게 해줘 본문은 그대로', p => only(p, 'noteStyle')],
 ];
 let bad = 0; const out = [];

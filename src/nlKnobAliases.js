@@ -6,6 +6,7 @@
 import { planFontEdit, patchText } from './nlFonts.js';
 import { planHighlight } from './styHighlight.js';
 import { planStyle } from './nlStyle.js';
+import { composeJamo } from './jamo.js';
 import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
@@ -424,7 +425,8 @@ export function splitClauses(msg) {
   return parts.length >= 2 && parts.length <= 4 ? parts : null;
 }
 
-export function planNaturalEdit(msg = '', cmdMap = {}, prevKeys = [], prevDirs = {}) {
+export function planNaturalEdit(rawMsg = '', cmdMap = {}, prevKeys = [], prevDirs = {}) {
+  const msg = composeJamo(rawMsg); // 자판이 갈라진 오타("ㅍ ㅏ랑색")를 먼저 글자로 합친다
   // 방금 따옴표 안 글자를 바꿨는데 "굵게"만 말하면 그 따옴표 안 글자에 굵게를 더한다("text:red" → "text:red+bold")
   const faceOnly = String(msg).trim().match(/^(굵게|볼드(?:로)?|두껍게|기울여|기울임|이탤릭)(?:\s*해\s*줘|\s*해줘|\s*줘)?[\s.!?~]*$/);
   if (faceOnly && prevKeys.includes('quoteHighlight') && cmdMap.quoteHighlight && cmdMap.quoteHighlight !== 'off') {
