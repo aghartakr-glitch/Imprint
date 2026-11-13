@@ -6411,6 +6411,7 @@ parSkip은 문단 간격 pt값(null이면 기본값 유지). reasons는변경항
     // 제목·소제목 글자 수(한글=1, 영문·숫자·공백≈0.55) — "소제목을 제목 가로 폭에 맞춰서"처럼 폭을 어림할 때 쓴다
     { const vlen = t => [...String(t)].reduce((n, c) => n + (/[가-힣ㄱ-ㅎ]/.test(c) ? 1 : /[\s\w.,'’‘“”"!?·:;()-]/.test(c) ? 0.55 : 1), 0);
       const t1 = latexStr.match(/\\hone\s+([^\\{}]+?)\s*\\par/); const t2 = latexStr.match(/\\htwo\s+([^\\{}]+?)\s*\\par/);
+      { const pwm = latexStr.match(/paperwidth\s*=\s*([\d.]+)\s*mm/); if (pwm) map.paperWidth = pwm[1]; }
       if (t1) map.h1Chars = String(Math.round(vlen(t1[1].trim()) * 10) / 10);
       if (t2) map.h2Chars = String(Math.round(vlen(t2[1].trim()) * 10) / 10); }
     // 제목(\hone/\htwo/\hthree) 서체 계열 — 제목 3종이 같은 계열일 때만 값을 둔다
@@ -7172,11 +7173,12 @@ ${customTexts.join('\n')}`;
       : `출력 규칙:
 - 변경 항목만 한 줄씩: "본문 크기: 9.5pt → 9.0pt" 형식. 설명 문장 금지.
 - sty 수치 수정(크기·행간·여백·자간): <sty_patch>키=값,키=값</sty_patch>
-  사용 가능한 키: symbolStyle footnoteWeight footnoteMarkColor dropCap h1FontFamily h2FontFamily rhColor pnColor noteColor h1Color h2Color bodyColor footnoteRuleWidth footnoteRuleThickness footnoteRuleColor quoteHighlight headingFontFamily serifFont sansFont bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily footnoteMarkFont rhFontFamily pnFontFamily headingAlignnoteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
+  사용 가능한 키: footnoteShift symbolStyle footnoteWeight footnoteMarkColor dropCap h1FontFamily h2FontFamily rhColor pnColor noteColor h1Color h2Color bodyColor footnoteRuleWidth footnoteRuleThickness footnoteRuleColor quoteHighlight headingFontFamily serifFont sansFont bodySize bodyLeading bodyFontFamily bodyAlign hyphenation parIndent parSkip colGap h1Size h1Leading h2Size h2Leading h3Size h3Leading headingWeight h1Weight h2Weight h3Weight bodyWeight wordSpace footinsSkip headingSpaceBefore headingKeepLines hangulTrack footnoteFontFamily footnoteMarkFont rhFontFamily pnFontFamily headingAlignnoteSize noteLeading footnoteSep footnoteMarker footnoteRule headingGap bodyGap pnSize pnLeading pnXShift pnYShift pnPos rhSize rhLeading rhXShift rhYShift rhPos rhText letterSpace marginTop marginBottom marginInner marginOuter bodyWidth noteWidth
   (소제목만/제목만 굵기를 바꿔달라는 요청 → h2Weight 또는 h1Weight, h3Weight. 값: bold 또는 normal. 전체 제목을 한꺼번에 바꾸는 요청이면 headingWeight)
   (본문 글씨를 진하게/얇게 해달라는 요청 → bodyWeight=bold 또는 normal. 본문 서체에 굵은 파일이 있는 경우에만 실제로 굵어지며, bold는 "조금"보다 확실히 굵은 쪽이므로 그 차이를 답에 함께 설명할 것)
   (각주만 명조/고딕으로 바꿔달라는 요청 → footnoteFontFamily=serif 또는 sans. 면주 서체는 rhFontFamily, 쪽번호 서체는 pnFontFamily. 이 셋은 본문 서체(bodyFontFamily)와 독립이다 — "본문과 같은 계열이라 따로 바꿀 수 없다"고 답하지 말고 값을 설정할 것)
   (특수문자(★●→※ 기호류·따옴표·괄호·쉼표·마침표 등 문장부호·①②③ 원문자)만 서체/색 → symbolStyle='font=sans;color=red;skip=quote/bracket' 형식(일부만 써도 됨, 현재: ${cmdMap.symbolStyle ?? '없음'}). font=serif|sans, color=red|blue|green|orange|pink|gray|dark<진하기%>, skip=빼는 항목(sym 기호류/quote 따옴표/bracket 괄호/punct 문장부호/num 원문자, '/'로 연결). 기본은 전부 적용. 사용자가 1번(기호류)·2번(문장부호=quote/bracket/punct)·3번(번호=num)을 빼라고 하면 skip에 넣고, 끄기는 symbolStyle=off. 본문 전체 서체·색(bodyFontFamily 등)은 바꾸지 말 것.)
+  (각주 덩어리 자체를 올리기/내리기 → footnoteShift=mm 변화량(위로 +, 아래로 −, 예: 2 또는 -3.5; 현재 값은 모름). 본문↔각주 간격(footinsSkip)은 각주가 아니라 본문을 밀어 올릴 뿐이라 각주 위치를 옮기는 용도가 아니다. 각주 줄간격은 noteLeading이고 글자 크기(noteSize)보다 작아질 수 없다.)
   (각주 굵기 → footnoteWeight=bold|normal. 본문 속 각주 숫자(위첨자)만 연하게/진하게 → footnoteMarkColor(검정 진하기 %, 낮을수록 연함; 현재 ${cmdMap.footnoteMarkColor ?? 100}) — 각주 문장 색(noteColor)과 별개이니 "밑에 각주는 건들지 말고"면 noteColor는 바꾸지 말 것. 따옴표 안 글자색+굵게는 quoteHighlight=text:red+bold 처럼 +로 잇는다.)
   (문단 첫 글자만 키우기 → dropCap=배율(1.3~3.3, 1이면 끔; 현재 ${cmdMap.dropCap ?? '끔'}). 본문 전체 글자 크기(bodySize)는 바꾸지 말 것. "지원하지 않는다"고 답하지 말 것.)
   (글자 색 — rhColor(면주) pnColor(쪽번호) noteColor(각주) h1Color(제목) h2Color(부제목) bodyColor(본문) = 검정의 진하기 %, 100=검정, 낮을수록 연한 회색(최소 5). "연하게/흐리게"는 값을 낮추고 "진하게/검정으로"는 올린다. 현재: 면주 ${cmdMap.rhColor ?? 100} / 쪽번호 ${cmdMap.pnColor ?? 100} / 각주 ${cmdMap.noteColor ?? 100} / 제목 ${cmdMap.h1Color ?? 100} / 본문 ${cmdMap.bodyColor ?? 100}. 면주 색상은 "지원 불가"라고 답하지 말 것.)
@@ -7502,7 +7504,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           rhSize:'면주 크기', rhLeading:'면주 행간',
           rhXShift:'면주 가로 이동', rhYShift:'면주 세로 이동', rhPos:'면주 위치',
           bodyAlign:'본문 정렬', hyphenation:'하이픈',
-          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', footnoteMarkFont:'각주 번호 서체 계열', rhColor:'면주 진하기', pnColor:'쪽번호 진하기', noteColor:'각주 진하기', h1Color:'제목 진하기', h2Color:'부제목 진하기', bodyColor:'본문 진하기', dropCap:'문단 첫 글자 배율', symbolStyle:'특수문자 서체·색', footnoteWeight:'각주 굵기', footnoteMarkColor:'각주 숫자(본문) 진하기', footnoteRuleWidth:'구분선 길이', footnoteRuleThickness:'구분선 두께', footnoteRuleColor:'구분선 진하기', serifFont:'명조 서체', sansFont:'고딕 서체', fontSameAs:'서체 맞춤', quoteHighlight:'따옴표 형광펜', headingFontFamily:'제목 서체 계열', h1FontFamily:'제목 서체 계열', h2FontFamily:'부제목 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
+          parIndent:'문단 들여쓰기', parSkip:'문단 간격', colGap:'단 간격', footnoteFontFamily:'각주 서체 계열', footnoteMarkFont:'각주 번호 서체 계열', rhColor:'면주 진하기', pnColor:'쪽번호 진하기', noteColor:'각주 진하기', h1Color:'제목 진하기', h2Color:'부제목 진하기', bodyColor:'본문 진하기', dropCap:'문단 첫 글자 배율', symbolStyle:'특수문자 서체·색', footnoteWeight:'각주 굵기', footnoteShift:'각주 덩어리 위치(위로+)', footnoteMarkColor:'각주 숫자(본문) 진하기', footnoteRuleWidth:'구분선 길이', footnoteRuleThickness:'구분선 두께', footnoteRuleColor:'구분선 진하기', serifFont:'명조 서체', sansFont:'고딕 서체', fontSameAs:'서체 맞춤', quoteHighlight:'따옴표 형광펜', headingFontFamily:'제목 서체 계열', h1FontFamily:'제목 서체 계열', h2FontFamily:'부제목 서체 계열', rhFontFamily:'면주 서체 계열', pnFontFamily:'쪽번호 서체 계열',
           headingWeight:'제목 굵기', h1Weight:'제목 굵기(\\hone)', h2Weight:'소제목 굵기(\\htwo)', h3Weight:'소소제목 굵기(\\hthree)',
           bodyWeight:'본문 굵기', wordSpace:'단어 사이 간격', footinsSkip:'본문↔각주 간격', headingSpaceBefore:'제목 위 여백', headingKeepLines:'제목 혼자 남김 방지 여유', hangulTrack:'양끝맞춤 자간 균일도', headingAlign:'제목 정렬',
           footnoteMarker:'각주 표시 형식', footnoteRule:'각주 구분선',
@@ -7512,7 +7514,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           marginTop:'상단 여백', marginBottom:'하단 여백',
           marginInner:'내측 여백', marginOuter:'외측 여백',
         };
-        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', footnoteMarkFont:'', bodyFontFamily:'', rhColor:'%', pnColor:'%', noteColor:'%', h1Color:'%', h2Color:'%', bodyColor:'%', dropCap:'배', symbolStyle:'', footnoteWeight:'', footnoteMarkColor:'%', footnoteRuleWidth:'%', footnoteRuleThickness:'pt', footnoteRuleColor:'%', serifFont:'', sansFont:'', fontSameAs:'', quoteHighlight:'', headingFontFamily:'', h1FontFamily:'', h2FontFamily:'', letterSpace:'%', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
+        const cmUnit = { marginTop:'mm', marginBottom:'mm', marginInner:'mm', marginOuter:'mm', pnXShift:'mm', pnYShift:'mm', rhXShift:'mm', rhYShift:'mm', pnPos:'', rhPos:'', bodyAlign:'', hyphenation:'', parIndent:'em', parSkip:'pt', colGap:'mm', footnoteMarkFont:'', bodyFontFamily:'', rhColor:'%', pnColor:'%', noteColor:'%', h1Color:'%', h2Color:'%', bodyColor:'%', dropCap:'배', symbolStyle:'', footnoteWeight:'', footnoteShift:'mm', footnoteMarkColor:'%', footnoteRuleWidth:'%', footnoteRuleThickness:'pt', footnoteRuleColor:'%', serifFont:'', sansFont:'', fontSameAs:'', quoteHighlight:'', headingFontFamily:'', h1FontFamily:'', h2FontFamily:'', letterSpace:'%', headingWeight:'', h1Weight:'', h2Weight:'', h3Weight:'', bodyWeight:'', wordSpace:'em', footinsSkip:'pt', headingSpaceBefore:'pt', headingKeepLines:'줄', hangulTrack:'', footnoteFontFamily:'', rhFontFamily:'', pnFontFamily:'', headingAlign:'', footnoteMarker:'', footnoteRule:'', bodyWidth:'mm', noteWidth:'mm', rhText:'' };
         let rhTextPatched = false;
         let mainTexPatched = false; // main.tex(finalLatex)를 직접 고친 키가 있었는지 (headingSpaceBefore, headingKeepLines)
         // 행간이 폰트 크기보다 작으면 줄바꿈 시 글자가 겹침 — 최소 1.0배(폰트 크기와 동일) 하한선
@@ -7763,6 +7765,18 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             const nSize = patches.noteSize || cmdMap.noteSize;
             const nLead = clampLeading(nSize, patches.noteLeading || cmdMap.noteLeading);
             if (nSize && nLead) patchedSty = patchFontSizeLeading(patchedSty, 'notef', nSize, nLead);
+          } else if (key === 'footnoteShift') {
+            // 각주 덩어리 올리기/내리기(mm, +는 위로) — 각주는 본문 칸 맨 아래에 붙어 있고, 푸터(쪽번호·면주)는 하단 여백을 따라간다(실측).
+            // 그래서 푸터 거리(footskip)만 바꾸면 푸터 자리는 그대로 두고 각주 블록만 움직인다. 올리면 본문 칸이 그만큼 줄고, 내리면 늘어난다.
+            const dmm = Number(val);
+            if (Number.isFinite(dmm) && dmm !== 0) {
+              patchedSty = ensureFootskip(patchedSty, 5);
+              const fm = patchedSty.match(/footskip\s*=\s*([\d.]+)\s*mm/);
+              if (fm) {
+                const nf = Math.max(5, Math.round((Number(fm[1]) + dmm) * 100) / 100); // 5mm 아래로는 푸터와 겹치므로 막는다
+                patchedSty = patchedSty.replace(/(footskip\s*=\s*)[\d.]+(\s*mm)/, `$1${nf}$2`);
+              }
+            }
           } else if (key === 'footnoteSep') {
             // 각주 항목 간 간격(각주1↔각주2 사이 여백) — noteLeading(줄 내부 행간)과는 다른 변수
             patchedSty = patchedSty.replace(
@@ -7953,6 +7967,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           const label = cmLabel[key] || key;
           if (applied) {
             if (before !== undefined && before !== val) directDiffs.push(`- ${label}: ${before}${unit} → ${val}${unit}`);
+          } else if (/Leading$/.test(key) && Number.isFinite(Number(before)) && Number(val) < Number(before) && Number(before) <= Number(patches[key.replace(/Leading$/, 'Size')] ?? cmdMap[key.replace(/Leading$/, 'Size')]) + 0.01) {
+            // 행간이 글자 크기와 같은 바닥에 닿아 더 줄일 수 없는 경우 — 조용히 무변경이 되지 않게 이유를 알린다
+            directDiffs.push(`- ${label}: 이미 글자 크기와 같은 최소 행간(${before}pt)이라 더 줄일 수 없어요. 더 촘촘히 하려면 글자 크기를 줄이거나 항목 사이 간격(각주끼리 간격)을 줄여 보세요`);
           } else if (!['rhText', 'pnPos', 'rhPos'].includes(key) && (before === undefined || String(before) !== String(val))) { // 이 셋은 위에서 이유를 따로 남긴다, 이미 같은 값이면 실패가 아님
             directDiffs.push(before === undefined
               ? `- (적용 안 됨) ${label}: 현재 문서에 이 항목이 없음 — 재생성 필요할 수 있음`
