@@ -7495,7 +7495,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         // 요소별 색·꾸밈(각주만 연하게·쪽번호 초록·각주 번호 빨강·따옴표 안 빨강+굵게+밑줄 …): 모델이 다른 요소 색까지 바꾸거나 못 한다고 하던 요청은
         // 코드가 읽은 요소·값만 쓰고, 모델이 낸 색·굵기·꾸밈 값은 버린다
         { const stp = planStyle(userMsg, cmdMap);
-          if (stp?.patches) { Object.keys(patches).forEach(k => { if (/(Color|Style|Weight)$/.test(k) || k === 'quoteHighlight') delete patches[k]; }); Object.assign(patches, stp.patches); } }
+          if (stp?.patches) { Object.keys(patches).forEach(k => { if (/(Color|Style|Weight)$/.test(k) || k === 'quoteHighlight' || (stp.font && /FontFamily$|^(serif|sans)Font$/.test(k))) delete patches[k]; }); Object.assign(patches, stp.patches); } }
         { const sp = planSymbol(userMsg, cmdMap);
           if (sp?.patches) { ['bodyFontFamily', 'bodyColor', 'noteColor', 'headingFontFamily', 'serifFont', 'sansFont'].forEach(k => { delete patches[k]; }); Object.assign(patches, sp.patches); } }
         { const dp = planDropCap(userMsg, detectIntensity(userMsg).level);

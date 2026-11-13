@@ -22,7 +22,7 @@ export const TEXT_COLORS = {
   yellow: { label: '노랑', expr: 'yellow!60!black' },
 };
 // 꾸밈: 굵게·기울임·밑줄·취소선. 몇 개든 겹쳐 쓸 수 있다(예: 'text:red+bold+underline')
-export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}', underline: '\\uline{#1}', strike: '\\sout{#1}' };
+export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}', underline: '\\uline{#1}', strike: '\\sout{#1}', sans: '{\\sffamily #1}', serif: '{\\rmfamily #1}' };
 // 모델이 'text:red|bold'처럼 | , 로 이어 내도 같은 뜻으로 읽는다. 'reset'은 색을 본문 기본색으로 되돌리는 자리 표시
 // ("따옴표 아닌 내용만 빨강"에서 따옴표는 빨강이 되지 않게 둘 때 쓴다)
 const splitMode = mode => String(mode).split(/[+|,]/).map(x => x.trim()).filter(x => x && x !== 'off');

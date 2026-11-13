@@ -82,8 +82,17 @@ export function planStyle(msg = '', cmdMap = {}) {
 
   if (t.kind === 'quote' || t.kind === 'nonquote') {
     const curTok = String(cmdMap.quoteHighlight || 'off').split(/[+|,]/).filter(x => x && x !== 'off');
-    let faces = curTok.filter(x => DECOS.includes(x));
-    let base = curTok.find(x => !DECOS.includes(x)) || null;
+    const FONTS = ['sans', 'serif'];
+    let faces = curTok.filter(x => DECOS.includes(x) || FONTS.includes(x));
+    let base = curTok.find(x => !DECOS.includes(x) && !FONTS.includes(x)) || null;
+    // 따옴표 안 글자만 고딕/명조 — 본문 서체는 건드리지 않는다
+    const fontWord = /(고딕|산세리프|산스|sans)/i.test(m) ? 'sans' : /(명조|세리프|serif)/i.test(m) ? 'serif' : null;
+    if (t.kind === 'quote' && fontWord) {
+      faces = [...new Set([...faces.filter(f => !FONTS.includes(f) && !remove.includes(f)), ...add, fontWord])];
+      if (hue) base = `text:${hue}`;
+      const mode = [base, ...faces].filter(Boolean).join('+');
+      return { patches: { quoteHighlight: mode }, targets: ['quote'], font: true };
+    }
     if (t.kind === 'quote') {
       if (!hue && !hasBlack && !add.length && !remove.length && !bgWord && !(toneWord && base)) return null;
       faces = [...new Set([...faces, ...add])].filter(f => !remove.includes(f));
