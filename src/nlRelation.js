@@ -71,6 +71,31 @@ const SMALLER = [0.95, 0.9, 0.85, 0.75, 0.6];
 const BIGGER = [1.05, 1.1, 1.15, 1.3, 1.5];
 const SAME_RE = /(같게|같은|동일|똑같|맞춰|맞추|비슷하게|비슷한|통일)/;
 
+// ── "쪽번호 4배", "제목 두 배로 키워줘", "각주 절반으로", "제목 왕따시만하게" — 글자 크기를 배수로 ──
+const WORD_N = { 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6 };
+export function planMultiple(msg = '', cmdMap = {}) {
+  const m = String(msg);
+  if (/(행간|줄\s*간격|간격|여백|서체|글꼴|굵|정렬|위치|폭|너비|따옴표|첫\s*글자|첫글자|드롭|특수)/.test(m)) return null;
+  const found = EL.map(([id, re, sk, lk]) => { const x = m.match(re); return x ? { id, sk, lk } : null; }).filter(Boolean);
+  if (found.length !== 1) return null;
+  const t = found[0];
+  const n = m.match(/(\d+(?:\.\d+)?|두|세|네|다섯|여섯)\s*배/);
+  const half = /(절반|반으로|반토막)/.test(m);
+  const giant = /(왕\s*따|거대|엄청나게\s*크|최대한\s*크|특대)/.test(m);
+  if (!n && !half && !giant) return null;
+  const shrink = /(작게|줄여|줄이|축소|작아)/.test(m);
+  let ratio = half ? 0.5 : giant ? 3 : (WORD_N[n[1]] || Number(n[1]));
+  if (!Number.isFinite(ratio) || ratio <= 0) return null;
+  if (shrink && ratio > 1) ratio = 1 / ratio;
+  const cur = num(cmdMap[t.sk]);
+  if (!Number.isFinite(cur) || cur <= 0) return null;
+  const size = r2(Math.max(3, Math.min(200, cur * ratio)));
+  const patches = { [t.sk]: size };
+  const curLead = num(cmdMap[t.lk]);
+  if (Number.isFinite(curLead)) patches[t.lk] = r2(Math.max(size, curLead * (size / cur)));
+  return { patches, target: t.id, ratio };
+}
+
 export function planSizeRelation(msg = '', cmdMap = {}) {
   const m = String(msg);
   if (/(행간|줄\s*간격|간격|여백|서체|글꼴|색|굵|정렬|위치|시작점|라인|가로\s*폭|폭|너비)/.test(m)) return null; // 크기가 아닌 속성 얘기

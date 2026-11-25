@@ -116,11 +116,17 @@ export function applyElementStyle(sty, tex, el, patch) {
   const siteOk = SITE_ELEMENTS.includes(el);
   const wantDeco = siteOk && (ul || st);
   // 사용처 감싸기는 켜질 때 한 번, 꺼질 때 걷는다(감싼 채로 매크로 정의가 사라지면 컴파일이 깨진다)
+  if (el === 'note') out = out.replace(/\\notef\\imprintNoteSw/g, '\\notef'); // 사용처를 감싸기 전에 걷어 둔다(아래에서 다시 단다)
   const w = wrapSites(out, outTex, el, wantDeco);
   out = w.sty; outTex = w.tex;
+  if (el === 'note') {
+    out = out.replace(/\\notef\\imprintNoteSw/g, '\\notef');
+    if (sw) out = out.replace(/\{\\notef( ?)(?=\\@thefnmark|#1|\\imprintDecoNote)/g, '{\\notef\\imprintNoteSw$1');
+    // 예전 방식(\notef 자체를 덮어쓴 것)으로 남은 줄은 새 줄로 바뀌므로 위에서 이미 지워졌다
+  }
   // 묶음 없이 쓰인 \bodyf{}는 색을 문서 끝까지 끌고 가므로, 본문 색이 있으면 걷어낸다(문단은 각자 {\bodyf …}로 크기를 정한다)
   // 세로 모드에서 색 명령이 먼저 나가면 앞 줄(부제목)까지 물들 수 있어, 문단을 연 다음 색을 건다
-  if (el === 'body') outTex = outTex.replace(/\\bodyf\{\}/g, '').replace(/\{\\bodyf\\noindent(\s)/g, '{\\noindent\\bodyf$1');
+  if (el === 'body') outTex = outTex.replace(/\\bodyf\{\}/g, '').replace(/\{\\bodyf\\noindent(?=[\s\\])/g, '{\\noindent\\bodyf');
   const pieces = [];
   if (ce) pieces.push('\\RequirePackage{xcolor}');
   if (ul || st) pieces.push('\\RequirePackage[normalem]{ulem}');
@@ -134,6 +140,10 @@ export function applyElementStyle(sty, tex, el, patch) {
       ? `\\fontsize{\\dimexpr${next.size}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont ` : '';
     // \@makefnmark·\f@size는 @ 이름이라 줄 전체를 \makeatletter로 감싼다(읽을 때 글자 처리가 달라서)
     if (sw || size) pieces.push(`\\makeatletter\\AtBeginDocument{\\let\\imprintOrigMk\\@makefnmark\\renewcommand\\@makefnmark{{${sw}${size}\\imprintOrigMk}}}\\makeatother`);
+  } else if (el === 'note') {
+    // 각주 서체 \notef는 \foottextfont 등에서 묶음 없이 불려 색이 다음 장 본문까지 번진다 — 색·굵기는 각주 문장·번호 묶음 안에서만 건다
+    pieces.push('\\providecommand{\\imprintNoteSw}{}');
+    pieces.push(`\\renewcommand{\\imprintNoteSw}{${sw}}`);
   } else if (sw) {
     pieces.push(`\\let\\imprintOrig${tag}\\${E.cmd}\\renewcommand{\\${E.cmd}}{\\imprintOrig${tag}${sw}}`);
     // 본문 색은 본문 문단(\bodyf) 안에서만 — 전역으로 걸면 제목·면주·쪽번호로 번진다. 문단 속 각주는 기본색으로 되돌린다

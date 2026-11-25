@@ -1,8 +1,10 @@
 // 문단 첫 글자 키우기 — 본문 문단 맨 앞 글자를 \imprintDrop{글자}로 감싸고, 확대 배율은 sty의 \imprintDrop 정의 한 줄(% imprintDropCap)로 정한다.
 // 글자 크기·행간(본문 전체)은 건드리지 않는다. 켜기/배율 바꾸기/끄기를 여러 번 해도 겹치지 않는다.
+import { TEXT_COLORS } from './styHighlight.js';
+import { hueOf } from './nlStyle.js';
 const MARK = '% imprintDropCap';
 export const DROP_STEPS = [1.3, 1.6, 2, 2.6, 3.3]; // 아주 조금 ~ 아주 많이
-const PARA_HEAD = /(\{\\bodyf(?:\\noindent)?[ \t]+)(\\imprintDrop\{[^{}]*\}|[‘“'"([]?[^\s\\{}%])/g;
+const PARA_HEAD = /(\{\\bodyf(?:\\[A-Za-z]+)*[ \t]+)(\\imprintDrop\{[^{}]*\}|[‘“'"([]?[^\s\\{}%])/g;
 
 function appendBeforeEndinput(sty, text) {
   if (/\\endinput\s*$/.test(sty)) return sty.replace(/\\endinput\s*$/, `${text}\n\\endinput\n`);
@@ -10,7 +12,7 @@ function appendBeforeEndinput(sty, text) {
 }
 
 export function readDropCap(sty) {
-  const m = String(sty).match(/% imprintDropCap ([\d.]+)/);
+  const m = String(sty).match(/% imprintDropCap ([\d.]+(?::[a-z]+)?)/);
   return m ? m[1] : undefined;
 }
 
@@ -18,7 +20,9 @@ export const countDropCaps = tex => (String(tex).match(/\\imprintDrop\{/g) || []
 
 // scale <= 1 이면 끈다. { sty, tex }를 돌려준다.
 export function applyDropCap(sty, tex, scale) {
-  const v = Number(scale);
+  const [scRaw, colRaw] = String(scale).split(':');
+  const v = Number(scRaw);
+  const colExpr = colRaw && TEXT_COLORS[colRaw] ? TEXT_COLORS[colRaw].expr : null;
   let outSty = String(sty).replace(/^.*% imprintDropCap.*\r?\n?/gm, '');
   // 이미 감싼 글자는 벗기고 다시 감싼다 — 같은 글자가 두 번 감싸지지 않게
   let outTex = String(tex).replace(/\\imprintDrop\{([^{}]*)\}/g, '$1');
@@ -30,18 +34,33 @@ export function applyDropCap(sty, tex, scale) {
   const close = big ? '}' : '';
   outSty = appendBeforeEndinput(outSty,
     // \f@size 같은 @ 이름을 쓰므로 \makeatletter로 감싼다(.sty 앞쪽의 \makeatother 뒤에서는 @가 글자가 아니다)
-    `\\makeatletter\\providecommand{\\imprintDrop}[1]{}\\renewcommand{\\imprintDrop}[1]{{${open}\\fontsize{\\dimexpr${s}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont #1${close}}}\\makeatother ${MARK} ${s}`);
+    `\\makeatletter\\providecommand{\\imprintDrop}[1]{}\\renewcommand{\\imprintDrop}[1]{{${open}\\fontsize{\\dimexpr${s}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont ${colExpr ? `\\textcolor{${colExpr}}{#1}` : '#1'}${close}}}\\makeatother${colExpr ? '\\RequirePackage{xcolor}' : ''} ${MARK} ${s}${colExpr ? ':' + colRaw : ''}`);
   outTex = outTex.replace(PARA_HEAD, (m, head, ch) => `${head}\\imprintDrop{${ch}}`);
   return { sty: outSty, tex: outTex };
 }
 
 // 자연어 — "문단 시작 첫 글자만 겁나 크게", "첫 글자 조금만 키워", "드롭캡 없애줘"
 const HEAD_RE = /((?:문단|단락|본문)\s*(?:의\s*)?)?(시작|첫)\s*(?:글자|글씨|문자)|드롭\s*캡|대문자\s*처럼/;
-export function planDropCap(msg = '', level = 3) {
+export function planDropCap(msg = '', level = 3, cmdMap = {}) {
   const m = String(msg);
   if (!HEAD_RE.test(m)) return null;
+  // 색만 말하면 배율은 지금 값을 유지한다("단락 첫 글자만 빨강으로" — 본문 전체 색이 아니라 첫 글자 색)
+  const [curSc, curCol] = String(cmdMap.dropCap ?? '').split(':');
+  const hue = hueOf(m);
+  const wantsBlack = /(검정|검은\s*색|원래\s*색|기본\s*색)/.test(m);
+  const sizeWord = /(크게|키워|키우|배|작게|줄여|줄이|확대|축소|조금|많이|겁나|엄청)/.test(m);
+  if ((hue || wantsBlack) && !sizeWord) {
+    const sc = Number(curSc) > 1 ? curSc : '2';
+    return { patches: { dropCap: hue ? `${sc}:${hue}` : sc } };
+  }
+  const colorPart = hue ? `:${hue}` : (curCol && !wantsBlack ? `:${curCol}` : '');
+  const mult = m.match(/(\d+(?:\.\d+)?|두|세|네|다섯)\s*배/);
+  if (mult) {
+    const n = ({ 두: 2, 세: 3, 네: 4, 다섯: 5 })[mult[1]] || Number(mult[1]);
+    if (n > 1 && !/(작게|줄여|줄이)/.test(m)) return { patches: { dropCap: `${Math.min(3.3, n)}${colorPart}` } };
+  }
   if (/(없애|지워|빼\s*줘|해제|원래대로|취소)/.test(m)) return { patches: { dropCap: '1' } };
   if (/(작게|줄여|줄이)/.test(m) && !/(키워|크게)/.test(m)) return { patches: { dropCap: '1' } }; // 줄이기는 끄기로 처리
   const L = Math.max(1, Math.min(5, level));
-  return { patches: { dropCap: String(DROP_STEPS[L - 1]) } };
+  return { patches: { dropCap: `${DROP_STEPS[L - 1]}${colorPart}` } };
 }

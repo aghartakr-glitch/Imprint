@@ -30,7 +30,7 @@ export const CASES_50 = [
   ['본문을 11pt로 바꿔줘', { keys: ['bodySize'], mode: 'amount' }],
   ['여백을 15mm로 맞춰줘', { keys: M4, mode: 'amount' }],
   ['행간 150%로', { keys: ['bodyLeading'], mode: 'amount' }],
-  ['본문 글자 두 배로 키워줘', { keys: ['bodySize'], mode: 'amount' }],
+  ['본문 글자 두 배로 키워줘', { keys: ['bodySize'], dir: 1, level: 3, mode: 'synth' }],
   ['본문 글자 크기를 한 단계 줄여줘', { keys: ['bodySize'], mode: 'amount' }],
   // 복수 대상·복합 (18~19, 46)
   ['제목이랑 부제목 둘 다 키워줘', { keys: ['h1Size', 'h2Size'], dir: 1, level: 3, mode: 'synth' }],

@@ -40,6 +40,7 @@ export function decoChanges(m) {
 // 대상 요소 — 따옴표 안/아닌, 본문 속 각주 번호, 일반 요소
 function targetsOf(m) {
   if (/(특수\s*문자|특수\s*기호|문장\s*부호)/.test(m)) return { kind: 'skip' };                       // 특수문자는 별도 처리(symbolStyle)
+  if (/(문단|단락|본문)?\s*(?:의\s*)?(시작|첫)\s*(?:글자|글씨|문자)|드롭\s*캡/.test(m)) return { kind: 'skip' };      // 첫 글자는 드롭캡 항목이 처리한다
   if (/(구분선|가로줄|각주\s*위\s*(?:에|의)?\s*(?:줄|선))/.test(m)) return { kind: 'skip' };          // 각주 구분선은 구분선 항목이 처리한다
   if (/따옴표\s*(?:가\s*)?(?:아닌|말고|이외|외의|밖|제외|빼고)|따옴표를?\s*(?:제외|빼고)|(?:따옴표|인용)[^,.\n]{0,12}?(?:제외|빼고|말고|이외|외의|아닌)/.test(m)) return { kind: 'nonquote' };
   if (/(따옴표|인용|‘|“)/.test(m) && !/(각주|주석|제목|쪽\s*번호|면주)/.test(m)) return { kind: 'quote' };
@@ -83,8 +84,23 @@ export function planStyle(msg = '', cmdMap = {}) {
   if (t.kind === 'quote' || t.kind === 'nonquote') {
     const curTok = String(cmdMap.quoteHighlight || 'off').split(/[+|,]/).filter(x => x && x !== 'off');
     const FONTS = ['sans', 'serif'];
-    let faces = curTok.filter(x => DECOS.includes(x) || FONTS.includes(x));
-    let base = curTok.find(x => !DECOS.includes(x) && !FONTS.includes(x)) || null;
+    const keepTok = x => DECOS.includes(x) || FONTS.includes(x) || /^size[\d.]+$/.test(x);
+    let faces = curTok.filter(keepTok);
+    let base = curTok.find(x => !keepTok(x)) || null;
+    // 따옴표 안 글자 크기 — "3배", "크게/작게"는 지금 배율에 곱한다(size토큰)
+    const curSz = Number((faces.find(f => /^size/.test(f)) || 'size1').slice(4)) || 1;
+    const mult = m.match(/(\d+(?:\.\d+)?|두|세|네|다섯)\s*배/);
+    const sizeAsk = t.kind === 'quote' && (mult || /(크게|키워|키우|작게|줄여|줄이|확대|축소)/.test(m)) && !hue;
+    if (sizeAsk) {
+      const shrink = /(작게|줄여|줄이|축소)/.test(m);
+      const n = mult ? (({ 두: 2, 세: 3, 네: 4, 다섯: 5 })[mult[1]] || Number(mult[1])) : [1.15, 1.3, 1.5, 1.8, 2.2][Math.max(1, Math.min(5, detectIntensity(m).level)) - 1];
+      const next = Math.max(0.5, Math.min(5, Math.round((mult ? (shrink ? curSz / n : curSz * n) : (shrink ? curSz / n : curSz * n)) * 100) / 100));
+      faces = faces.filter(f => !/^size/.test(f));
+      if (Math.abs(next - 1) > 0.01) faces.push(`size${next}`);
+      faces = [...new Set([...faces, ...add])].filter(f => !remove.includes(f));
+      const mode = [base, ...faces].filter(Boolean).join('+');
+      return { patches: { quoteHighlight: mode || 'off' }, targets: ['quote'], font: true };
+    }
     // 따옴표 안 글자만 고딕/명조 — 본문 서체는 건드리지 않는다
     const fontWord = /(고딕|산세리프|산스|sans)/i.test(m) ? 'sans' : /(명조|세리프|serif)/i.test(m) ? 'serif' : null;
     if (t.kind === 'quote' && fontWord) {

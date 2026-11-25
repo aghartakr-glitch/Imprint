@@ -26,11 +26,13 @@ export const FACE_MODES = { bold: '\\textbf{#1}', italic: '\\textit{#1}', underl
 // 모델이 'text:red|bold'처럼 | , 로 이어 내도 같은 뜻으로 읽는다. 'reset'은 색을 본문 기본색으로 되돌리는 자리 표시
 // ("따옴표 아닌 내용만 빨강"에서 따옴표는 빨강이 되지 않게 둘 때 쓴다)
 const splitMode = mode => String(mode).split(/[+|,]/).map(x => x.trim()).filter(x => x && x !== 'off');
+const SIZE_RE = /^size(\d+(?:\.\d+)?)$/;
+const isFace = x => !!FACE_MODES[x] || SIZE_RE.test(x);
 const baseOk = v => v === 'reset' || !!HL_COLORS[v] || (/^text:/.test(v) && !!TEXT_COLORS[v.slice(5)]);
 export const isHlMode = v => {
   const t = splitMode(v);
-  const faces = t.filter(x => FACE_MODES[x]), bases = t.filter(x => !FACE_MODES[x]);
-  return t.length > 0 && t.every(x => FACE_MODES[x] || baseOk(x)) && bases.length <= 1 && new Set(faces).size === faces.length;
+  const faces = t.filter(isFace), bases = t.filter(x => !isFace(x));
+  return t.length > 0 && t.every(x => isFace(x) || baseOk(x)) && bases.length <= 1 && new Set(faces).size === faces.length;
 };
 export const normalizeHlMode = mode => splitMode(mode).join('+');
 
@@ -44,15 +46,15 @@ function appendBeforeEndinput(sty, text) {
 }
 
 export function readHighlight(sty) {
-  const m = String(sty).match(/% imprintHL ([\w:+]+)/);
+  const m = String(sty).match(/% imprintHL ([\w:+.]+)/);
   return m ? m[1] : 'off';
 }
 
 // mode: 'off' | 배경색 | 'text:색' | 'reset' 에 꾸밈(bold·italic·underline·strike)을 +로 몇 개든 더한 것. { sty, tex }를 돌려준다.
 export function applyHighlight(sty, tex, rawMode) {
   const parts = splitMode(rawMode);
-  const faceToks = parts.filter(x => FACE_MODES[x]);
-  const baseTok = parts.find(x => !FACE_MODES[x]) || null;
+  const faceToks = parts.filter(isFace);
+  const baseTok = parts.find(x => !isFace(x)) || null;
   const mode = parts.length ? parts.join('+') : 'off';
   const outSty = String(sty).replace(/^.*% imprintHL.*\r?\n?/gm, '');
   let outTex = String(tex);
@@ -65,10 +67,15 @@ export function applyHighlight(sty, tex, rawMode) {
   if (baseTok === 'reset') macro = '{\\normalcolor #1}';
   else if (baseTok && /^text:/.test(baseTok) && TEXT_COLORS[baseTok.slice(5)]) macro = `\\textcolor{${TEXT_COLORS[baseTok.slice(5)].expr}}{#1}`;
   else if (baseTok && HL_COLORS[baseTok]) macro = `{\\setlength{\\fboxsep}{0.5pt}\\colorbox{${HL_COLORS[baseTok].expr}}{#1}}`;
-  for (const f of faceToks) macro = FACE_MODES[f].replace('#1', () => macro);
+  for (const f of faceToks) {
+    const sz = f.match(SIZE_RE);
+    const tpl = sz ? `{\\fontsize{\\dimexpr${sz[1]}\\dimexpr\\f@size pt\\relax\\relax}{\\f@baselineskip}\\selectfont #1}` : FACE_MODES[f];
+    macro = tpl.replace('#1', () => macro);
+  }
+  const needAt = faceToks.some(f => SIZE_RE.test(f));
   const needUlem = faceToks.some(f => f === 'underline' || f === 'strike');
   const styOut = appendBeforeEndinput(outSty,
-    `\\RequirePackage{xcolor}${needUlem ? '\\RequirePackage[normalem]{ulem}' : ''}\\providecommand{\\imprintHL}[1]{${macro}}\\renewcommand{\\imprintHL}[1]{${macro}} ${MARK} ${mode}`);
+    `\\RequirePackage{xcolor}${needUlem ? '\\RequirePackage[normalem]{ulem}' : ''}${needAt ? '\\makeatletter' : ''}\\providecommand{\\imprintHL}[1]{${macro}}\\renewcommand{\\imprintHL}[1]{${macro}}${needAt ? '\\makeatother' : ''} ${MARK} ${mode}`);
   const at = outTex.indexOf('\\begin{document}');
   const head = at < 0 ? '' : outTex.slice(0, at);
   let body = at < 0 ? outTex : outTex.slice(at);

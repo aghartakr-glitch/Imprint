@@ -4,7 +4,7 @@ import { applyElementStyle, readElementStyle, parseSpec } from './src/styElement
 import { applyHighlight, countHighlighted, isHlMode } from './src/styHighlight.js';
 import { fixLocaleLine, mapSafeLines } from './src/texSafe.js';
 
-const CM = { quoteHighlight: 'off', noteStyle: '', bodyStyle: '', h1Size: '21', h1Leading: '26', bodySize: '9.5', bodyLeading: '15' };
+const CM = { quoteHighlight: 'off', pnSize: '8.1', noteStyle: '', bodyStyle: '', h1Size: '21', h1Leading: '26', bodySize: '9.5', bodyLeading: '15' };
 const run = (msg, cm = CM) => planNaturalEdit(msg, cm, [], {}).synth?.patches || {};
 const spec = (p, k) => parseSpec(p[k]);
 const only = (p, ...keys) => Object.keys(p).length === keys.length && keys.every(k => k in p);
@@ -22,6 +22,14 @@ const CASES = [
   ['따옴표 안에 있는거 빼고 본문 빨강', p => spec(p, 'bodyStyle').color === 'red' && p.quoteHighlight === 'reset'],
   ['따옴표 안에 있는것만 고딕체로 변경', p => only(p, 'quoteHighlight') && p.quoteHighlight === 'sans'],
   ['따옴표 안 빨강 명조체', p => p.quoteHighlight === 'text:red+serif'],
+  // 2026-11-24 로그
+  ['따옴표 안에 있는 글자만 3배 키워줘', { quoteHighlight: 'text:blue+sans' }, p => p.quoteHighlight === 'text:blue+sans+size3'],
+  ['단락 첫 글자만 빨강으로', p => only(p, 'dropCap') && /:red$/.test(p.dropCap)],
+  ['단락 첫 글자만 4배 크게', p => only(p, 'dropCap') && Number(p.dropCap.split(':')[0]) >= 3],
+  ['쪽번호 4배로 키우고 빨강으로 해줘', p => Number(p.pnSize) > 30 && spec(p, 'pnStyle').color === 'red'],
+  ['제목 왕따 크게 핑크', p => Number(p.h1Size) > 40 && spec(p, 'h1Style').color === 'pink'],
+  ['제목 크기 4배', p => p.h1Size === '84'],
+  ['주석 색상 노랑 해줘', p => only(p, 'noteStyle') && spec(p, 'noteStyle').color === 'yellow'],
   ['따옴표 말고 빨간 적용', p => spec(p, 'bodyStyle').color === 'red' && /reset/.test(p.quoteHighlight)],
   ['따옴표 안에 있는거 빨강으로, 밑줄', p => p.quoteHighlight === 'text:red+underline'],
   ['따옴표 안에 빨강 굵게 밑줄', p => ['text:red', 'bold', 'underline'].every(x => p.quoteHighlight.split('+').includes(x))],

@@ -11,7 +11,7 @@ import { planRule } from './styRule.js';
 import { planNoteMarker } from './styNoteMarker.js';
 import { planLayout } from './nlLayout.js';
 import { planWeight, planAlign, planSlotPos, planFamilyAll, planCollapse, planFootnotePlace } from './nlMisc.js';
-import { planMore, planSizeRelation, planWidthFit, planLeadingRelation, planOneLine } from './nlRelation.js';
+import { planMore, planMultiple, planSizeRelation, planWidthFit, planLeadingRelation, planOneLine } from './nlRelation.js';
 import { planMargins } from './nlMargin.js';
 import { planDropCap } from './styDropCap.js';
 import { planSymbol } from './stySymbol.js';
@@ -359,13 +359,13 @@ function planSingle(msg = '', cmdMap = {}, prevKeys = []) {
   if (lay) { unsupported = []; synth = { text: patchText(lay.patches), keys: Object.keys(lay.patches), patches: { ...lay.patches }, font: true }; fontOnly = true; }
   // 전체 로그 점검에서 나온 것: 굵기·정렬·쪽번호/면주 위치·전체 서체 계열
   // 문단 첫 글자만 키우기 — 본문 전체 크기로 읽히지 않게 이 요청이면 첫 글자 배율만 낸다
-  const drop = planDropCap(msg, level);
+  const drop = planDropCap(msg, level, cmdMap);
   if (drop) { unsupported = []; synth = { text: patchText(drop.patches), keys: Object.keys(drop.patches), patches: { ...drop.patches }, font: true }; fontOnly = true; }
   // 여백 4면 — 면마다 방향을 따로 읽는다(안쪽/바깥쪽·위/아래·좌우·사방). 왼쪽/오른쪽은 되묻는다
   const marg = planMargins(msg, cmdMap);
   if (marg?.ask) { unsupported = [marg.ask]; synth = null; }
   else if (marg) { unsupported = []; synth = { text: patchText(marg.patches), keys: Object.keys(marg.patches), patches: { ...marg.patches }, font: true }; fontOnly = true; }
-  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planOneLine(msg, cmdMap), planLeadingRelation(msg, cmdMap), planCollapse(msg), planWidthFit(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg, cmdMap), planAlign(msg)]) {
+  for (const plan of marg ? [] : [planFootnotePlace(msg, cmdMap, level), planOneLine(msg, cmdMap), planLeadingRelation(msg, cmdMap), planCollapse(msg), planWidthFit(msg, cmdMap), planMultiple(msg, cmdMap), planSizeRelation(msg, cmdMap), planFamilyAll(msg, cmdMap), planSlotPos(msg, cmdMap), planWeight(msg, cmdMap), planAlign(msg)]) {
     if (!plan) continue;
     if (plan.noChange) { unsupported = [plan.noChange]; synth = null; fontOnly = false; break; }
     unsupported = [];
