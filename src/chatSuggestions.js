@@ -80,7 +80,25 @@ export const SUGGESTION_POOL = [
   [ "바깥 여백 좁혀줘", "marginOuter" ],
   [ "본문 폭을 좁혀서 한 줄 길이를 줄여줘", "margin" ],
   [ "한 줄이 너무 길어서 눈이 피곤해", "margin" ],
-  [ "단 사이 간격 좀 더 넓혀줘", "colGap" ]
+  [ "단 사이 간격 좀 더 넓혀줘", "colGap" ],
+  // 요소별 색·꾸밈·특수 요청 (docs 로그 기반 — 코드가 직접 처리하는 문장들)
+  [ "각주만 연하게 해줘", "noteStyle" ],
+  [ "각주 번호만 빨간색으로 바꿔줘", "markStyle" ],
+  [ "쪽번호만 초록색으로", "pnStyle" ],
+  [ "면주만 보라색으로 해줘", "rhStyle" ],
+  [ "제목 빨강에 밑줄 넣어줘", "h1Style" ],
+  [ "소제목 파랑 기울임으로", "h2Style" ],
+  [ "따옴표 안에 있는 글자만 파랑색으로", "quoteHighlight" ],
+  [ "따옴표 안 글자만 고딕으로 바꿔줘", "quoteFont" ],
+  [ "따옴표 안 내용 빨강 굵게 밑줄", "quoteDeco" ],
+  [ "따옴표 아닌 본문만 빨간색으로", "bodyStyle" ],
+  [ "문단 첫 글자만 겁나 크게", "dropCap" ],
+  [ "단락 첫 글자만 빨강으로", "dropCapColor" ],
+  [ "특수문자만 색 바꿔줘 빨강으로", "symbolStyle" ],
+  [ "쪽번호 4배로 키워줘", "pnSizeMul" ],
+  [ "제목 크기 두 배로", "h1SizeMul" ],
+  [ "각주 줄간격을 본문이랑 똑같이", "noteLeadingSame" ],
+  [ "각주 덩어리를 조금 위로 올려줘", "footnoteShift" ]
 ];
 
 // 기대 키 → 현재 문서에 그 요소가 실제로 있는지. 없는 요소를 건드리는 문장은 추천하지 않는다
@@ -101,6 +119,13 @@ const GATES = {
   footnoteFontFamily: m => m.noteSize !== undefined,
   footinsSkip: m => m.noteSize !== undefined,
   colGap: m => m.colGap !== undefined,
+  noteStyle: m => m.noteSize !== undefined,
+  markStyle: m => m.noteSize !== undefined,
+  pnStyle: m => m.pnSize !== undefined,
+  rhStyle: m => m.rhSize !== undefined,
+  pnSizeMul: m => m.pnSize !== undefined,
+  noteLeadingSame: m => m.noteSize !== undefined,
+  footnoteShift: m => m.noteSize !== undefined,
 };
 
 // cmdMap: extractLatexCommandMap 결과. sentHistory: 지금까지 사용자가 보낸 문장들.
