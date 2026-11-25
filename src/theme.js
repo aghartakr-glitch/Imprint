@@ -3,23 +3,23 @@
 // 색/폰트 등을 바꿀 땐 이 파일을 고친 뒤, 다른 두 앱의 theme.js에도 같은 내용을 반영하세요.
 
 export const T = {
-  bg:      "#EAF0EB",
+  bg:      "#EDEDEB",
   surface: "#FFFFFF",
-  border:  "#DCE5DF",
-  muted:   "#5E6F65",
-  ink:     "#10261C",
-  accent:  "#0B3B2C",
-  deep:    "#0B3B2C",
-  lime:    "#CDEE7A",
+  border:  "#E4E4E1",
+  muted:   "#85857F",
+  ink:     "#111111",
+  accent:  "#111111",
+  deep:    "#111111",
+  lime:    "#14C98B",
   glass:   "rgba(255,255,255,0.07)",
   glassLine: "rgba(255,255,255,0.14)",
-  soft:    "#8FB3A1",
+  soft:    "#9A9A95",
   error:   "#C0392B",
   warning: "#B45309",
-  code:    "#F1F5F2",
-  tagBg:   "#E2EBE5",
+  code:    "#F6F6F4",
+  tagBg:   "#F0F0EE",
   mono:    "'JetBrains Mono','Fira Code',monospace",
-  sans:    "'Spoqa Han Sans Neo',system-ui,-apple-system,sans-serif",
+  sans:    "'Pretendard Variable','Pretendard',system-ui,-apple-system,sans-serif",
 };
 
 // 타이포 스케일 — 위계용 5단계 (라벨 → 본문 → 소제목 → 제목 → 헤드라인)
@@ -32,16 +32,16 @@ export const GLOBAL_CSS = `
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
   * { box-sizing: border-box; }
   ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:#C3D1C8; border-radius:2px; }
+  ::-webkit-scrollbar-thumb { background:#D0D0CC; border-radius:2px; }
   textarea, input, select { outline:none; resize:none; font-family:inherit; }
   textarea:focus-visible, input:focus-visible, select:focus-visible {
-    outline: 2px solid #14573F; outline-offset: 1px;
+    outline: 2px solid #111111; outline-offset: 1px;
   }
   button { font-family:inherit; border-radius:0; transition: opacity 120ms; }
   button:not(:disabled):hover { opacity: 0.75; }
   button:not(:disabled):active { opacity: 0.6; }
   button:focus-visible {
-    outline: 2px solid #14573F; outline-offset: 1px;
+    outline: 2px solid #111111; outline-offset: 1px;
   }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
@@ -58,11 +58,11 @@ export const GLOBAL_CSS = `
   .cta:not(:disabled):hover .arw { transform: translateX(3px) scale(1.06); }
   .arw { transition: transform .25s; }
   textarea, input, select { transition: border-color .2s, box-shadow .2s; }
-  textarea:focus, input:focus { box-shadow: 0 0 0 4px rgba(20,87,63,.12); }
+  textarea:focus, input:focus { box-shadow: 0 0 0 4px rgba(23,22,20,.10); }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
   ::placeholder { color: #5E6F65; opacity: 0.7; }
 `;
 
-// index.html <head>에 넣을 폰트 링크(Spoqa Han Sans Neo, jsDelivr):
+// index.html <head>에 넣을 폰트 링크(Pretendard, jsDelivr):
 // <link rel="preconnect" href="https://fonts.googleapis.com" />
 // <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

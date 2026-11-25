@@ -1,5 +1,6 @@
-﻿import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect, useMemo } from "react";
 import { T, FS, GLOBAL_CSS } from "./theme.js";
+import { pickSuggestions } from "./chatSuggestions.js";
 import { buildKnobHintSuffix, planNaturalEdit } from "./nlKnobAliases.js";
 import { scalePatches, LEVEL_NAMES } from "./nlIntensity.js";
 import { applyTracking, readTracking } from "./styTracking.js";
@@ -8170,10 +8171,22 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
   const matchText = (fields["본문"] || [fields["제목"], fields["소제목"]].filter(Boolean).join(" ")).trim();
   const isDone = !!latex;
   const isRunning = matching || loading;
+  // 채팅 추천 문장 3개 — 생성이 끝날 때, 그리고 대화가 한 턴 오갈 때마다 새로 뽑는다.
+  // API 호출 없이 검증된 문장 풀에서 현재 문서에 있는 요소만 골라 보여준다.
+  const prevSuggestionsRef = useRef([]);
+  const chatSuggestions = useMemo(() => {
+    if (!isDone) return [];
+    const cmdMap = { ...extractLatexCommandMap(latex), ...(styCode ? extractLatexCommandMap(styCode) : {}) };
+    const sent = refineHistory.filter(m => m.role === 'user').map(m => m.content);
+    const picked = pickSuggestions(cmdMap, sent, prevSuggestionsRef.current);
+    prevSuggestionsRef.current = picked;
+    return picked;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDone, refineHistory.length, styleVersion, currentRunId]);
   const [showLogs, setShowLogs] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('imprint_api_key') || '');
   const [showApiInput, setShowApiInput] = useState(false);
-  const [lang, setLang] = useState('ko');
+  const [lang, setLang] = useState('en');
   const L = (ko, en) => lang === 'ko' ? ko : en;
 
   function saveApiKey(key) {
@@ -8213,26 +8226,32 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
   return (
     <div style={{ height:"100vh", position:"relative",
-      background:"radial-gradient(900px 520px at 80% -12%,rgba(110,200,150,.32),transparent 62%),radial-gradient(760px 520px at -4% 104%,rgba(24,100,72,.75),transparent 62%),#05231B",
+      background:T.bg,
       fontFamily:T.sans, color:T.ink, display:"flex", flexDirection:"column", overflow:"hidden" }}>
       <style>{GLOBAL_CSS}</style>
 
       {/* ══ 헤더 ══════════════════════════════════════════════════════ */}
-      <header className="rv" style={{ height:76, display:"flex", alignItems:"center", gap:16, padding:"0 32px", color:"#fff",
+      <header className="rv" style={{ position:"relative", height:60, display:"flex", alignItems:"center", gap:16, padding:"0 24px", color:T.ink,
         background:"transparent", flexShrink:0, zIndex:100 }}>
-        <span style={{ width:32, height:32, borderRadius:10, background:T.lime, color:T.deep, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:700 }}>I</span>
+        <span style={{ width:30, height:30, borderRadius:9, background:T.ink, color:"#fff", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:700 }}>I</span>
         <span style={{ fontSize:22, fontWeight:700, letterSpacing:"-0.04em", lineHeight:1 }}>Imprint</span>
-        <span style={{ fontSize:11, color:T.soft, letterSpacing:"0.02em" }}>v{IMPRINT_VERSION}</span>
+        <span style={{ fontSize:11, color:T.muted, letterSpacing:"0.02em" }}>v{IMPRINT_VERSION}</span>
+        <div style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)", display:"flex", gap:2, padding:4, borderRadius:999, background:T.ink }}>
+          {[L("입력","Input"), L("분석","Analyze"), L("출력","Export")].map((label, i) => {
+            const cur = isDone ? 2 : isRunning ? 1 : 0;
+            return <span key={i} style={{ padding:"7px 20px", borderRadius:999, fontSize:12, fontWeight:500,
+              background: i === cur ? "#fff" : "transparent", color: i === cur ? T.ink : "#A3A39E", transition:"background .3s, color .3s" }}>{label}</span>;
+          })}
+        </div>
         <div style={{ flex:1 }} />
-        <span style={{ fontSize:12, color:T.soft, letterSpacing:"0.02em" }}>{L(`${DB.length}개 스타일 패키지`, `${DB.length} style packages`)}</span>
 
         {/* 언어 토글 */}
-        <div style={{ display:"flex", padding:3, gap:2, border:`1px solid ${T.glassLine}`, background:"rgba(255,255,255,0.08)", borderRadius:999, overflow:"hidden" }}>
-          {['ko','en'].map(code => (
+        <div style={{ display:"flex", padding:3, gap:2, border:`1px solid ${T.border}`, background:T.surface, borderRadius:999, overflow:"hidden" }}>
+          {['en','ko'].map(code => (
             <button key={code} onClick={() => setLang(code)}
-              style={{ padding:"4px 10px", fontSize:11, fontWeight:600, border:"none",
-                background: lang === code ? "#fff" : "transparent",
-                color: lang === code ? T.deep : "#B7CFC2", cursor:"pointer", borderRadius:999 }}>
+              style={{ height:24, padding:"0 12px", fontSize:11, fontWeight:500, border:"none",
+                background: lang === code ? T.ink : "transparent",
+                color: lang === code ? "#fff" : T.muted, cursor:"pointer", borderRadius:999 }}>
               {code === 'ko' ? 'KOR' : 'ENG'}
             </button>
           ))}
@@ -8261,63 +8280,80 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           ) : (
             <button className="glass-btn" onClick={() => setShowApiInput(true)}
               style={{ height:36, padding:"0 16px", fontSize:12, fontWeight:500,
-                border:"1px solid rgba(255,255,255,0.22)", borderRadius:999,
-                background:"transparent", color:"#fff",
+                border:`1px solid ${T.border}`, borderRadius:999,
+                background:T.surface, color:T.ink,
                 cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ width:7, height:7, borderRadius:"50%",
-                background: apiKey ? T.lime : "#6F8F7F", display:"inline-block" }} />
+                background: apiKey ? T.lime : "#C9C9C4", display:"inline-block" }} />
               {apiKey ? L("API 연결됨", "API Connected") : L("API 키 입력", "Enter API Key")}
             </button>
           )}
         </div>
       </header>
 
+      {isDone && (<div className="rv" style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:24, padding:"14px 32px 22px", flexShrink:0, color:T.ink }}>
+        <div style={{ minWidth:0 }}>
+          {isDone && <div style={{ fontSize:32, fontWeight:500, letterSpacing:"-0.045em", lineHeight:1.1 }}>{pkg?.t}</div>}
+        </div>
+        <div style={{ display:"flex", gap:40, flexShrink:0 }}>
+          {[
+            [L("판형","Format"), isDone && pkg?.f ? `${pkg.f.w}×${pkg.f.h}` : "—"],
+            [L("본문","Body"), isDone && pkg?.b ? `${pkg.b.크기}pt` : "—"],
+            [L("행간","Leading"), isDone && pkg?.b ? `${pkg.b.행간}pt` : "—"],
+            [L("단","Columns"), isDone && pkg?.c?.구성 ? String(pkg.c.구성).trim().slice(0, 8) : "—"],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <div style={{ fontSize:11, color:T.muted }}>{k}</div>
+              <div style={{ fontSize:30, fontWeight:300, letterSpacing:"-0.04em", lineHeight:1.15, marginTop:2, whiteSpace:"nowrap" }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      </div>)}
+
       {/* ══ 3칼럼 본문 ════════════════════════════════════════════════ */}
       <div style={{ flex:1, display:"grid", gridTemplateColumns: leftOpen ? "clamp(260px,25vw,380px) 1fr clamp(220px,22vw,320px)" : "44px 1fr clamp(220px,22vw,320px)",
-        gap:16, padding:"0 16px 16px", background:"transparent", overflow:"hidden", minHeight:0, minWidth:0 }}>
+        gap:16, padding:"4px 16px 16px", background:"transparent", overflow:"hidden", minHeight:0, minWidth:0 }}>
 
         {/* ── 좌: 접힌 상태의 얇은 막대 — 눌러서 다시 펼친다 ───────────── */}
         {!leftOpen && (
-          <div style={{ borderRadius:28, border:"none", background:T.surface, boxShadow:"0 30px 60px rgba(2,20,15,.35)",
+          <div style={{ borderRadius:16, border:"none", background:T.surface, boxShadow:"0 0 0 1px rgba(0,0,0,.05)",
             display:"flex", flexDirection:"column", alignItems:"center", gap:10, padding:"12px 0" }}>
             <button onClick={toggleLeft} title={L("입력 패널 펼치기","Open input panel")}
               style={{ border:"none", background:"transparent", cursor:"pointer", color:T.ink, display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:16, lineHeight:1 }}>▶</span>
-              <span style={{ writingMode:"vertical-rl", fontSize:12, letterSpacing:"0.12em" }}>{L("입력 패널 펼치기","Open input")}</span>
+              <span style={{ display:"flex" }}><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 3l4 4-4 4"/></svg></span>
             </button>
             {/* 접어도 생성은 할 수 있게 — 패널 안의 생성 버튼과 같은 동작(클릭해야만 실행, API 키·입력 텍스트가 있어야 활성) */}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
-              title={!apiKey ? L("API 키 필요","Enter API key first") : !matchText ? L("본문 필요","Enter text first") : L("스타일 생성","Generate Typeset Style")}
-              style={{ marginTop:"auto", width:32, padding:"10px 0", fontSize:12, fontWeight:700, border:"none", borderRadius:10,
+              title={!apiKey ? L("API 키 필요","Enter API key first") : !matchText ? L("본문 필요","Enter text first") : L("실행","Run")}
+              style={{ marginTop:"auto", width:32, height:32, padding:0, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, fontSize:14, fontWeight:500, border:"none", borderRadius:10,
                 background: (isRunning || !matchText || !apiKey) ? T.border : T.accent,
                 color: (isRunning || !matchText || !apiKey) ? T.muted : "#fff",
-                cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer", writingMode:"vertical-rl", letterSpacing:"0.1em" }}>
-              {isRunning ? L("생성 중…","Running…") : L("생성","Generate")}
+                cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer" }}>
+              {isRunning ? "…" : "→"}
             </button>
           </div>
         )}
         {/* ── 좌: 텍스트 입력 ──────────────────────────────────────── */}
-        <div style={{ display: leftOpen ? "flex" : "none", borderRadius:28, boxShadow:"0 30px 60px rgba(2,20,15,.35)",
+        <div style={{ display: leftOpen ? "flex" : "none", borderRadius:16, boxShadow:"0 0 0 1px rgba(0,0,0,.05)",
           border:"none",
           flexDirection:"column", background:T.surface,  overflow:"hidden" }}>
 
           {/* 입력 탭 */}
-          <div style={{ display:"flex", borderBottom:`1px solid ${T.border}`, padding:"0 20px", flexShrink:0 }}>
-            {[["text",L("텍스트 입력","Text Input")],["experiment",L("실험","Experiment")]].map(([k,label]) => (
+          <div style={{ display:"flex", alignItems:"center", height:52, borderBottom:`1px solid ${T.border}`, padding:"0 20px", flexShrink:0 }}>
+            {[["text",L("텍스트 입력","Text Input")]].map(([k,label]) => (
               <button key={k} onClick={() => setInputTab(k)}
-                style={{ padding:"12px 16px", fontSize:12,
-                  fontWeight: inputTab === k ? 700 : 400,
-                  border:"none", borderBottom: inputTab === k
-                    ? `2px solid ${T.ink}` : "2px solid transparent",
+                style={{ padding:0, fontSize:13,
+                  fontWeight: 500,
+                  border:"none",
                   background:"transparent", color: inputTab === k ? T.ink : T.muted,
                   cursor:"pointer", marginBottom:-1 }}>
                 {label}
               </button>
             ))}
             <button onClick={toggleLeft} title={L("입력 패널 접기","Collapse input panel")}
-              style={{ marginLeft:"auto", alignSelf:"center", fontSize:12, padding:"4px 10px", borderRadius:999, cursor:"pointer",
+              style={{ marginLeft:"auto", alignSelf:"center", width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", padding:0, borderRadius:8, cursor:"pointer",
                 border:`1px solid ${T.border}`, background:"transparent", color:T.muted }}>
-              {L("◀ 접기","◀ Hide")}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 3L4.5 7l4 4"/></svg>
             </button>
           </div>
 
@@ -8348,12 +8384,12 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                 ))}
                 {/* 면주 */}
                 <div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:8 }}>
-                    <label style={{ fontSize:10, fontWeight:500, letterSpacing:"0.02em", color:T.muted }}>{L("면주","Running Head")}</label>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", minHeight:30, marginBottom:4 }}>
+                    <label style={{ display:"flex", gap:8, fontSize:11, fontWeight:500, color:T.muted }}><span style={{ color:T.ink }}>05</span>{L("면주","Running head")}</label>
                     {/* 위치 드롭다운 */}
                     <select value={styleConfig.rhPos || '자동'}
                       onChange={e => setStyleConfig(s => ({ ...s, rhPos: e.target.value }))}
-                      style={{ padding:"4px 0", fontSize:12,
+                      style={{ height:30, padding:"0 10px", fontSize:12,
                         border:`1px solid ${T.border}`, borderRadius:10,
                         background:T.bg, color:T.ink, cursor:"pointer" }}>
                       <option value="자동">{L("자동","Auto (from DB)")}</option>
@@ -8376,7 +8412,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         return (
                           <button key={val}
                             onClick={() => setStyleConfig(s => ({ ...s, rhVertPos: val }))}
-                            style={{ padding:"4px 8px", fontSize:12, fontWeight: active?600:400,
+                            style={{ height:30, padding:"0 12px", fontSize:12, fontWeight:500,
                               border:`1px solid ${active ? T.ink : T.border}`,
                               borderRadius:10, background: active ? T.accent : "transparent",
                               color: active ? "#fff" : T.ink, cursor:"pointer" }}>
@@ -8398,9 +8434,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   />
                 </div>
                 {/* ── 스타일 설정 ── */}
-                <div>
+                <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:20, marginTop:4 }}>
                   {/* 스타일 선택 모드 */}
-                  <label style={{ display:"block", fontSize:10, fontWeight:500, letterSpacing:"0.02em",
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
                     color:T.muted, marginBottom:8 }}>
                     {L("스타일 선택 모드","Style Selection Mode")}
                   </label>
@@ -8408,7 +8444,6 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     {[
                       ['auto',         L('자동 추천','Auto Recommend')],
                       ['genre-forced', L('장르 강제','Force Genre')],
-                      ['ref-locked',   L('레퍼런스 고정','Lock Reference')],
                     ].map(([mode, label]) => {
                       const active = selectionMode === mode;
                       return (
@@ -8418,7 +8453,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                           if (mode === 'genre-forced') { setLockedStyleId(null); }
                           if (mode === 'ref-locked') { setHint(''); }
                         }} style={{
-                          flex:1, padding:"4px 8px", fontSize:12, fontWeight: active ? 600 : 400,
+                          flex:1, height:30, padding:"0 12px", fontSize:12, fontWeight:500,
                           border:`1px solid ${active ? T.ink : T.border}`,
                           borderRadius:10,
                           background: active ? T.accent : 'transparent',
@@ -8470,7 +8505,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   )}
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:10, fontWeight:500, letterSpacing:"0.02em",
+                  <label style={{ display:"block", fontSize:11, fontWeight:500,
                     color:T.muted, marginBottom:8 }}>
                     {L("단 구성","Column Layout")}
                   </label>
@@ -8481,7 +8516,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                       return (
                         <button key={val}
                           onClick={() => setStyleConfig(s => ({ ...s, columnMode: val }))}
-                          style={{ padding:"4px 12px", fontSize:12, fontWeight: active?600:400,
+                          style={{ flex:1, height:30, padding:"0 12px", fontSize:12, fontWeight:500,
                             border:`1px solid ${active ? T.ink : T.border}`,
                             borderRadius:10, background: active ? T.accent : "transparent",
                             color: active ? "#fff" : T.ink, cursor:"pointer" }}>
@@ -8498,7 +8533,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         return (
                           <button key={n}
                             onClick={() => setStyleConfig(s => ({ ...s, fixedColumns: n }))}
-                            style={{ padding:"4px 12px", fontSize:12, fontWeight: active?600:400,
+                            style={{ height:30, padding:"0 12px", fontSize:12, fontWeight:500,
                               border:`1px solid ${active ? T.ink : T.border}`,
                               borderRadius:10, background: active ? T.accent : "transparent",
                               color: active ? "#fff" : T.ink, cursor:"pointer", minWidth:32 }}>
@@ -8521,7 +8556,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     const canIndent = !isSide && vgTotal > vgBody;
 
                     // ── 공유 스타일 ──────────────────────────────────
-                    const ni = { width:46, padding:"4px 8px", fontSize:12,
+                    const ni = { width:46, height:30, padding:"0 12px", fontSize:12,
                       border:`1px solid ${T.border}`, borderRadius:10,
                       background:T.bg, color:T.ink, textAlign:"center" };
                     // 각 행: 레이블(왼) + 컨트롤(오)
@@ -8530,11 +8565,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     const rowLbl = { fontSize:12, fontWeight:500, color:T.muted,
                       width:46, flexShrink:0, paddingTop:17, lineHeight:1.4 };
                     // 입력 필드 위의 작은 레이블
-                    const fieldLbl = { fontSize:10, color:T.muted, marginBottom:4, display:'block' };
+                    const fieldLbl = { fontSize:11, color:T.muted, marginBottom:4, display:'block' };
                     const fld = { display:"flex", flexDirection:"column" };
                     // 위치/옵션 버튼 공통
                     const posBtn = (active) => ({
-                      padding:"4px 12px", fontSize:12, fontWeight: active ? 600 : 400,
+                      height:30, padding:"0 12px", fontSize:12, fontWeight:500,
                       border:`1px solid ${active ? T.ink : T.border}`,
                       borderRadius:10, background: active ? T.accent : "transparent",
                       color: active ? "#fff" : T.ink, cursor:"pointer"
@@ -8749,7 +8784,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     <div style={{ fontSize:13, color:T.muted, lineHeight:1.75 }}>
                       {L("생성 전","Not generated yet.")}<br/>
                       <strong style={{ color:T.ink }}>{L("텍스트 입력 탭","Text Input tab")}</strong>{L("에서 본문 입력 후"," — enter body text,")}<br/>
-                      <strong style={{ color:T.ink }}>{L("스타일 생성","Generate Typeset Style")}</strong>{L("를 실행"," and click it.")}
+                      <strong style={{ color:T.ink }}>{L("실행","Run")}</strong>{L("를 실행"," and click it.")}
                     </div>
                     <div style={{ marginTop:20, opacity:0.4, pointerEvents:'none', display:'flex', flexDirection:'column', gap:12 }}>
                       <div style={{ padding:"12px 12px", background:T.bg, border:`1px solid ${T.border}`,
@@ -8826,7 +8861,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         {feedbackCurrentVar !== '__custom__' && (
                           <div style={{ display:'flex', gap:8, fontSize:12 }}>
                             <div style={{ flex:1 }}>
-                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
+                              <label style={{ display:'block', fontSize:11, color:T.muted, marginBottom:4 }}>
                                 {L("시스템이 적용한 값 (예: +8%, 3단)","System-applied value (e.g. +8%, 3col)")}
                               </label>
                               <input type="text" value={feedbackCurrentSystemPct}
@@ -8837,7 +8872,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                               />
                             </div>
                             <div style={{ flex:1 }}>
-                              <label style={{ display:'block', fontSize:10, color:T.muted, marginBottom:4 }}>
+                              <label style={{ display:'block', fontSize:11, color:T.muted, marginBottom:4 }}>
                                 {L("원하는 값 (예: +15%, 2단)","Desired value (e.g. +15%, 2col)")}
                               </label>
                               <input type="text" value={feedbackCurrentUserPct}
@@ -9174,28 +9209,27 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           )}
 
           {/* 실행 버튼 */}
-          <div style={{ padding:"12px 16px 16px", flexShrink:0 }}>
+          <div style={{ padding:"16px 20px 20px", flexShrink:0, borderTop:`1px solid ${T.border}` }}>
             {!apiKey && (
               <div style={{ fontSize:11, color:T.muted, padding:"0 4px 10px",
                 lineHeight:1.6 }}>
-                {L("상단 ","Complete the ")}<strong style={{ color:T.ink }}>{L("API 키 입력","Enter API Key")}</strong>{L("이 필요합니다.", " field in the top right first.")}<br/>
-                <span style={{ fontSize:12 }}>{L("console.anthropic.com에서 발급","Get a key at console.anthropic.com (sign in with your claude.ai account)")}</span>
+                {L("상단 ","Complete the ")}<strong style={{ color:T.ink }}>{L("API 키 입력","Enter API Key")}</strong>{L("이 필요합니다.", " field in the top right first.")}
               </div>
             )}
             <button onClick={run} disabled={isRunning || !matchText || !apiKey}
-              className="cta" style={{ width:"100%", height:58, padding:"0 9px 0 28px", fontSize:15, fontWeight:700, letterSpacing:"-0.01em",
-                border:"none", borderRadius:999,
+              className="cta" style={{ width:"100%", height:44, padding:"0 16px", fontSize:14, fontWeight:500,
+                border:"none", borderRadius:10,
                 background: (isRunning || !matchText || !apiKey) ? T.tagBg : T.deep,
                 color: (isRunning || !matchText || !apiKey) ? T.muted : "#fff",
                 cursor: (isRunning || !matchText || !apiKey) ? "not-allowed" : "pointer",
-                display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+                display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
               {isRunning ? (
                 <>
                   <div style={{ width:14, height:14, border:"2px solid rgba(255,255,255,0.3)",
                     borderTopColor:"#fff", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
                   {L("생성 중","Analyzing & generating style…")}
                 </>
-              ) : <>{L("스타일 생성","Generate Typeset Style")}<span className="arw" style={{ width:40, height:40, borderRadius:"50%", background: (!matchText || !apiKey) ? "#fff" : T.lime, color:T.deep, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:700 }}>→</span></>}
+              ) : <>{L("실행","Run")}</>}
             </button>
             {err && (
               <div style={{ marginTop:8, fontSize:12, color:"#111111", padding:"8px 12px",
@@ -9208,9 +9242,9 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
 
         {/* ── 중앙: 결과 패널 ─────────────────────────────────────── */}
         <div className="rv" style={{ display:"flex", flexDirection:"column", overflow:"hidden", animationDelay:".16s",
-          background: (!isDone && !isRunning) ? "radial-gradient(70% 55% at 50% 92%,rgba(205,238,122,.34),transparent 70%),linear-gradient(165deg,#0F5039 0%,#0A3A2B 48%,#072A20 100%)" : T.surface,
+          background: T.surface,
           border:"none",
-          borderRadius:28, boxShadow:"0 30px 60px rgba(2,20,15,.35)" }}>
+          borderRadius:16, boxShadow:"0 0 0 1px rgba(0,0,0,.05)" }}>
 
           {/* 피드백 반영 완료 토스트 */}
           {patchToast && (
@@ -9250,66 +9284,20 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           )}
 
           {!isDone && !isRunning ? (
-            /* ── 빈 상태: 히어로 ── */
-            <div style={{ flex:1, position:"relative", overflow:"hidden", color:"#fff", minHeight:0 }}>
-              <div style={{ position:"absolute", left:44, top:44, right:44, zIndex:2 }}>
-                <span style={{ display:"inline-flex", alignItems:"center", gap:8, height:30, padding:"0 14px", borderRadius:999,
-                  background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.18)", fontSize:12, color:"#DDEBE3" }}>
-                  <span style={{ width:6, height:6, borderRadius:"50%", background:T.lime, animation:"pulse 2.4s ease-in-out infinite" }} />
-                  {L(`${DB.length}개 편집 디자인 레퍼런스`, `${DB.length} editorial references`)}
-                </span>
-                <h1 style={{ margin:"22px 0 0", fontSize:52, lineHeight:1.12, fontWeight:700, letterSpacing:"-0.05em", wordBreak:"keep-all" }}>
-                  {L(<>본문에 맞는<br/>조판 스타일</>, <>Typesetting<br/>that fits the text</>)}
-                </h1>
-                <p style={{ margin:"16px 0 0", maxWidth:340, fontSize:14, lineHeight:1.7, color:"#A9C4B6" }}>
-                  {L("본문과 가까운 레퍼런스를 골라 판형, 여백, 서체, 단 구성을 정하고 XeLaTeX 파일로 출력합니다.", "Pick the closest reference, set format, margins, type and columns, and export an XeLaTeX file.")}
-                </p>
+            /* ── 빈 상태: 빈 판형 ── */
+            <div style={{ flex:1, minHeight:0, display:"flex", flexDirection:"column", color:T.ink }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", height:52, padding:"0 20px", borderBottom:`1px solid ${T.border}`, fontSize:13 }}>
+                <span style={{ fontWeight:500 }}>{L("판형 미리보기","Page preview")}</span>
+                <span style={{ fontSize:11, color:T.muted }}>{L("생성 전","Before generation")}</span>
               </div>
-
-              <div style={{ position:"absolute", right:44, top:54, maxWidth:200, textAlign:"right", fontSize:11, lineHeight:1.5, color:"#8FB3A1", zIndex:2 }}>{L("레퍼런스 예시", "Reference sample")}<br/>{pkg?.t}</div>
-
-              {/* 3D 지면 스택 */}
-              <div style={{ position:"absolute", left:0, right:0, bottom:0, height:"68%", perspective:1500, pointerEvents:"none" }}>
-                <div style={{ position:"absolute", left:"50%", top:"50%", width:560, height:560, margin:"-250px 0 0 -280px",
-                  background:"radial-gradient(circle, rgba(205,238,122,.28), transparent 66%)" }} />
-                <div className="stack" style={{ position:"absolute", left:"50%", top:"44%", width:250, height:354, marginLeft:-125,
-                  transformStyle:"preserve-3d", transform:"rotateX(58deg) rotateZ(-32deg)" }}>
-                  <div style={{ position:"absolute", inset:0, background:T.lime, borderRadius:6, transform:"translateZ(0)", boxShadow:"0 40px 70px rgba(0,0,0,.45)" }} />
-                  <div style={{ position:"absolute", inset:0, background:"#7FB89A", borderRadius:6, transform:"translateZ(44px)" }} />
-                  <div style={{ position:"absolute", inset:0, background:"#E4F1E9", borderRadius:6, transform:"translateZ(88px)" }} />
-                  <div style={{ position:"absolute", inset:0, background:"#fff", borderRadius:6, transform:"translateZ(132px)", padding:"26px 24px", boxSizing:"border-box", color:T.ink }}>
-                    <div style={{ fontSize:15, fontWeight:700, letterSpacing:"-0.04em" }}>{fields["제목"] || L("제목", "Title")}</div>
-                    <div style={{ marginTop:3, fontSize:7, color:T.muted }}>{fields["소제목"]}</div>
-                    <div style={{ marginTop:14, fontSize:7.5, lineHeight:"12.5px", color:"#2B3A33", textAlign:"justify", wordBreak:"keep-all", overflow:"hidden", maxHeight:250 }}>
-                      {(fields["본문"] || "").slice(0, 420)}
-                    </div>
-                  </div>
+              <div style={{ flex:1, minHeight:0, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px 0 28px" }}>
+                <div style={{ height:"100%", maxHeight:560, aspectRatio:"150 / 210", position:"relative", background:"#fff", boxShadow:"0 0 0 1px "+T.border+", 0 14px 36px rgba(0,0,0,.06)" }}>
+                  <div style={{ position:"absolute", inset:"11% 12%", border:"1px dashed "+T.lime, opacity:.7 }} />
+                  <div style={{ position:"absolute", left:"12%", top:"11%", width:"34%", height:6, background:T.ink, opacity:.85 }} />
+                  {Array.from({ length: 16 }).map((_, i) => (
+                    <div key={i} style={{ position:"absolute", left:"12%", right: i % 6 === 5 ? "42%" : "12%", top:`${24 + i * 3.7}%`, height:3, background:T.border }} />
+                  ))}
                 </div>
-              </div>
-
-              {/* 떠 있는 스타일 값 카드 — 마지막으로 선택된 레퍼런스의 실제 값 */}
-              {[
-                { k:L("판형","Format"), v: pkg?.f ? `${pkg.f.w} × ${pkg.f.h} mm` : "—", pos:{ left:36, top:"40%" }, d:0 },
-                { k:L("본문","Body"), v: pkg?.b ? `${pkg.b.크기}pt / ${L("행간","leading")} ${pkg.b.행간}pt` : "—", pos:{ right:36, top:"36%" }, d:-2.2 },
-                { k:L("서체","Type"), v: (pkg?.ty?.이름 || "—").split("/")[0].trim(), pos:{ left:56, top:"62%" }, d:-4.1 },
-                { k:L("단 구성","Columns"), v: pkg?.c?.구성 ? String(pkg.c.구성).trim().slice(0, 14) : "—", pos:{ right:52, top:"66%" }, d:-5.6 },
-              ].map((c, i) => (
-                <div key={i} className="chip" style={{ position:"absolute", ...c.pos, animationDelay:`${c.d}s`, padding:"11px 16px", borderRadius:18,
-                  background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)", color:"#fff", zIndex:2 }}>
-                  <div style={{ fontSize:11, color:"#A9C4B6" }}>{c.k}</div>
-                  <div style={{ marginTop:2, fontSize:15, fontWeight:500, whiteSpace:"nowrap" }}>{c.v}</div>
-                </div>
-              ))}
-
-              <div style={{ position:"absolute", left:44, right:44, bottom:32, display:"flex", gap:8, alignItems:"center", zIndex:2 }}>
-                {[L("장르·형태 분석","Analyze genre"), L("레퍼런스 매칭","Match reference"), L("XeLaTeX 출력","Export XeLaTeX")].map((label, i) => (
-                  <span key={i} style={{ display:"flex", alignItems:"center", gap:10, height:38, padding:"0 16px 0 5px", borderRadius:999, whiteSpace:"nowrap",
-                    background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.16)", fontSize:12 }}>
-                    <span style={{ width:28, height:28, borderRadius:"50%", background:T.lime, color:T.deep, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700 }}>{String(i + 1).padStart(2, "0")}</span>
-                    {label}
-                  </span>
-                ))}
-                
               </div>
             </div>
           ) : isDone && (
@@ -9362,7 +9350,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                     ["소제목", pkg.subheading !== '-' ? pkg.subheading : null],
                     ["자간", (() => { const v = String(pkg.b.자간); return v && v !== '0' ? v : null; })()],
                   ].filter(([,v]) => v).map(([label, value]) => (
-                    <div key={label} style={{ display:"flex", flexDirection:"column", gap:3, padding:"10px 14px", background:"#F3F7F4", borderRadius:14, minWidth:0 }}>
+                    <div key={label} style={{ display:"flex", flexDirection:"column", gap:3, padding:"10px 14px", background:T.bg, borderRadius:10, minWidth:0 }}>
                       <span style={{ fontSize:11, fontWeight:400, color:T.muted }}>{label}</span>
                       <span style={{ fontSize:13, fontWeight:500, color:T.ink, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</span>
                     </div>
@@ -9371,7 +9359,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
               </div>
 
               {/* ── 출력 탭 ── */}
-              <div style={{ display:"flex", gap:2, margin:"12px 28px 14px", padding:3, background:"#EEF3EF", borderRadius:999,
+              <div style={{ display:"flex", gap:2, margin:"12px 28px 14px", padding:3, background:T.bg, borderRadius:999,
                 alignSelf:"flex-start", flexShrink:0 }}>
                 {[
                   ["pdf",L("PDF 미리보기","PDF Preview")],
@@ -9985,24 +9973,35 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
         </div>
 
         {/* ── 우: 채팅 (스타일 조정) ──────────────────────────────── */}
-        <div className="rv" style={{ borderRadius:28, boxShadow:"none", animationDelay:".24s",
-          border:`1px solid ${T.glassLine}`,
-          display:"flex", flexDirection:"column", background:T.glass, backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", overflow:"hidden", color:"#fff" }}>
+        <div className="rv" style={{ borderRadius:16, boxShadow:"none", animationDelay:".24s",
+          border:"none",
+          display:"flex", flexDirection:"column", background:T.surface, overflow:"hidden", color:T.ink }}>
 
-          <div style={{ padding:"16px 16px", borderBottom:`1px solid ${"rgba(255,255,255,0.16)"}`, flexShrink:0 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#FFFFFF" }}>{L("스타일 조정","Style Adjustments")}</div>
-            <div style={{ fontSize:12, color:T.soft, marginTop:4 }}>
-              {L("결과를 문장으로 수정","Request edits to the result in plain language")}
-            </div>
+          <div style={{ display:"flex", alignItems:"center", height:52, padding:"0 20px", borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
+            <div style={{ fontSize:13, fontWeight:500, color:T.ink }}>{L("스타일 조정","Style Adjustments")}</div>
           </div>
 
-          {/* 빠른 수정 버튼 — 제거됨 */}
+          {/* 추천 문장 — 누르면 입력창에 채워짐(바로 전송은 안 함, 고쳐서 보낼 수 있게) */}
+          {isDone && chatSuggestions.length > 0 && (
+            <div style={{ padding:"12px 16px 4px", display:"flex", flexDirection:"column", gap:6, flexShrink:0 }}>
+              <div style={{ fontSize:11, color:T.muted }}>{L("이렇게 말해보세요","Try saying")}</div>
+              {chatSuggestions.map(s => (
+                <button key={s} type="button" disabled={refineLoading}
+                  onClick={() => { setRefineInput(s); document.getElementById('refine-input')?.focus(); }}
+                  style={{ textAlign:"left", padding:"8px 12px", fontSize:12, lineHeight:1.5,
+                    border:`1px solid ${T.border}`, borderRadius:10, background:T.bg, color:T.ink,
+                    cursor: refineLoading ? "not-allowed" : "pointer", opacity: refineLoading ? 0.5 : 1 }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* 채팅 메시지 */}
           <div style={{ flex:1, overflowY:"auto", padding:"12px 16px",
             display:"flex", flexDirection:"column", gap:8 }}>
             {refineHistory.length === 0 ? (
-              <div style={{ fontSize:12, color:T.soft, textAlign:"center",
+              <div style={{ fontSize:12, color:T.muted, textAlign:"center",
                 paddingTop:24, lineHeight:1.75 }}>
                 {isDone
                   ? L("생성됨. 수정할 내용을 아래에 입력","Style generated.\nEnter a request below if you need changes.")
@@ -10011,16 +10010,16 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             ) : refineHistory.map((msg, i) => (
               <div key={i} style={{
                 padding:"4px 0 4px 12px", borderRadius:10, fontSize:12, lineHeight:1.7,
-                background:"transparent", color: msg.role === "user" ? "#FFFFFF" : T.soft,
+                background:"transparent", color: msg.role === "user" ? T.ink : T.muted,
                 fontWeight: msg.role === "user" ? 500 : 400,
                 alignSelf:"stretch", maxWidth:"100%",
-                border:"none", borderLeft: msg.role === "user" ? `2px solid ${"#FFFFFF"}` : `1px solid ${"rgba(255,255,255,0.16)"}`,
+                border:"none", borderLeft: msg.role === "user" ? `2px solid ${T.ink}` : `1px solid ${T.border}`,
               }}>
                 {msg.role === 'user' && msg.intent && msg.intent !== 'ambiguous' && (
                   <div style={{
                     display:'inline-block', fontSize:10, fontWeight:700,
                     padding:'1px 5px', borderRadius:10, marginBottom:4,
-                    background: msg.intent === 'question' ? '#111111' : "#FFFFFF",
+                    background: msg.intent === 'question' ? '#111111' : T.ink,
                     color: '#fff', letterSpacing:'0.05em',
                   }}>
                     {msg.intent === 'question' ? '질문' : '수정'}
@@ -10042,11 +10041,11 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                             display:'inline-block', fontSize:10, fontWeight:700,
                             padding:'1px 5px', borderRadius:10, marginBottom:8,
                             background: msg.intent === 'question'
-                              ? "rgba(255,255,255,0.16)"
-                              : (msg.codeChanged ? "#FFFFFF" : "rgba(255,255,255,0.16)"),
+                              ? T.border
+                              : (msg.codeChanged ? T.ink : T.border),
                             color: msg.intent === 'question'
-                              ? T.soft
-                              : (msg.codeChanged ? '#fff' : T.soft),
+                              ? T.muted
+                              : (msg.codeChanged ? '#fff' : T.muted),
                             letterSpacing:'0.05em',
                           }}>
                             {msg.intent === 'question'
@@ -10062,7 +10061,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                         )}
                         {/* 수치 변경 요약 (directDiffs) */}
                         {msg.changes && (
-                          <div style={{borderTop: msg.chatContent ? `1px solid ${"rgba(255,255,255,0.16)"}` : 'none',
+                          <div style={{borderTop: msg.chatContent ? `1px solid ${T.border}` : 'none',
                             paddingTop: msg.chatContent ? 7 : 0}}>
                             {msg.changes.split('\n').filter(l => l.trim()).map((line, li) => {
                               const raw = line.replace(/^[-•]\s*/, '');
@@ -10074,7 +10073,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                                 const newVal = parts[1].trim();
                                 return (
                                   <div key={li} style={{fontSize:12, lineHeight:1.6, marginTop: li > 0 ? 3 : 0}}>
-                                    <span style={{color:T.soft}}>{label}</span>
+                                    <span style={{color:T.muted}}>{label}</span>
                                     <span style={{color:'#D4D4D0', margin:'0 3px'}}>:</span>
                                     {oldVal && <span style={{color:T.error, textDecoration:'line-through', marginRight:4}}>{oldVal}</span>}
                                     <span style={{color:'#6B6B6B', marginRight:3}}>→</span>
@@ -10082,7 +10081,7 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                                   </div>
                                 );
                               }
-                              return <div key={li} style={{fontSize:12, color:T.soft, marginTop: li > 0 ? 3 : 0}}>{raw}</div>;
+                              return <div key={li} style={{fontSize:12, color:T.muted, marginTop: li > 0 ? 3 : 0}}>{raw}</div>;
                             })}
                           </div>
                         )}
@@ -10095,17 +10094,17 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
             {/* 스트리밍 중 실시간 말풍선 */}
             {refineLoading && (
               <div style={{ padding:"12px 12px", borderRadius:10, fontSize:12, lineHeight:1.6,
-                background:"rgba(255,255,255,0.08)", border:`1px solid ${"rgba(255,255,255,0.16)"}`, color:"#FFFFFF",
+                background:T.bg, border:`1px solid ${T.border}`, color:T.ink,
                 alignSelf:"flex-start", maxWidth:"92%", whiteSpace:"pre-wrap" }}>
                 {streamingText
                   ? <>{streamingText}<span style={{
                       display:"inline-block", width:2, height:'1em',
-                      background:"#FFFFFF", marginLeft:2, verticalAlign:'text-bottom',
+                      background:T.ink, marginLeft:2, verticalAlign:'text-bottom',
                       animation:"blink 1s step-end infinite",
                     }} /></>
-                  : <span style={{color:T.soft, display:'flex', alignItems:'center', gap:8}}>
+                  : <span style={{color:T.muted, display:'flex', alignItems:'center', gap:8}}>
                       <span style={{ width:8, height:8, border:"1px solid #D4D4D0",
-                        borderTopColor:"#FFFFFF", borderRadius:"50%", display:'inline-block',
+                        borderTopColor:T.ink, borderRadius:"50%", display:'inline-block',
                         animation:"spin 0.8s linear infinite" }} />
                       생각 중…
                     </span>
@@ -10115,9 +10114,10 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
           </div>
 
           {/* 입력창 */}
-          <div style={{ padding:"12px", borderTop:`1px solid ${"rgba(255,255,255,0.16)"}`, flexShrink:0 }}>
-            <div style={{ display:"flex", gap:8 }}>
+          <div style={{ padding:"16px 20px 20px", borderTop:`1px solid ${T.border}`, flexShrink:0 }}>
+            <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
               <textarea
+                id="refine-input"
                 value={refineInput} rows={2}
                 onChange={e => setRefineInput(e.target.value)}
                 disabled={!isDone || loading || refineLoading}
@@ -10129,15 +10129,15 @@ ${intent === 'question' ? '(질문 모드: 참고용, 수정 금지)\n' : ''}${c
                   }
                 }}
                 style={{ flex:1, padding:"10px 12px", fontSize:12,
-                  border:`1px solid ${"rgba(255,255,255,0.16)"}`, borderRadius:12,
-                  background:"rgba(255,255,255,0.08)",
-                  color:"#FFFFFF", lineHeight:1.6, resize:"none" }}
+                  border:`1px solid ${T.border}`, borderRadius:10,
+                  background:T.bg,
+                  color:T.ink, lineHeight:1.6, resize:"none" }}
               />
               <button onClick={refine} disabled={!isDone || loading || refineLoading || !refineInput.trim()}
-                style={{ padding:"0 14px", fontSize:12, fontWeight:600,
+                style={{ height:44, padding:"0 18px", fontSize:14, fontWeight:500,
                   border:"none", borderRadius:10,
-                  background: (!isDone || loading || refineLoading || !refineInput.trim()) ? "rgba(255,255,255,0.16)" : "#FFFFFF",
-                  color: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.soft : "#fff",
+                  background: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.border : T.ink,
+                  color: (!isDone || loading || refineLoading || !refineInput.trim()) ? T.muted : "#fff",
                   cursor: (!isDone || loading || refineLoading || !refineInput.trim()) ? "not-allowed" : "pointer" }}>
                 {refineLoading ? L("처리 중…","Processing…") : L("전송","Send")}
               </button>
