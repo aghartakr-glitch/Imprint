@@ -45,7 +45,7 @@ const STEPS_THICK = [0.9, 0.8, 0.65, 0.5, 0.35];    // 두께 배율(얇게)
 const STEPS_DARK = [8, 15, 25, 40, 55];            // 진하기(%p)
 export function planRule(msg = '', cmdMap = {}, level = 3) {
   const m = String(msg);
-  if (!/(구[붆붑불분]\s*선|각주\s*선|각주\s*위\s*(?:의\s*)?선|가로줄)/.test(m)) return null;
+  if (!/(구[붆붑불분]\s*선|각\s*주\s*선|각\s*주\s*위\s*(?:에|의)?\s*(?:줄|선)|가로줄)/.test(m)) return null;
   const cur = { ...RULE_DEFAULT, width: Number(cmdMap.footnoteRuleWidth ?? RULE_DEFAULT.width), thickness: Number(cmdMap.footnoteRuleThickness ?? RULE_DEFAULT.thickness), darkness: Number(cmdMap.footnoteRuleColor ?? RULE_DEFAULT.darkness) };
   const patches = {};
   const L = Math.max(1, Math.min(5, level)) - 1;

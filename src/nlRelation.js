@@ -73,13 +73,16 @@ const SAME_RE = /(같게|같은|동일|똑같|맞춰|맞추|비슷하게|비슷�
 
 export function planSizeRelation(msg = '', cmdMap = {}) {
   const m = String(msg);
-  if (/(행간|줄\s*간격|간격|여백|서체|글꼴|색|굵|정렬|위치|가로\s*폭|폭|너비)/.test(m)) return null; // 크기가 아닌 속성 얘기
+  if (/(행간|줄\s*간격|간격|여백|서체|글꼴|색|굵|정렬|위치|시작점|라인|가로\s*폭|폭|너비)/.test(m)) return null; // 크기가 아닌 속성 얘기
   const found = EL.map(([id, re, sk, lk]) => { const x = m.match(re); return x ? { id, at: x.index, len: x[0].length, sk, lk } : null; }).filter(Boolean);
   if (found.length < 2) return null;
   let target, ref, ratio;
   const than = m.match(/(각주|주석|본문|제목|소제목|부제목|부제|쪽\s*번호|면주|머리말)\s*(?:의\s*)?(?:글자\s*)?(?:크기)?\s*보다/);
-  if (than) {
-    ref = found.find(f => than.index <= f.at && f.at <= than.index + than[0].length);
+  // "소제목 크기를 제목과 차이가 나도록 줄여줘" — "~와 차이 나게"도 "~보다" 비교와 같게 읽는다(기준은 와/과 앞의 요소)
+  const diffM = m.match(/(각주|주석|본문|제목|소제목|부제목|부제|쪽\s*번호|면주|머리말)\s*(?:와|과|랑|이랑|하고)\s*(?:글자\s*)?(?:크기\s*)?차이\s*(?:가\s*)?나(?:게|도록)/);
+  const rel = than || diffM;
+  if (rel) {
+    ref = found.find(f => rel.index <= f.at && f.at <= rel.index + rel[0].length);
     target = found.find(f => f !== ref);
     if (!ref || !target) return null;
     const { level } = detectIntensity(normalizeMsg(m).replace(/(차이\s*나게|차이가\s*나게|확실히|뚜렷하게)/, ''));
@@ -98,7 +101,7 @@ export function planSizeRelation(msg = '', cmdMap = {}) {
   if (!Number.isFinite(refSize)) return null;
   let size = refSize * ratio;
   // "보다 작게"인데 기준이 이미 작아 지금보다 커지는 경우는 만들지 않는다(반대도 마찬가지)
-  if (Number.isFinite(curSize) && than) {
+  if (Number.isFinite(curSize) && rel) {
     if (ratio < 1 && size > curSize) size = curSize * ratio;
     if (ratio > 1 && size < curSize) size = curSize * ratio;
   }
@@ -106,4 +109,46 @@ export function planSizeRelation(msg = '', cmdMap = {}) {
   const curLead = num(cmdMap[target.lk]);
   if (Number.isFinite(curLead) && Number.isFinite(curSize) && curSize > 0) patches[target.lk] = r2(Math.max(size, curLead * (size / curSize)));
   return { patches, target: target.id, ref: ref.id, ratio };
+}
+
+// ── 4) 행간을 다른 요소와 똑같이 ──────────────────────────────────────────────
+// "각주 줄간격 본문이랑 똑같이 많이 줄여줘" — 글자 크기가 달라도 줄 사이 비율이 같게: 대상 행간 = 대상 크기 × (기준 행간 ÷ 기준 크기)
+const LEAD_RE = /(행간|줄\s*간격|줄간격|줄\s*사이)/;
+export function planLeadingRelation(msg = '', cmdMap = {}) {
+  const m = String(msg);
+  if (!LEAD_RE.test(m) || !SAME_RE.test(m)) return null;
+  const found = EL.map(([id, re, sk, lk]) => { const x = m.match(re); return x ? { id, at: x.index, sk, lk } : null; }).filter(Boolean).sort((a, b) => a.at - b.at);
+  if (found.length < 2) return null;
+  const [target, ref] = found; // 먼저 나온 요소가 바꿀 대상, 다음이 기준
+  const tSize = num(cmdMap[target.sk]), rSize = num(cmdMap[ref.sk]), rLead = num(cmdMap[ref.lk]);
+  if (![tSize, rSize, rLead].every(Number.isFinite) || rSize <= 0) return null;
+  return { patches: { [target.lk]: r2(Math.max(tSize, tSize * (rLead / rSize))) }, target: target.id, ref: ref.id };
+}
+
+// ── 5) 한 줄에 들어오게 ────────────────────────────────────────────────────────
+// "부제목 글자 크기 줄여줘 한줄에 들어오게" — 판면 폭(용지 폭 − 안쪽·바깥쪽 여백)을 글자 수(한글=1, 영문·숫자≈0.55)로 나눈 크기 이하로 맞춘다.
+// 이미 한 줄에 들어가면 크기를 바꾸지 않는다. 제목·소제목 글자는 cmdMap의 h1Chars/h2Chars, 용지 폭은 paperWidth(mm).
+const ONELINE_RE = /(한\s*줄|한줄)\s*(?:에|안에)?\s*(?:다\s*)?(들어|맞|나오|오게|가게|넘지|안\s*넘)/;
+const MM2PT = 2.8346;
+export function planOneLine(msg = '', cmdMap = {}) {
+  const m = String(msg);
+  if (!ONELINE_RE.test(m)) return null;
+  const sub = /(소제목|부제목|부제)/.test(m), main = /(?<![소부])(제목|타이틀|표제)/.test(m);
+  const targets = sub && main ? ['h1', 'h2'] : sub ? ['h2'] : main ? ['h1'] : [];
+  if (!targets.length) return null;
+  const pw = num(cmdMap.paperWidth), mi = num(cmdMap.marginInner), mo = num(cmdMap.marginOuter);
+  if (![pw, mi, mo].every(Number.isFinite)) return null;
+  const textPt = (pw - mi - mo) * MM2PT;
+  const patches = {};
+  const fits = [];
+  for (const t of targets) {
+    const chars = num(cmdMap[t + 'Chars']), size = num(cmdMap[t + 'Size']), lead = num(cmdMap[t + 'Leading']);
+    if (![chars, size].every(Number.isFinite) || chars <= 0) continue;
+    const maxSize = Math.floor((textPt / chars) * 0.97 * 100) / 100; // 3% 여유
+    if (size <= maxSize) { fits.push(t); continue; }                  // 이미 한 줄에 들어간다
+    patches[t + 'Size'] = r2(maxSize);
+    if (Number.isFinite(lead)) patches[t + 'Leading'] = r2(Math.max(maxSize, lead * maxSize / size));
+  }
+  if (!Object.keys(patches).length && fits.length) return { patches: {}, noChange: '이미 한 줄에 들어가는 길이라 크기를 바꿀 필요가 없음 — 그대로 두고 한 줄에 들어간다고 알릴 것(값을 바꾸지 말 것)' };
+  return Object.keys(patches).length ? { patches } : null;
 }

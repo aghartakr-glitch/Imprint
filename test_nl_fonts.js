@@ -151,7 +151,7 @@ let bad = 0;
 const diff = [];
 for (const [msg, cm, want] of CASES) {
   const plan = planNaturalEdit(msg, cm, []);
-  const text = plan.font ? plan.font.patches : null;
+  const text = plan.font ? plan.font.patches : (plan.synth?.font && /quoteHighlight/.test(plan.synth.text) ? plan.synth.patches : null); // 따옴표 안 색은 통합 스타일 해석기가 낸다
   const ok = want === null
     ? !text
     : text && Object.keys(want).length === Object.keys(text).length && Object.entries(want).every(([k, v]) => text[k] === v);

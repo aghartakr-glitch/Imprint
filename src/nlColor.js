@@ -31,11 +31,45 @@ export function elementsIn(msg) {
   // 제목·부제목이 같이 잡히면 더 구체적인 쪽만, 본문은 글자·글씨가 다른 요소와 함께 나온 말이면 뺀다
   if (els.includes('h2') && els.includes('h1') && !/(제목\s*(?:과|와|이랑|하고|,)\s*부제)|(?:제목.*부제목.*(?:모두|둘\s*다))/.test(m)) els.splice(els.indexOf('h1'), 1);
   if (els.length > 1 && els.includes('body') && !/본문/.test(m)) els.splice(els.indexOf('body'), 1);
+  // "각주만 ~" — 요소 이름 바로 뒤에 "만"이 붙은 요소가 있으면 그것만 대상으로 한다(다른 요소 이름이 불평 문장에 들어 있어도)
+  const onlyEls = els.filter(el => { const re = ELEMENT_RES.find(([id]) => id === el)[1]; return new RegExp(`(?:${re.source})\\s*(?:글자|글씨|텍스트)?\\s*만`).test(m); });
+  if (onlyEls.length) return onlyEls;
+  // "본문도 연해져"처럼 바뀌어 버렸다는 불평에 든 요소는 대상이 아니다
+  for (const x of m.matchAll(/([가-힣]+)\s*(?:도|까지)\s*[가-힣]*(?:연해|바뀌|변해|커져|작아져|흐려|진해|달라|굵어)/g)) {
+    for (const [el, re] of ELEMENT_RES) if (re.test(x[1]) && els.includes(el) && els.length > 1) els.splice(els.indexOf(el), 1);
+  }
+  // "본문은 그대로", "제목은 빼고" — 건드리지 말라고 한 요소는 뺀다(로그: 각주만 연하게 해달라는데 본문까지 연해짐)
+  for (const x of m.matchAll(/([가-힣]+(?:\s*[가-힣]+)?)\s*(?:은|는|도)?\s*(?:그대로|유지|놔두|놔둬|냅두|건드리지|빼고|제외|말고)/g)) {
+    for (const [el, re] of ELEMENT_RES) if (re.test(x[1]) && els.includes(el)) els.splice(els.indexOf(el), 1);
+  }
   return els;
 }
 
 // 반환: null | { patches: {rhColor: 70}, elements: ['rh'] }
 export function planColorEdit(msg = '', cmdMap = {}) {
+  const mk = String(msg);
+  // "본문에 있는 각주 숫자를 연하게" — 각주 문장이 아니라 본문 속 위첨자 숫자의 색이다("밑에 각주는 건들지 말고"는 각주 문장을 그대로 둔다)
+  if (/각주\s*(?:숫자|번호|표시)/.test(mk) && /(연하|흐리|옅|진하|짙|회색|그레이|검정|까맣|색)/.test(mk)
+      && !/(밑|아래|목록)\s*(?:에\s*있는\s*)?각주\s*(?:숫자|번호)/.test(mk)) {
+    const cur = Number(cmdMap.footnoteMarkColor ?? 100);
+    const { level } = detectIntensity(mk);
+    const L = Math.max(1, Math.min(5, level)) - 1;
+    if (/(연하|흐리|옅|희미)/.test(mk)) return { patches: { footnoteMarkColor: String(Math.max(10, cur - STEPS[L])) }, elements: ['mark'], level };
+    if (/(검정|까맣|검게)/.test(mk)) return { patches: { footnoteMarkColor: '100' }, elements: ['mark'], level };
+    if (/(진하|짙)/.test(mk)) return { patches: { footnoteMarkColor: String(Math.min(100, cur + STEPS[L])) }, elements: ['mark'], level };
+    if (/(회색|그레이)/.test(mk)) return { patches: { footnoteMarkColor: '55' }, elements: ['mark'], level };
+  }
+  // "각주 진하게" — 이미 연하게 만든 요소를 다시 진하게 하는 말은 굵기가 아니라 색이다
+  if (/(진하게|짙게)/.test(mk) && !COLORWORD.test(mk) && !/(굵|두껍|볼드)/.test(mk)) {
+    const lighter = elementsIn(mk).filter(el => Number(cmdMap[COLOR_ELEMENTS[el].key] ?? 100) < 100);
+    if (lighter.length) {
+      const { level } = detectIntensity(mk);
+      const L = Math.max(1, Math.min(5, level)) - 1;
+      const patches = {};
+      for (const el of lighter) patches[COLOR_ELEMENTS[el].key] = String(Math.min(100, Number(cmdMap[COLOR_ELEMENTS[el].key]) + STEPS[L]));
+      return { patches, elements: lighter, level };
+    }
+  }
   if (!hasColorRequest(msg)) return null;
   const els = elementsIn(msg);
   if (!els.length) return null;

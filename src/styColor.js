@@ -34,6 +34,19 @@ export function applyColor(sty, el, pct) {
   return appendBeforeEndinput(out, line);
 }
 
+// 본문 속 각주 숫자(위첨자) 색 — \@makefnmark를 문서 시작 때 한 번 감싼다(다른 줄이 \@makefnmark를 다시 정의해도 순서와 상관없이 적용됨)
+export function applyMarkColor(sty, pct) {
+  const out = String(sty).replace(/^.*% imprintMarkColor.*\r?\n?/gm, '');
+  if (!Number.isFinite(Number(pct))) return out;
+  const n = clamp(Number(pct));
+  if (n >= 100) return out;
+  return appendBeforeEndinput(out, `\\RequirePackage{xcolor}\\AtBeginDocument{\\makeatletter\\let\\imprintOrigMk\\@makefnmark\\renewcommand\\@makefnmark{{\\color{black!${n}}\\imprintOrigMk}}\\makeatother} % imprintMarkColor ${n}`);
+}
+export function readMarkColor(sty) {
+  const m = String(sty).match(/% imprintMarkColor (\d+)/);
+  return m ? m[1] : undefined;
+}
+
 export function readColor(sty, el) {
   const m = String(sty).match(new RegExp(`% imprintColor ${el}=(\\d+)`));
   return m ? m[1] : undefined;
